@@ -68,6 +68,7 @@ const state = {
   editingInkCartridge: null,
   productDraft: readProductDraft(),
   inkCartridgeDraft: readInkCartridgeDraft(),
+  previewProductId: '',
   mailWarning: '',
 };
 
@@ -147,6 +148,16 @@ app.addEventListener('click', async (event) => {
 
   if (target.matches('[data-add-product]')) {
     addToCart(target.dataset.addProduct, Number(target.dataset.step || 1));
+  }
+
+  if (target.matches('[data-preview-product]')) {
+    state.previewProductId = target.dataset.previewProduct || '';
+    render();
+  }
+
+  if (target.matches('[data-close-preview]')) {
+    state.previewProductId = '';
+    render();
   }
 
   if (target.matches('[data-cart-action]')) {
@@ -253,6 +264,13 @@ app.addEventListener('click', async (event) => {
 });
 
 init();
+
+window.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && state.previewProductId) {
+    state.previewProductId = '';
+    render();
+  }
+});
 
 function handleProductDraftChange(event) {
   const form = event.target.closest('[data-product-form]');
@@ -498,6 +516,7 @@ function renderShell() {
         ${state.setupError ? renderSetupError() : renderCurrentView(admin)}
       </main>
     </div>
+    ${renderProductPreview()}
   `;
 }
 
@@ -813,9 +832,12 @@ function renderProductCard(product) {
     <article class="product-card">
       <div class="product-image">
         <img src="${escapeHtml(image)}" alt="${escapeHtml(product.naam)}" loading="lazy" />
+        <button class="image-zoom-button" type="button" data-preview-product="${escapeHtml(product.id)}">
+          Vergroten
+        </button>
       </div>
       <div class="product-content">
-        <div>
+        <div class="product-text">
           <span class="supplier">${escapeHtml(getSupplierDisplay(product))}</span>
           <h4>${escapeHtml(product.naam)}</h4>
           <p>${escapeHtml(product.omschrijving || 'Geen omschrijving ingevuld.')}</p>
@@ -830,6 +852,38 @@ function renderProductCard(product) {
         </button>
       </div>
     </article>
+  `;
+}
+
+function renderProductPreview() {
+  if (!state.previewProductId) {
+    return '';
+  }
+
+  const product = state.data.products.find((item) => String(item.id) === String(state.previewProductId));
+
+  if (!product) {
+    return '';
+  }
+
+  const image = product.image_url || defaultImage;
+
+  return `
+    <div class="image-modal" role="dialog" aria-modal="true" aria-labelledby="product-preview-title">
+      <button class="image-modal-backdrop" type="button" data-close-preview aria-label="Voorbeeld sluiten"></button>
+      <section class="image-modal-panel">
+        <div class="image-modal-header">
+          <div>
+            <span class="supplier">${escapeHtml(getSupplierDisplay(product))}</span>
+            <h3 id="product-preview-title">${escapeHtml(product.naam)}</h3>
+          </div>
+          <button class="ghost-button" type="button" data-close-preview>Sluiten</button>
+        </div>
+        <div class="image-modal-body">
+          <img src="${escapeHtml(image)}" alt="${escapeHtml(product.naam)}" />
+        </div>
+      </section>
+    </div>
   `;
 }
 
