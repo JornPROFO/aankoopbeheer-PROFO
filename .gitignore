@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+.npm-cache/
+.vite/
+*.log
+.DS_Store
+Thumbs.db
+render_functieprofiel/
+.git_broken_aankoopbeheer/
+.git_broken_sandbox_init/
+data/gebruikers_profo_reservaties*.csv
+supabase/manual-sql/seeds/*gebruikers*.sql
