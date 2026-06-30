@@ -554,8 +554,16 @@ function renderCurrentView(admin) {
 }
 
 function renderOrderWorkspace() {
-  const products = state.data.products.filter((product) => product.actief !== false);
-  const categories = [...new Set(products.map((product) => product.categorie || 'Algemeen'))];
+  const products = state.data.products
+    .filter((product) => product.actief !== false)
+    .sort((a, b) => {
+      const order = Number(a.sort_order || 100) - Number(b.sort_order || 100);
+      if (order !== 0) {
+        return order;
+      }
+
+      return String(a.naam || '').localeCompare(String(b.naam || ''), 'nl-BE');
+    });
   const cartItems = getCartItems();
 
   return `
@@ -573,7 +581,7 @@ function renderOrderWorkspace() {
     ${state.mailWarning ? `<div class="warning-panel">${escapeHtml(state.mailWarning)}</div>` : ''}
     <section class="order-layout">
       <div class="catalog-panel">
-        ${categories.map((category) => renderCategory(category, products)).join('')}
+        ${renderProductCatalog(products)}
       </div>
       <aside class="cart-panel">
         <div class="panel-header">
@@ -808,17 +816,15 @@ function renderInkReview(inkItems, totals) {
   `;
 }
 
-function renderCategory(category, products) {
-  const rows = products.filter((product) => (product.categorie || 'Algemeen') === category);
-
+function renderProductCatalog(products) {
   return `
     <section class="category-section">
-      <div class="category-header">
-        <h3>${escapeHtml(category)}</h3>
-        <span>${rows.length} artikel${rows.length === 1 ? '' : 'en'}</span>
+      <div class="catalog-toolbar">
+        <h3>Producten</h3>
+        <span>${products.length} artikel${products.length === 1 ? '' : 'en'}</span>
       </div>
       <div class="product-grid">
-        ${rows.map(renderProductCard).join('')}
+        ${products.map(renderProductCard).join('')}
       </div>
     </section>
   `;
@@ -838,7 +844,10 @@ function renderProductCard(product) {
       </div>
       <div class="product-content">
         <div class="product-text">
-          <span class="supplier">${escapeHtml(getSupplierDisplay(product))}</span>
+          <div class="product-labels">
+            <span class="category-pill">${escapeHtml(product.categorie || 'Algemeen')}</span>
+            <span class="supplier">${escapeHtml(getSupplierDisplay(product))}</span>
+          </div>
           <h4>${escapeHtml(product.naam)}</h4>
           <p>${escapeHtml(product.omschrijving || 'Geen omschrijving ingevuld.')}</p>
         </div>
