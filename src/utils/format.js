@@ -32,10 +32,11 @@ export function getUserRole(user) {
   return getFirstValue(user, ['rol', 'role']) || 'Gebruiker';
 }
 
+const beheerderEmails = new Set(['jorn.neeus@profo.be', 'kathleen.nerinckx@profo.be']);
+
 export function isAdminUser(user, sessionEmail = '') {
-  const role = getUserRole(user).toLowerCase();
-  const email = String(user?.email || sessionEmail || '').toLowerCase();
-  return ['admin', 'beheerder', 'eindverantwoordelijke'].includes(role) || email === 'jorn.neeus@profo.be';
+  const email = String(user?.email || sessionEmail || '').trim().toLowerCase();
+  return beheerderEmails.has(email);
 }
 
 export function formatCurrency(value) {
