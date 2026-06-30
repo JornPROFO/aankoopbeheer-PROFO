@@ -37,6 +37,7 @@ const orderDraftStorageKey = 'profo-aankoopbeheer-order-draft';
 const productDraftStorageKey = 'profo-aankoopbeheer-product-draft';
 const inkDraftStorageKey = 'profo-aankoopbeheer-ink-draft';
 const inkCartridgeDraftStorageKey = 'profo-aankoopbeheer-ink-cartridge-draft';
+const analysisFiltersStorageKey = 'profo-aankoopbeheer-analysis-filters';
 const defaultImage = '/assets/gevouwen-handdoeken-voorbeeld.png';
 
 const state = {
@@ -68,6 +69,7 @@ const state = {
   editingInkCartridge: null,
   productDraft: readProductDraft(),
   inkCartridgeDraft: readInkCartridgeDraft(),
+  analysisFilters: readAnalysisFilters(),
   previewProductId: '',
   mailWarning: '',
 };
@@ -124,6 +126,8 @@ app.addEventListener('input', handleInkDraftChange);
 app.addEventListener('change', handleInkDraftChange);
 app.addEventListener('input', handleAdminCartridgeDraftChange);
 app.addEventListener('change', handleAdminCartridgeDraftChange);
+app.addEventListener('input', handleAnalysisFilterChange);
+app.addEventListener('change', handleAnalysisFilterChange);
 
 app.addEventListener('click', async (event) => {
   const target = event.target.closest('button, a');
@@ -261,6 +265,10 @@ app.addEventListener('click', async (event) => {
   if (target.matches('[data-disable-ink-cartridge]')) {
     await handleInkCartridgeDisable(target.dataset.disableInkCartridge);
   }
+
+  if (target.matches('[data-print-analysis]')) {
+    window.print();
+  }
 });
 
 init();
@@ -350,6 +358,18 @@ function handleAdminCartridgeDraftChange(event) {
   if (event.type === 'change' && event.target.name === 'printer_id') {
     render();
   }
+}
+
+function handleAnalysisFilterChange(event) {
+  const form = event.target.closest('[data-analysis-form]');
+
+  if (!form) {
+    return;
+  }
+
+  state.analysisFilters = readAnalysisFiltersFromForm(form);
+  persistAnalysisFilters();
+  render();
 }
 
 async function init() {
@@ -510,6 +530,7 @@ function renderShell() {
         ${navLink('bestellen', 'Onderhoud')}
         ${navLink('inkt', 'Inkt')}
         ${navLink('bestellingen', 'Bestellingen')}
+        ${admin ? navLink('analyse', 'Analyse') : ''}
         ${admin ? navLink('beheer', 'Beheer') : ''}
       </nav>
       <main class="content">
@@ -548,6 +569,10 @@ function renderCurrentView(admin) {
 
   if (state.view === 'beheer' && admin) {
     return renderAdmin();
+  }
+
+  if (state.view === 'analyse' && admin) {
+    return renderAnalysis();
   }
 
   return renderOrderWorkspace();
@@ -1063,6 +1088,229 @@ function renderOrderCard(order, admin) {
           : ''
       }
     </article>
+  `;
+}
+
+function renderAnalysis() {
+  const filters = state.analysisFilters;
+  const data = getAnalysisData(filters);
+  const chartRows = filters.group_by === 'location' ? data.byLocation : data.byProduct;
+  const tableTitle = filters.group_by === 'location' ? 'Analyse per locatie' : 'Analyse per product';
+
+  return `
+    <section class="analysis-page">
+      <section class="page-heading">
+        <div>
+          <p class="eyebrow">Analyse</p>
+          <h2>Bestelcijfers</h2>
+        </div>
+        <p class="page-intro">
+          Filter bestellingen op periode, locatie, product en status. De resultaten kunnen afgedrukt worden of visueel bekeken worden.
+        </p>
+      </section>
+
+      <form class="panel analysis-filters" data-analysis-form>
+        <div class="form-grid analysis-filter-grid">
+          <label class="field">
+            <span>Periode vanaf</span>
+            <input name="date_from" type="date" value="${escapeHtml(filters.date_from)}" />
+          </label>
+          <label class="field">
+            <span>Periode tot</span>
+            <input name="date_to" type="date" value="${escapeHtml(filters.date_to)}" />
+          </label>
+          <label class="field">
+            <span>Locatie</span>
+            <select name="location_id">
+              <option value="">Alle locaties</option>
+              ${state.data.locations
+                .map((location) => `<option value="${escapeHtml(location.id)}" ${String(location.id) === String(filters.location_id) ? 'selected' : ''}>${escapeHtml(getLocationLabel(location))}</option>`)
+                .join('')}
+            </select>
+          </label>
+          <label class="field">
+            <span>Product</span>
+            <select name="product_key">
+              <option value="">Alle producten</option>
+              ${getAnalysisProductOptions()
+                .map((product) => `<option value="${escapeHtml(product.key)}" ${product.key === filters.product_key ? 'selected' : ''}>${escapeHtml(product.label)}</option>`)
+                .join('')}
+            </select>
+          </label>
+          <label class="field">
+            <span>Status</span>
+            <select name="status">
+              <option value="">Alle statussen</option>
+              ${getAnalysisStatusOptions()
+                .map((status) => `<option value="${escapeHtml(status)}" ${status === filters.status ? 'selected' : ''}>${escapeHtml(status)}</option>`)
+                .join('')}
+            </select>
+          </label>
+          <label class="field">
+            <span>Analyse</span>
+            <select name="group_by">
+              <option value="product" ${filters.group_by === 'product' ? 'selected' : ''}>Per product</option>
+              <option value="location" ${filters.group_by === 'location' ? 'selected' : ''}>Per locatie</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Grafiek</span>
+            <select name="chart_type">
+              <option value="bar" ${filters.chart_type === 'bar' ? 'selected' : ''}>Staafdiagram</option>
+              <option value="pie" ${filters.chart_type === 'pie' ? 'selected' : ''}>Taartdiagram</option>
+            </select>
+          </label>
+        </div>
+        <div class="form-actions analysis-actions">
+          <button class="ghost-button" type="button" data-print-analysis>Afdrukken</button>
+        </div>
+      </form>
+
+      <section class="analysis-summary">
+        ${analysisSummaryCard('Bestellingen', data.summary.orders, 'aantal gefilterde bestellingen')}
+        ${analysisSummaryCard('Locaties', data.summary.locations, 'locaties in selectie')}
+        ${analysisSummaryCard('Producten', data.summary.products, 'producten in selectie')}
+        ${analysisSummaryCard('Aantal', data.summary.quantity, 'stuks of eenheden')}
+        ${analysisSummaryCard('Totaal', formatCurrency(data.summary.total), 'incl. btw')}
+      </section>
+
+      <section class="analysis-layout">
+        <div class="panel analysis-chart-panel">
+          <div class="panel-header">
+            <h3>${escapeHtml(tableTitle)}</h3>
+            <span>${chartRows.length} regels</span>
+          </div>
+          ${chartRows.length ? renderAnalysisChart(chartRows, filters.chart_type) : '<div class="empty-state is-compact"><p>Geen gegevens voor deze filter.</p></div>'}
+        </div>
+
+        <div class="panel analysis-table-panel">
+          <div class="panel-header">
+            <h3>Detailtabel</h3>
+            <span>${formatCurrency(data.summary.total)} incl. btw</span>
+          </div>
+          ${renderAnalysisTable(chartRows)}
+        </div>
+      </section>
+    </section>
+  `;
+}
+
+function analysisSummaryCard(label, value, detail) {
+  return `
+    <article class="analysis-summary-card">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+      <small>${escapeHtml(detail)}</small>
+    </article>
+  `;
+}
+
+function renderAnalysisChart(rows, chartType) {
+  const topRows = rows.slice(0, 8);
+
+  if (chartType === 'pie') {
+    return renderPieChart(topRows);
+  }
+
+  return renderBarChart(topRows);
+}
+
+function renderBarChart(rows) {
+  const max = Math.max(...rows.map((row) => row.total), 1);
+
+  return `
+    <div class="bar-chart" aria-label="Staafdiagram">
+      ${rows
+        .map((row) => {
+          const percentage = Math.max(3, Math.round((row.total / max) * 100));
+          return `
+            <div class="bar-row">
+              <span>${escapeHtml(row.label)}</span>
+              <div class="bar-track"><div class="bar-fill" style="width: ${percentage}%"></div></div>
+              <strong>${formatCurrency(row.total)}</strong>
+            </div>
+          `;
+        })
+        .join('')}
+    </div>
+  `;
+}
+
+function renderPieChart(rows) {
+  const total = rows.reduce((sum, row) => sum + row.total, 0);
+  const radius = 70;
+  const circumference = 2 * Math.PI * radius;
+  let offset = 0;
+  const colors = ['#b61917', '#ce5f5a', '#891811', '#d8a4a1', '#6f6a6a', '#1f6f43', '#b78a88', '#423f3f'];
+
+  return `
+    <div class="pie-chart-wrap">
+      <svg class="pie-chart" viewBox="0 0 180 180" role="img" aria-label="Taartdiagram">
+        <circle cx="90" cy="90" r="${radius}" fill="transparent" stroke="#f5dedd" stroke-width="34"></circle>
+        ${rows
+          .map((row, index) => {
+            const length = total > 0 ? (row.total / total) * circumference : 0;
+            const segment = `
+              <circle
+                cx="90"
+                cy="90"
+                r="${radius}"
+                fill="transparent"
+                stroke="${colors[index % colors.length]}"
+                stroke-width="34"
+                stroke-dasharray="${length} ${circumference - length}"
+                stroke-dashoffset="${-offset}"
+                transform="rotate(-90 90 90)"
+              ></circle>
+            `;
+            offset += length;
+            return segment;
+          })
+          .join('')}
+      </svg>
+      <div class="chart-legend">
+        ${rows
+          .map(
+            (row, index) => `
+              <div>
+                <span style="background: ${colors[index % colors.length]}"></span>
+                <strong>${escapeHtml(row.label)}</strong>
+                <small>${formatCurrency(row.total)}</small>
+              </div>
+            `,
+          )
+          .join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderAnalysisTable(rows) {
+  if (!rows.length) {
+    return '<div class="empty-state is-compact"><p>Geen gegevens voor deze filter.</p></div>';
+  }
+
+  return `
+    <div class="analysis-table">
+      <div class="analysis-table-head">
+        <span>Omschrijving</span>
+        <span>Bestellingen</span>
+        <span>Aantal</span>
+        <span>Totaal incl. btw</span>
+      </div>
+      ${rows
+        .map(
+          (row) => `
+            <div class="analysis-table-row">
+              <span>${escapeHtml(row.label)}</span>
+              <span>${escapeHtml(row.orders)}</span>
+              <span>${escapeHtml(row.quantity)}</span>
+              <strong>${formatCurrency(row.total)}</strong>
+            </div>
+          `,
+        )
+        .join('')}
+    </div>
   `;
 }
 
@@ -2045,6 +2293,150 @@ function getSupplierDisplay(product) {
   return reference.artikelnummer ? `${supplier} - art. ${reference.artikelnummer}` : supplier;
 }
 
+function getAnalysisData(filters) {
+  const rows = [];
+  const orderIds = new Set();
+  const locationNames = new Set();
+  const productNames = new Set();
+
+  state.data.orders.forEach((order) => {
+    if (!orderMatchesAnalysisFilters(order, filters)) {
+      return;
+    }
+
+    (order.regels ?? []).forEach((line) => {
+      if (filters.product_key && getLineProductKey(line) !== filters.product_key) {
+        return;
+      }
+
+      const quantity = Number(line.aantal || 0);
+      const total = roundMoney(line.lijn_totaal_incl_btw || 0);
+      const productLabel = line.product_naam || 'Product niet gekend';
+      const locationLabel = order.locatie_naam || 'Locatie niet gekend';
+
+      rows.push({
+        orderId: order.id,
+        locationLabel,
+        productLabel,
+        quantity,
+        total,
+      });
+
+      orderIds.add(order.id);
+      locationNames.add(locationLabel);
+      productNames.add(productLabel);
+    });
+  });
+
+  return {
+    summary: {
+      orders: orderIds.size,
+      locations: locationNames.size,
+      products: productNames.size,
+      quantity: rows.reduce((sum, row) => sum + row.quantity, 0),
+      total: roundMoney(rows.reduce((sum, row) => sum + row.total, 0)),
+    },
+    byProduct: aggregateAnalysisRows(rows, 'productLabel'),
+    byLocation: aggregateAnalysisRows(rows, 'locationLabel'),
+  };
+}
+
+function orderMatchesAnalysisFilters(order, filters) {
+  const orderDate = getDateInputValue(order.created_at);
+
+  if (filters.date_from && orderDate && orderDate < filters.date_from) {
+    return false;
+  }
+
+  if (filters.date_to && orderDate && orderDate > filters.date_to) {
+    return false;
+  }
+
+  if (filters.location_id && String(order.locatie_id) !== String(filters.location_id)) {
+    return false;
+  }
+
+  if (filters.status && String(order.status || '') !== String(filters.status)) {
+    return false;
+  }
+
+  if (filters.product_key) {
+    return (order.regels ?? []).some((line) => getLineProductKey(line) === filters.product_key);
+  }
+
+  return true;
+}
+
+function aggregateAnalysisRows(rows, key) {
+  const groups = rows.reduce((map, row) => {
+    const label = row[key] || 'Niet gekend';
+    const item = map.get(label) ?? {
+      label,
+      orders: new Set(),
+      quantity: 0,
+      total: 0,
+    };
+
+    item.orders.add(row.orderId);
+    item.quantity += row.quantity;
+    item.total = roundMoney(item.total + row.total);
+    map.set(label, item);
+    return map;
+  }, new Map());
+
+  return [...groups.values()]
+    .map((item) => ({
+      label: item.label,
+      orders: item.orders.size,
+      quantity: item.quantity,
+      total: item.total,
+    }))
+    .sort((a, b) => b.total - a.total || a.label.localeCompare(b.label, 'nl-BE'));
+}
+
+function getAnalysisProductOptions() {
+  const products = new Map();
+
+  state.data.orders.forEach((order) => {
+    (order.regels ?? []).forEach((line) => {
+      const key = getLineProductKey(line);
+      const label = line.product_naam || 'Product niet gekend';
+
+      if (!products.has(key)) {
+        products.set(key, label);
+      }
+    });
+  });
+
+  return [...products.entries()]
+    .map(([key, label]) => ({ key, label }))
+    .sort((a, b) => a.label.localeCompare(b.label, 'nl-BE'));
+}
+
+function getAnalysisStatusOptions() {
+  return [...new Set(state.data.orders.map((order) => order.status).filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b, 'nl-BE'),
+  );
+}
+
+function getLineProductKey(line) {
+  return line.product_id ? `product:${line.product_id}` : `name:${line.product_naam || 'onbekend'}`;
+}
+
+function getDateInputValue(value) {
+  if (!value) {
+    return '';
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  return date.toISOString().slice(0, 10);
+}
+
 function parseSupplierReference(value) {
   const raw = String(value ?? '').trim();
 
@@ -2253,7 +2645,46 @@ function clearInkCartridgeDraft() {
   localStorage.removeItem(inkCartridgeDraftStorageKey);
 }
 
+function readAnalysisFilters() {
+  const defaults = {
+    date_from: '',
+    date_to: '',
+    location_id: '',
+    product_key: '',
+    status: '',
+    group_by: 'product',
+    chart_type: 'bar',
+  };
+
+  try {
+    return {
+      ...defaults,
+      ...JSON.parse(localStorage.getItem(analysisFiltersStorageKey) || '{}'),
+    };
+  } catch {
+    return defaults;
+  }
+}
+
+function readAnalysisFiltersFromForm(form) {
+  const formData = new FormData(form);
+
+  return {
+    date_from: String(formData.get('date_from') ?? ''),
+    date_to: String(formData.get('date_to') ?? ''),
+    location_id: String(formData.get('location_id') ?? ''),
+    product_key: String(formData.get('product_key') ?? ''),
+    status: String(formData.get('status') ?? ''),
+    group_by: String(formData.get('group_by') ?? 'product'),
+    chart_type: String(formData.get('chart_type') ?? 'bar'),
+  };
+}
+
+function persistAnalysisFilters() {
+  localStorage.setItem(analysisFiltersStorageKey, JSON.stringify(state.analysisFilters));
+}
+
 function getRoute() {
   const route = window.location.hash.replace('#', '');
-  return ['bestellen', 'inkt', 'bestellingen', 'beheer'].includes(route) ? route : 'bestellen';
+  return ['bestellen', 'inkt', 'bestellingen', 'analyse', 'beheer'].includes(route) ? route : 'bestellen';
 }

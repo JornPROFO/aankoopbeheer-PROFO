@@ -1056,6 +1056,177 @@ h4 {
   font-weight: 700;
 }
 
+.analysis-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.analysis-filters {
+  margin-bottom: 0;
+}
+
+.analysis-filter-grid {
+  grid-template-columns: repeat(7, minmax(130px, 1fr));
+  gap: 0.7rem;
+}
+
+.analysis-filter-grid .field {
+  margin-bottom: 0;
+}
+
+.analysis-actions {
+  justify-content: flex-end;
+  margin-top: 0.9rem;
+}
+
+.analysis-actions .ghost-button {
+  flex: 0 0 auto;
+}
+
+.analysis-summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.analysis-summary-card {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(34, 30, 30, 0.05);
+}
+
+.analysis-summary-card span,
+.analysis-summary-card small {
+  color: var(--muted);
+}
+
+.analysis-summary-card strong {
+  color: var(--profo-red-dark);
+  font-size: 1.35rem;
+}
+
+.analysis-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(420px, 0.95fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.bar-chart {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(160px, 1.2fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.bar-row span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.bar-row strong {
+  color: var(--profo-red-dark);
+  white-space: nowrap;
+}
+
+.bar-track {
+  height: 18px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--profo-pink);
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--profo-red);
+}
+
+.pie-chart-wrap {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  gap: 1rem;
+  align-items: center;
+}
+
+.pie-chart {
+  width: 190px;
+  height: 190px;
+}
+
+.chart-legend {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.chart-legend div {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.chart-legend span {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+}
+
+.chart-legend strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.chart-legend small {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.analysis-table {
+  display: grid;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.analysis-table-head,
+.analysis-table-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 100px 90px 140px;
+  gap: 0.75rem;
+  align-items: center;
+  min-height: 42px;
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.analysis-table-head {
+  color: var(--profo-red-dark);
+  background: var(--profo-pink);
+  font-weight: 700;
+}
+
+.analysis-table-row:last-child {
+  border-bottom: 0;
+}
+
+.analysis-table-row span:first-child {
+  overflow-wrap: anywhere;
+}
+
+.analysis-table-row strong {
+  color: var(--profo-red-dark);
+}
+
 .spinner {
   width: 34px;
   height: 34px;
@@ -1077,8 +1248,14 @@ h4 {
   .ink-layout,
   .admin-layout,
   .admin-switcher,
+  .analysis-layout,
+  .analysis-summary,
   .page-heading {
     grid-template-columns: 1fr;
+  }
+
+  .analysis-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .sidebar {
@@ -1122,7 +1299,12 @@ h4 {
   .two,
   .admin-product-row,
   .ink-option,
-  .admin-simple-row {
+  .admin-simple-row,
+  .bar-row,
+  .pie-chart-wrap,
+  .analysis-table-head,
+  .analysis-table-row,
+  .analysis-filter-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1156,5 +1338,43 @@ h4 {
   .record-actions,
   .inline-actions {
     justify-content: flex-start;
+  }
+}
+
+@media print {
+  @page {
+    margin: 14mm;
+  }
+
+  body {
+    background: #ffffff;
+  }
+
+  .app-header,
+  .sidebar,
+  .analysis-filters,
+  .image-modal,
+  .form-actions {
+    display: none !important;
+  }
+
+  .app-layout,
+  .content,
+  .analysis-layout {
+    display: block;
+    width: 100%;
+    padding: 0;
+  }
+
+  .page-heading,
+  .analysis-summary,
+  .analysis-chart-panel,
+  .analysis-table-panel {
+    break-inside: avoid;
+  }
+
+  .panel,
+  .analysis-summary-card {
+    box-shadow: none;
   }
 }
