@@ -35,8 +35,8 @@ jobs:
         run: npm run build
         env:
           GITHUB_PAGES: 'true'
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_URL: https://rxkffollbimmsvwhucgd.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_YGy5zm8Dt2aexMKALx83Hg_4JwjPc3r
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
