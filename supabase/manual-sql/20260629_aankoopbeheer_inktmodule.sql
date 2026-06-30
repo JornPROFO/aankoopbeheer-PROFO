@@ -24,7 +24,7 @@ create table if not exists public.aankoop_printer_cartridges (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   printer_id bigint not null references public.aankoop_printers(id) on delete cascade,
-  kleur text not null check (kleur in ('BK', 'C', 'M', 'Y')),
+  kleur text not null check (kleur in ('BK', 'C', 'M', 'Y', 'SET')),
   naam text not null,
   artikelnummer text,
   leverancier text not null default '123inkt.nl',

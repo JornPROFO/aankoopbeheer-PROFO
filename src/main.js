@@ -1550,7 +1550,7 @@ function renderCartridgeAdmin() {
           <label class="field">
             <span>Kleur</span>
             <select name="kleur" required>
-              ${['BK', 'C', 'M', 'Y']
+              ${['BK', 'C', 'M', 'Y', 'SET']
                 .map((kleur) => `<option value="${kleur}" ${String(cartridgeValue('kleur', 'BK')) === kleur ? 'selected' : ''}>${escapeHtml(getInkColorLabel(kleur))}</option>`)
                 .join('')}
             </select>
@@ -2244,6 +2244,7 @@ function getInkColorLabel(color) {
     C: 'Cyaan (C)',
     M: 'Magenta (M)',
     Y: 'Geel (Y)',
+    SET: 'Set zwart + C/M/Y',
   };
 
   return labels[color] ?? color ?? 'Kleur';

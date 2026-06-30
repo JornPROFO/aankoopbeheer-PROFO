@@ -1031,6 +1031,12 @@ h4 {
   background: #171717;
 }
 
+.color-set {
+  color: #111111;
+  background:
+    linear-gradient(90deg, #171717 0 25%, #8fe4f2 25% 50%, #c01877 50% 75%, #f5d34b 75% 100%);
+}
+
 .empty-state {
   display: grid;
   place-items: center;
