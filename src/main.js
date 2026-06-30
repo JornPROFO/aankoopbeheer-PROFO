@@ -1523,7 +1523,7 @@ function renderCartridgeAdmin() {
   const draft = cartridge ? {} : state.inkCartridgeDraft;
   const cartridgeValue = (field, fallback = '') => cartridge?.[field] ?? draft?.[field] ?? fallback;
   const selectedPrinterId = String(cartridgeValue('printer_id', state.adminCartridgePrinterId || ''));
-  const cartridgeActive = cartridge ? cartridge.actief !== false : draft?.actief === true;
+  const cartridgeActive = cartridge ? cartridge.actief !== false : draft?.actief !== false;
   const cartridgesForSelectedPrinter = selectedPrinterId
     ? state.data.cartridges.filter((item) => String(item.printer_id) === String(selectedPrinterId))
     : state.data.cartridges;
@@ -2021,7 +2021,7 @@ function copyCartridgeToDraft(cartridge) {
     eenheid: String(cartridge.eenheid || 'stuk'),
     sort_order: String(cartridge.sort_order ?? 100),
     leverancier_url: String(cartridge.leverancier_url || ''),
-    actief: cartridge.actief === true,
+    actief: cartridge.actief !== false,
   };
   persistInkCartridgeDraft();
   state.notice = 'Gegevens overgenomen in het formulier. Controleer prijs en link voor je bewaart.';
@@ -2267,7 +2267,6 @@ function getCartridgesForPrinter(printerId) {
   return state.data.cartridges.filter(
     (cartridge) =>
       cartridge.actief !== false &&
-      getCartridgePriceInclVat(cartridge) > 0 &&
       String(cartridge.printer_id) === String(printerId || ''),
   );
 }
