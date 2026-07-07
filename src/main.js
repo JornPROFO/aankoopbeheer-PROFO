@@ -38,7 +38,44 @@ const productDraftStorageKey = 'profo-aankoopbeheer-product-draft';
 const inkDraftStorageKey = 'profo-aankoopbeheer-ink-draft';
 const inkCartridgeDraftStorageKey = 'profo-aankoopbeheer-ink-cartridge-draft';
 const analysisFiltersStorageKey = 'profo-aankoopbeheer-analysis-filters';
+const orderFiltersStorageKey = 'profo-aankoopbeheer-order-filters';
 const defaultImage = '/assets/gevouwen-handdoeken-voorbeeld.png';
+
+const productCategories = [
+  'Kantoorbenodigdheden',
+  'Huishoudproducten',
+  'Didactisch materiaal',
+  'IT-materiaal',
+  'Veiligheid/EHBO',
+  'Onderhoud',
+  'Overige',
+];
+
+const priorityOptions = [
+  { value: 'normaal', label: 'Normaal', description: 'Kan mee in de gewone verwerking.' },
+  { value: 'dringend', label: 'Dringend', description: 'Graag sneller opvolgen omdat voorraad laag is.' },
+  { value: 'hoog', label: 'Hoog', description: 'Nodig voor werking, veiligheid of geplande activiteit.' },
+];
+
+const orderStatuses = [
+  { value: 'Concept', label: 'Concept', description: 'Nog niet definitief ingediend.' },
+  { value: 'Ingediend', label: 'Ingediend', description: 'Ontvangen en klaar voor nazicht.' },
+  { value: 'In behandeling', label: 'In behandeling', description: 'Wordt bekeken of voorbereid.' },
+  { value: 'Goedgekeurd', label: 'Goedgekeurd', description: 'Mag besteld of verwerkt worden.' },
+  { value: 'Extra informatie gevraagd', label: 'Info gevraagd', description: 'Er is nog verduidelijking nodig.' },
+  { value: 'Geweigerd', label: 'Geweigerd', description: 'Wordt niet verder verwerkt.' },
+  { value: 'Besteld', label: 'Besteld', description: 'Bestelling is doorgegeven aan leverancier.' },
+  { value: 'Gedeeltelijk geleverd', label: 'Gedeeltelijk geleverd', description: 'Een deel is ontvangen.' },
+  { value: 'Geleverd', label: 'Geleverd', description: 'Alles is geleverd.' },
+  { value: 'Afgesloten', label: 'Afgesloten', description: 'Administratief afgewerkt.' },
+];
+
+const legacyStatusMap = {
+  Nieuw: 'Ingediend',
+  'In verwerking': 'In behandeling',
+  'Besteld bij leverancier': 'Besteld',
+  Geannuleerd: 'Geweigerd',
+};
 
 const state = {
   session: null,
@@ -70,6 +107,7 @@ const state = {
   productDraft: readProductDraft(),
   inkCartridgeDraft: readInkCartridgeDraft(),
   analysisFilters: readAnalysisFilters(),
+  orderFilters: readOrderFilters(),
   previewProductId: '',
   mailWarning: '',
 };
@@ -94,7 +132,7 @@ app.addEventListener('submit', async (event) => {
 
   if (form.matches('[data-order-form]')) {
     event.preventDefault();
-    await handleOrder(form);
+    await handleOrder(form, event.submitter?.value || 'submit');
   }
 
   if (form.matches('[data-product-form]')) {
@@ -128,6 +166,8 @@ app.addEventListener('input', handleAdminCartridgeDraftChange);
 app.addEventListener('change', handleAdminCartridgeDraftChange);
 app.addEventListener('input', handleAnalysisFilterChange);
 app.addEventListener('change', handleAnalysisFilterChange);
+app.addEventListener('input', handleOrderFilterChange);
+app.addEventListener('change', handleOrderFilterChange);
 
 app.addEventListener('click', async (event) => {
   const target = event.target.closest('button, a');
@@ -178,6 +218,10 @@ app.addEventListener('click', async (event) => {
   if (target.matches('[data-edit-order-review]')) {
     state.orderReview = false;
     render();
+  }
+
+  if (target.matches('[data-copy-order]')) {
+    copyOrderToCart(target.dataset.copyOrder);
   }
 
   if (target.matches('[data-edit-product]')) {
@@ -372,6 +416,18 @@ function handleAnalysisFilterChange(event) {
   render();
 }
 
+function handleOrderFilterChange(event) {
+  const form = event.target.closest('[data-order-filter-form]');
+
+  if (!form) {
+    return;
+  }
+
+  state.orderFilters = readOrderFiltersFromForm(form);
+  persistOrderFilters();
+  render();
+}
+
 async function init() {
   try {
     state.session = await getCurrentSession();
@@ -527,7 +583,8 @@ function renderShell() {
     </header>
     <div class="app-layout">
       <nav class="sidebar" aria-label="Hoofdnavigatie">
-        ${navLink('bestellen', 'Onderhoud')}
+        ${navLink('start', 'Start')}
+        ${navLink('bestellen', 'Nieuwe bestelling')}
         ${navLink('inkt', 'Inkt')}
         ${navLink('bestellingen', 'Bestellingen')}
         ${admin ? navLink('analyse', 'Analyse') : ''}
@@ -559,6 +616,10 @@ function renderSetupError() {
 }
 
 function renderCurrentView(admin) {
+  if (state.view === 'start') {
+    return renderStart(admin);
+  }
+
   if (state.view === 'bestellingen') {
     return renderOrders(admin);
   }
@@ -576,6 +637,120 @@ function renderCurrentView(admin) {
   }
 
   return renderOrderWorkspace();
+}
+
+function renderStart(admin) {
+  const ownOrders = getVisibleOrders(admin);
+  const recentOrders = ownOrders.slice(0, 3);
+  const cartItems = getCartItems();
+  const urgentOrders = ownOrders.filter((order) => {
+    const meta = getOrderMeta(order);
+    return ['dringend', 'hoog'].includes(meta.prioriteit) && !['Geleverd', 'Afgesloten', 'Geweigerd'].includes(getNormalizedStatus(order.status));
+  });
+
+  return `
+    <section class="page-heading">
+      <div>
+        <p class="eyebrow">Start</p>
+        <h2>Wat wil je vandaag doen?</h2>
+      </div>
+      <p class="page-intro">
+        Start een nieuwe bestelling, volg een bestaande aanvraag op of herhaal een recente bestelling zonder opnieuw alles te moeten zoeken.
+      </p>
+    </section>
+    ${state.error ? `<div class="warning-panel">${escapeHtml(state.error)}</div>` : ''}
+    ${state.notice ? `<div class="notice-panel">${escapeHtml(state.notice)}</div>` : ''}
+    ${state.mailWarning ? `<div class="warning-panel">${escapeHtml(state.mailWarning)}</div>` : ''}
+    <section class="start-actions">
+      <a class="action-card is-primary" href="#bestellen">
+        <span>Nieuwe bestelling</span>
+        <strong>Onderhoud en algemene producten</strong>
+        <small>${cartItems.length ? `${cartItems.length} product(en) staan al klaar in je winkelmand.` : 'Kies producten, controleer en dien in.'}</small>
+      </a>
+      <a class="action-card" href="#inkt">
+        <span>Inkt en toner</span>
+        <strong>Bestellen per printer</strong>
+        <small>Kies locatie, printer en de nodige kleuren of set.</small>
+      </a>
+      <a class="action-card" href="#bestellingen">
+        <span>Opvolging</span>
+        <strong>Mijn bestellingen</strong>
+        <small>${ownOrders.length} bestelling(en), waarvan ${urgentOrders.length} met hoge prioriteit.</small>
+      </a>
+    </section>
+    <section class="dashboard-grid">
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Recente bestellingen</h3>
+          <span>${recentOrders.length} zichtbaar</span>
+        </div>
+        ${recentOrders.length ? recentOrders.map(renderCompactOrder).join('') : '<div class="empty-state is-compact"><p>Nog geen recente bestellingen.</p></div>'}
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Veelgebruikte producten</h3>
+          <span>snel toevoegen</span>
+        </div>
+        ${renderFrequentProducts()}
+      </div>
+    </section>
+  `;
+}
+
+function renderCompactOrder(order) {
+  const meta = getOrderMeta(order);
+  const firstLine = order.regels?.[0]?.product_naam || 'Bestelling zonder regel';
+
+  return `
+    <article class="compact-order">
+      <div>
+        <strong>Bestelling ${escapeHtml(order.id)} - ${escapeHtml(order.locatie_naam || 'locatie niet gekend')}</strong>
+        <span>${escapeHtml(firstLine)}${order.regels?.length > 1 ? ` + ${order.regels.length - 1} extra` : ''}</span>
+        <small>${formatDateTime(order.created_at)} - ${escapeHtml(getStatusLabel(order.status))}${meta.prioriteit ? ` - ${escapeHtml(getPriorityLabel(meta.prioriteit))}` : ''}</small>
+      </div>
+      <button class="ghost-button" type="button" data-copy-order="${escapeHtml(order.id)}">Herhaal</button>
+    </article>
+  `;
+}
+
+function renderFrequentProducts() {
+  const counts = new Map();
+
+  state.data.orders.forEach((order) => {
+    (order.regels ?? []).forEach((line) => {
+      if (!line.product_id) {
+        return;
+      }
+      const current = counts.get(String(line.product_id)) ?? { id: String(line.product_id), label: line.product_naam, quantity: 0 };
+      current.quantity += Number(line.aantal || 0);
+      counts.set(String(line.product_id), current);
+    });
+  });
+
+  const rows = [...counts.values()]
+    .filter((row) => state.data.products.some((product) => String(product.id) === row.id && product.actief !== false))
+    .sort((a, b) => b.quantity - a.quantity || a.label.localeCompare(b.label, 'nl-BE'))
+    .slice(0, 5);
+
+  if (!rows.length) {
+    return '<div class="empty-state is-compact"><p>Zodra er bestellingen zijn, verschijnen hier snelle herhaalopties.</p></div>';
+  }
+
+  return `
+    <div class="quick-product-list">
+      ${rows
+        .map((row) => {
+          const product = state.data.products.find((item) => String(item.id) === row.id);
+          return `
+            <button class="quick-product" type="button" data-add-product="${escapeHtml(row.id)}" data-step="${escapeHtml(product?.minimum_bestelhoeveelheid || 1)}">
+              <span>${escapeHtml(row.label)}</span>
+              <strong>In winkelmand</strong>
+            </button>
+          `;
+        })
+        .join('')}
+    </div>
+  `;
 }
 
 function renderOrderWorkspace() {
@@ -934,9 +1109,12 @@ function renderCart(cartItems) {
   const currentUserId = state.appUser?.id ?? '';
   const selectedLocationId = state.orderDraft.locatie_id ?? '';
   const selectedBestellerId = state.orderDraft.besteller_id || currentUserId;
+  const selectedCategory = state.orderDraft.categorie || 'Huishoudproducten';
+  const selectedPriority = state.orderDraft.prioriteit || 'normaal';
+  const desiredDate = state.orderDraft.gewenst_tegen || '';
   const opmerkingen = state.orderDraft.opmerkingen ?? '';
   const andereProducten = state.orderDraft.andere_producten ?? '';
-  const submitLabel = state.orderReview ? 'Bestelling definitief doorsturen' : 'Bestelling controleren';
+  const submitLabel = state.orderReview ? 'Bestelling indienen' : 'Bestelling controleren';
 
   return `
     <form data-order-form data-order-review="${state.orderReview ? 'true' : 'false'}">
@@ -982,6 +1160,31 @@ function renderCart(cartItems) {
             .join('')}
         </select>
       </label>
+      <div class="form-grid two">
+        <label class="field">
+          <span>Categorie</span>
+          <select name="categorie" required>
+            ${productCategories
+              .map((category) => `<option value="${escapeHtml(category)}" ${category === selectedCategory ? 'selected' : ''}>${escapeHtml(category)}</option>`)
+              .join('')}
+          </select>
+        </label>
+        <label class="field">
+          <span>Gewenst tegen</span>
+          <input name="gewenst_tegen" type="date" value="${escapeHtml(desiredDate)}" />
+        </label>
+      </div>
+      <label class="field">
+        <span>Prioriteit</span>
+        <select name="prioriteit" required>
+          ${priorityOptions
+            .map(
+              (priority) =>
+                `<option value="${escapeHtml(priority.value)}" ${priority.value === selectedPriority ? 'selected' : ''}>${escapeHtml(priority.label)} - ${escapeHtml(priority.description)}</option>`,
+            )
+            .join('')}
+        </select>
+      </label>
       <label class="field">
         <span>Opmerking voor verwerking</span>
         <textarea name="opmerkingen" placeholder="Bijvoorbeeld dringendheid, voorraad bijna op, of levering na bepaalde datum.">${escapeHtml(opmerkingen)}</textarea>
@@ -992,7 +1195,8 @@ function renderCart(cartItems) {
       </label>
       ${state.orderReview ? renderOrderReview(cartItems, totals) : ''}
       <div class="form-actions">
-        <button class="primary-button" type="submit">${submitLabel}</button>
+        <button class="primary-button" type="submit" name="intent" value="submit">${submitLabel}</button>
+        ${state.orderReview ? '' : '<button class="ghost-button" type="submit" name="intent" value="concept">Als concept bewaren</button>'}
         ${state.orderReview ? '<button class="ghost-button" type="button" data-edit-order-review>Aanpassen</button>' : ''}
         <button class="ghost-button" type="button" data-clear-cart>Leegmaken</button>
       </div>
@@ -1004,6 +1208,10 @@ function renderOrderReview(cartItems, totals) {
   const location = state.data.locations.find((item) => String(item.id) === String(state.orderDraft.locatie_id));
   const besteller = state.data.users.find((item) => String(item.id) === String(state.orderDraft.besteller_id || state.appUser?.id));
   const andereProducten = String(state.orderDraft.andere_producten ?? '').trim();
+  const selectedCategory = state.orderDraft.categorie || 'Huishoudproducten';
+  const selectedPriority = state.orderDraft.prioriteit || 'normaal';
+  const desiredDate = state.orderDraft.gewenst_tegen || '';
+  const opmerkingen = String(state.orderDraft.opmerkingen ?? '').trim();
 
   return `
     <section class="cart-review">
@@ -1014,6 +1222,9 @@ function renderOrderReview(cartItems, totals) {
       <dl class="review-meta">
         <div><dt>Locatie</dt><dd>${escapeHtml(location ? getLocationLabel(location) : 'Niet gekozen')}</dd></div>
         <div><dt>Besteller</dt><dd>${escapeHtml(besteller ? getUserLabel(besteller) : 'Niet gekozen')}</dd></div>
+        <div><dt>Categorie</dt><dd>${escapeHtml(selectedCategory)}</dd></div>
+        <div><dt>Prioriteit</dt><dd>${escapeHtml(getPriorityLabel(selectedPriority))}</dd></div>
+        ${desiredDate ? `<div><dt>Gewenst tegen</dt><dd>${escapeHtml(formatDateLabel(desiredDate))}</dd></div>` : ''}
       </dl>
       <div class="review-lines">
         ${cartItems
@@ -1028,6 +1239,14 @@ function renderOrderReview(cartItems, totals) {
           })
           .join('')}
       </div>
+      ${
+        opmerkingen
+          ? `<div class="review-extra">
+              <strong>Toelichting</strong>
+              <p>${escapeHtml(opmerkingen)}</p>
+            </div>`
+          : ''
+      }
       ${
         andereProducten
           ? `<div class="review-extra">
@@ -1045,7 +1264,7 @@ function renderOrderReview(cartItems, totals) {
 }
 
 function renderOrders(admin) {
-  const orders = state.data.orders;
+  const orders = getFilteredOrders(admin);
 
   return `
     <section class="page-heading">
@@ -1054,16 +1273,21 @@ function renderOrders(admin) {
         <h2>${admin ? 'Alle bestellingen' : 'Mijn bestellingen'}</h2>
       </div>
       <p class="page-intro">
-        Elke bestelling blijft raadpleegbaar met locatie, besteller, regels, totaalbedrag en mailstatus.
+        Elke bestelling blijft raadpleegbaar met locatie, besteller, prioriteit, status en de gevraagde materialen.
       </p>
     </section>
     ${state.notice ? `<div class="notice-panel">${escapeHtml(state.notice)}</div>` : ''}
     ${state.mailWarning ? `<div class="warning-panel">${escapeHtml(state.mailWarning)}</div>` : ''}
-    ${orders.length ? `<div class="order-list">${orders.map((order) => renderOrderCard(order, admin)).join('')}</div>` : '<div class="empty-state"><p>Nog geen bestellingen gevonden.</p></div>'}
+    ${renderOrderFilters(admin)}
+    ${orders.length ? `<div class="order-list">${orders.map((order) => renderOrderCard(order, admin)).join('')}</div>` : '<div class="empty-state"><p>Geen bestellingen gevonden voor deze filter.</p></div>'}
   `;
 }
 
 function renderOrderCard(order, admin) {
+  const meta = getOrderMeta(order);
+  const normalizedStatus = getNormalizedStatus(order.status);
+  const freeText = getOrderFreeText(order);
+
   return `
     <article class="order-card">
       <div class="order-card-header">
@@ -1071,14 +1295,18 @@ function renderOrderCard(order, admin) {
           <span>${formatDateTime(order.created_at)}</span>
           <h3>Bestelling ${escapeHtml(order.id)}</h3>
         </div>
-        <span class="status-badge">${escapeHtml(order.status || 'Nieuw')}</span>
+        <span class="status-badge ${getStatusClass(normalizedStatus)}">${escapeHtml(getStatusLabel(order.status))}</span>
       </div>
       <dl class="order-meta">
         <div><dt>Locatie</dt><dd>${escapeHtml(order.locatie_naam)}</dd></div>
         <div><dt>Besteller</dt><dd>${escapeHtml(order.besteller_naam)}<br /><span>${escapeHtml(order.besteller_email)}</span></dd></div>
+        <div><dt>Categorie</dt><dd>${escapeHtml(meta.categorie || 'Niet vermeld')}</dd></div>
+        <div><dt>Prioriteit</dt><dd>${escapeHtml(getPriorityLabel(meta.prioriteit || 'normaal'))}</dd></div>
+        <div><dt>Gewenst tegen</dt><dd>${escapeHtml(meta.gewenst_tegen ? formatDateLabel(meta.gewenst_tegen) : 'Niet vermeld')}</dd></div>
         <div><dt>Totaal</dt><dd>${formatCurrency(order.totaal_incl_btw)}</dd></div>
         <div><dt>Mail</dt><dd>${escapeHtml(order.mail_status || 'Nog niet verzonden')}</dd></div>
       </dl>
+      ${renderStatusTrail(normalizedStatus)}
       <div class="line-table">
         ${order.regels
           .map(
@@ -1091,17 +1319,101 @@ function renderOrderCard(order, admin) {
           )
           .join('')}
       </div>
-      ${order.opmerkingen ? `<p class="order-note">${escapeHtml(order.opmerkingen)}</p>` : ''}
+      ${freeText ? `<p class="order-note">${escapeHtml(freeText)}</p>` : ''}
+      <div class="record-actions">
+        <button class="ghost-button" type="button" data-copy-order="${escapeHtml(order.id)}">Opnieuw gebruiken</button>
+      </div>
       ${
         admin
           ? `<div class="record-actions">
-              ${['Nieuw', 'In verwerking', 'Besteld bij leverancier', 'Geleverd', 'Geannuleerd']
+              ${['In behandeling', 'Goedgekeurd', 'Extra informatie gevraagd', 'Geweigerd', 'Besteld', 'Gedeeltelijk geleverd', 'Geleverd', 'Afgesloten']
                 .map((status) => `<button class="ghost-button" type="button" data-order-id="${escapeHtml(order.id)}" data-status="${escapeHtml(status)}">${escapeHtml(status)}</button>`)
                 .join('')}
             </div>`
           : ''
       }
     </article>
+  `;
+}
+
+function renderOrderFilters(admin) {
+  const filters = state.orderFilters;
+  const statusOptions = getOrderStatusOptions();
+
+  return `
+    <form class="panel order-filter-panel" data-order-filter-form>
+      <div class="panel-header">
+        <h3>Zoeken en filteren</h3>
+        <span>${admin ? 'beheer' : 'eigen bestellingen'}</span>
+      </div>
+      <div class="form-grid order-filter-grid">
+        <label class="field">
+          <span>Zoeken</span>
+          <input name="search" type="search" value="${escapeHtml(filters.search)}" placeholder="Product, locatie, aanvrager of status" />
+        </label>
+        <label class="field">
+          <span>Status</span>
+          <select name="status">
+            <option value="">Alle statussen</option>
+            ${statusOptions
+              .map((status) => `<option value="${escapeHtml(status.value)}" ${status.value === filters.status ? 'selected' : ''}>${escapeHtml(status.label)}</option>`)
+              .join('')}
+          </select>
+        </label>
+        <label class="field">
+          <span>Locatie</span>
+          <select name="location_id">
+            <option value="">Alle locaties</option>
+            ${state.data.locations
+              .map((location) => `<option value="${escapeHtml(location.id)}" ${String(location.id) === String(filters.location_id) ? 'selected' : ''}>${escapeHtml(getLocationLabel(location))}</option>`)
+              .join('')}
+          </select>
+        </label>
+        <label class="field">
+          <span>Categorie</span>
+          <select name="category">
+            <option value="">Alle categorieen</option>
+            ${productCategories
+              .map((category) => `<option value="${escapeHtml(category)}" ${category === filters.category ? 'selected' : ''}>${escapeHtml(category)}</option>`)
+              .join('')}
+          </select>
+        </label>
+        <label class="field">
+          <span>Prioriteit</span>
+          <select name="priority">
+            <option value="">Alle prioriteiten</option>
+            ${priorityOptions
+              .map((priority) => `<option value="${escapeHtml(priority.value)}" ${priority.value === filters.priority ? 'selected' : ''}>${escapeHtml(priority.label)}</option>`)
+              .join('')}
+          </select>
+        </label>
+        <label class="field">
+          <span>Vanaf</span>
+          <input name="date_from" type="date" value="${escapeHtml(filters.date_from)}" />
+        </label>
+        <label class="field">
+          <span>Tot</span>
+          <input name="date_to" type="date" value="${escapeHtml(filters.date_to)}" />
+        </label>
+      </div>
+    </form>
+  `;
+}
+
+function renderStatusTrail(status) {
+  const visibleStatuses = ['Concept', 'Ingediend', 'In behandeling', 'Goedgekeurd', 'Besteld', 'Gedeeltelijk geleverd', 'Geleverd', 'Afgesloten'];
+  const currentIndex = visibleStatuses.indexOf(status);
+
+  return `
+    <div class="status-trail" aria-label="Statusverloop">
+      ${visibleStatuses
+        .map((item, index) => {
+          const isDone = currentIndex >= 0 && index <= currentIndex;
+          const isCurrent = item === status;
+          return `<span class="${isDone ? 'is-done' : ''} ${isCurrent ? 'is-current' : ''}">${escapeHtml(getStatusLabel(item))}</span>`;
+        })
+        .join('')}
+    </div>
   `;
 }
 
@@ -1156,7 +1468,7 @@ function renderAnalysis() {
             <select name="status">
               <option value="">Alle statussen</option>
               ${getAnalysisStatusOptions()
-                .map((status) => `<option value="${escapeHtml(status)}" ${status === filters.status ? 'selected' : ''}>${escapeHtml(status)}</option>`)
+                .map((status) => `<option value="${escapeHtml(status)}" ${status === filters.status ? 'selected' : ''}>${escapeHtml(getStatusLabel(status))}</option>`)
                 .join('')}
             </select>
           </label>
@@ -1677,10 +1989,12 @@ async function handleAuth(form) {
   }
 }
 
-async function handleOrder(form) {
+async function handleOrder(form, intent = 'submit') {
   const cartItems = getCartItems();
 
   if (!cartItems.length) {
+    state.error = 'Voeg minstens een product toe aan je winkelmand.';
+    render();
     return;
   }
 
@@ -1697,7 +2011,7 @@ async function handleOrder(form) {
     return;
   }
 
-  if (form.dataset.orderReview !== 'true') {
+  if (intent !== 'concept' && form.dataset.orderReview !== 'true') {
     state.error = '';
     state.orderReview = true;
     render();
@@ -1707,6 +2021,9 @@ async function handleOrder(form) {
   const totals = calculateTotals(cartItems);
   const opmerkingen = String(formData.get('opmerkingen') ?? '').trim();
   const andereProducten = String(formData.get('andere_producten') ?? '').trim();
+  const categorie = String(formData.get('categorie') ?? 'Huishoudproducten').trim() || 'Huishoudproducten';
+  const prioriteit = String(formData.get('prioriteit') ?? 'normaal').trim() || 'normaal';
+  const gewenstTegen = String(formData.get('gewenst_tegen') ?? '').trim();
   const hasOtherProductRequest = cartItems.some(({ product }) => isOtherProductRequest(product));
 
   if (hasOtherProductRequest && !andereProducten) {
@@ -1724,9 +2041,12 @@ async function handleOrder(form) {
     besteller_email: besteller.email,
     aangemaakt_door_id: state.appUser.id,
     aangemaakt_door_email: state.session.user.email,
-    status: 'Nieuw',
+    status: intent === 'concept' ? 'Concept' : 'Ingediend',
     opmerkingen: [
-      opmerkingen,
+      `Categorie: ${categorie}`,
+      `Prioriteit: ${prioriteit}`,
+      gewenstTegen ? `Gewenst tegen: ${gewenstTegen}` : '',
+      opmerkingen ? `Toelichting:\n${opmerkingen}` : '',
       andereProducten ? `Andere producten gevraagd:\n${andereProducten}` : '',
     ]
       .filter(Boolean)
@@ -1734,7 +2054,7 @@ async function handleOrder(form) {
     totaal_excl_btw: totals.excl,
     totaal_btw: totals.vat,
     totaal_incl_btw: totals.incl,
-    mail_status: 'Automatische mail wordt verzonden',
+    mail_status: intent === 'concept' ? 'Niet verzonden (concept)' : 'Automatische mail wordt verzonden',
   };
 
   const linePayloads = cartItems.map(({ product, quantity }) => {
@@ -1757,23 +2077,25 @@ async function handleOrder(form) {
     const order = await createOrder(orderPayload, linePayloads);
     state.mailWarning = '';
 
-    try {
-      await invokeOrderMail(order.id);
-    } catch (mailError) {
-      const mailStatus = `Mailfout: ${mailError.message}`.slice(0, 240);
+    if (intent !== 'concept') {
       try {
-        await updateOrderMailStatus(order.id, mailStatus);
-      } catch {
-        // De bestelling zelf is al bewaard; de waarschuwing hieronder blijft dan de belangrijkste feedback.
+        await invokeOrderMail(order.id);
+      } catch (mailError) {
+        const mailStatus = `Mailfout: ${mailError.message}`.slice(0, 240);
+        try {
+          await updateOrderMailStatus(order.id, mailStatus);
+        } catch {
+          // De bestelling zelf is al bewaard; de waarschuwing hieronder blijft dan de belangrijkste feedback.
+        }
+        state.mailWarning = 'De bestelling is bewaard. De automatische mail is nog niet verzonden, maar de bestelling staat intern klaar voor verwerking.';
       }
-      state.mailWarning = `De bestelling is bewaard, maar de automatische mail is nog niet verzonden: ${mailError.message}`;
     }
 
     state.cart = {};
     state.orderReview = false;
     persistCart();
     clearOrderDraft();
-    state.notice = 'De bestelling is bewaard en doorgestuurd voor verwerking.';
+    state.notice = intent === 'concept' ? 'Het concept is bewaard. Je kan dit later verder opvolgen.' : 'De bestelling is ingediend en staat klaar voor verwerking.';
     state.view = 'bestellingen';
     window.location.hash = '#bestellingen';
     await bootstrapData();
@@ -1832,9 +2154,11 @@ async function handleInkOrder(form) {
     besteller_email: besteller.email,
     aangemaakt_door_id: state.appUser.id,
     aangemaakt_door_email: state.session.user.email,
-    status: 'Nieuw',
+    status: 'Ingediend',
     opmerkingen: [
       'Inktbestelling',
+      'Categorie: IT-materiaal',
+      'Prioriteit: normaal',
       `Printer: ${getPrinterLabel(printer)}`,
       opmerkingen ? `Opmerking: ${opmerkingen}` : '',
     ]
@@ -1875,12 +2199,12 @@ async function handleInkOrder(form) {
       } catch {
         // De bestelling zelf is bewaard; de waarschuwing blijft zichtbaar in de app.
       }
-      state.mailWarning = `De inktbestelling is bewaard, maar de automatische mail is nog niet verzonden: ${mailError.message}`;
+      state.mailWarning = 'De inktbestelling is bewaard. De automatische mail is nog niet verzonden, maar de bestelling staat intern klaar voor verwerking.';
     }
 
     clearInkDraft();
     state.inkReview = false;
-    state.notice = 'De inktbestelling is bewaard en doorgestuurd voor verwerking.';
+    state.notice = 'De inktbestelling is ingediend en staat klaar voor verwerking.';
     state.view = 'bestellingen';
     window.location.hash = '#bestellingen';
     await bootstrapData();
@@ -2060,13 +2384,64 @@ function copyCartridgeToDraft(cartridge) {
 
 async function handleStatusChange(orderId, status) {
   try {
-    await updateOrderStatus(orderId, status);
+    await updateOrderStatus(orderId, status, {
+      actorName: getUserLabel(state.appUser),
+      actorEmail: state.session?.user?.email ?? '',
+    });
     state.notice = 'Status aangepast.';
     await bootstrapData();
   } catch (error) {
     state.error = error.message;
     render();
   }
+}
+
+function copyOrderToCart(orderId) {
+  const order = state.data.orders.find((item) => String(item.id) === String(orderId));
+
+  if (!order) {
+    return;
+  }
+
+  const nextCart = {};
+  (order.regels ?? []).forEach((line) => {
+    if (!line.product_id) {
+      return;
+    }
+
+    const product = state.data.products.find((item) => String(item.id) === String(line.product_id) && item.actief !== false);
+    if (!product) {
+      return;
+    }
+
+    nextCart[String(line.product_id)] = Math.max(1, Number(line.aantal || 1));
+  });
+
+  if (!Object.keys(nextCart).length) {
+    state.error = 'Deze bestelling bevat geen producten die nog actief in de catalogus staan.';
+    render();
+    return;
+  }
+
+  const meta = getOrderMeta(order);
+  state.cart = nextCart;
+  state.orderDraft = {
+    locatie_id: String(order.locatie_id ?? ''),
+    besteller_id: String(state.appUser?.id ?? order.besteller_id ?? ''),
+    categorie: meta.categorie || 'Huishoudproducten',
+    prioriteit: meta.prioriteit || 'normaal',
+    gewenst_tegen: '',
+    opmerkingen: getOrderFreeText(order),
+    andere_producten: '',
+  };
+  state.orderReview = false;
+  state.error = '';
+  state.notice = `Bestelling ${order.id} is gekopieerd naar je winkelmand. Controleer de gegevens voor je indient.`;
+  persistCart();
+  persistOrderDraft();
+  state.view = 'bestellen';
+  window.location.hash = '#bestellen';
+  render();
 }
 
 function addToCart(productId, step = 1) {
@@ -2327,6 +2702,154 @@ function getSupplierDisplay(product) {
   return reference.artikelnummer ? `${supplier} - art. ${reference.artikelnummer}` : supplier;
 }
 
+function getVisibleOrders(admin) {
+  if (admin) {
+    return state.data.orders;
+  }
+
+  const userId = String(state.appUser?.id ?? '');
+  const email = String(state.session?.user?.email ?? '').toLowerCase();
+
+  return state.data.orders.filter((order) => {
+    const bestellerId = String(order.besteller_id ?? '');
+    const aangemaaktDoorId = String(order.aangemaakt_door_id ?? '');
+    const bestellerEmail = String(order.besteller_email ?? '').toLowerCase();
+    const aangemaaktDoorEmail = String(order.aangemaakt_door_email ?? '').toLowerCase();
+
+    return [bestellerId, aangemaaktDoorId].includes(userId) || [bestellerEmail, aangemaaktDoorEmail].includes(email);
+  });
+}
+
+function getFilteredOrders(admin) {
+  return getVisibleOrders(admin).filter((order) => orderMatchesOrderFilters(order, state.orderFilters));
+}
+
+function orderMatchesOrderFilters(order, filters) {
+  const orderDate = getDateInputValue(order.created_at);
+  const meta = getOrderMeta(order);
+
+  if (filters.date_from && orderDate && orderDate < filters.date_from) {
+    return false;
+  }
+
+  if (filters.date_to && orderDate && orderDate > filters.date_to) {
+    return false;
+  }
+
+  if (filters.location_id && String(order.locatie_id) !== String(filters.location_id)) {
+    return false;
+  }
+
+  if (filters.status && getNormalizedStatus(order.status) !== filters.status) {
+    return false;
+  }
+
+  if (filters.category && meta.categorie !== filters.category) {
+    return false;
+  }
+
+  if (filters.priority && meta.prioriteit !== filters.priority) {
+    return false;
+  }
+
+  if (filters.search) {
+    const haystack = getOrderSearchText(order);
+    if (!haystack.includes(filters.search.toLowerCase())) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function getOrderSearchText(order) {
+  return [
+    order.id,
+    order.status,
+    getStatusLabel(order.status),
+    order.locatie_naam,
+    order.besteller_naam,
+    order.besteller_email,
+    order.opmerkingen,
+    ...(order.regels ?? []).flatMap((line) => [line.product_naam, line.product_omschrijving]),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+}
+
+function getOrderMeta(order) {
+  const text = String(order?.opmerkingen ?? '');
+
+  return {
+    categorie: getMetaValue(text, 'Categorie'),
+    prioriteit: getMetaValue(text, 'Prioriteit') || 'normaal',
+    gewenst_tegen: getMetaValue(text, 'Gewenst tegen'),
+  };
+}
+
+function getMetaValue(text, label) {
+  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = String(text).match(new RegExp(`^${escapedLabel}:\\s*(.+)$`, 'im'));
+  return match ? match[1].trim() : '';
+}
+
+function getOrderFreeText(order) {
+  return String(order?.opmerkingen ?? '')
+    .split('\n')
+    .filter((line) => !/^(Categorie|Prioriteit|Gewenst tegen):/i.test(line.trim()))
+    .join('\n')
+    .trim();
+}
+
+function getNormalizedStatus(status) {
+  const value = String(status || 'Ingediend').trim();
+  return legacyStatusMap[value] || value;
+}
+
+function getStatusLabel(status) {
+  const normalized = getNormalizedStatus(status);
+  return orderStatuses.find((item) => item.value === normalized)?.label || normalized;
+}
+
+function getStatusClass(status) {
+  return `status-${getNormalizedStatus(status).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+}
+
+function getPriorityLabel(value) {
+  const normalized = String(value || 'normaal').toLowerCase();
+  return priorityOptions.find((item) => item.value === normalized)?.label || value || 'Normaal';
+}
+
+function getOrderStatusOptions() {
+  const seen = new Set();
+
+  state.data.orders.forEach((order) => {
+    seen.add(getNormalizedStatus(order.status));
+  });
+
+  return orderStatuses
+    .filter((status) => seen.has(status.value) || ['Concept', 'Ingediend', 'In behandeling', 'Besteld', 'Geleverd', 'Afgesloten'].includes(status.value))
+    .map((status) => ({ value: status.value, label: status.label }));
+}
+
+function formatDateLabel(value) {
+  if (!value) {
+    return '';
+  }
+
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat('nl-BE', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(date);
+}
+
 function getAnalysisData(filters) {
   const rows = [];
   const orderIds = new Set();
@@ -2390,7 +2913,7 @@ function orderMatchesAnalysisFilters(order, filters) {
     return false;
   }
 
-  if (filters.status && String(order.status || '') !== String(filters.status)) {
+  if (filters.status && getNormalizedStatus(order.status) !== String(filters.status)) {
     return false;
   }
 
@@ -2448,9 +2971,10 @@ function getAnalysisProductOptions() {
 }
 
 function getAnalysisStatusOptions() {
-  return [...new Set(state.data.orders.map((order) => order.status).filter(Boolean))].sort((a, b) =>
-    a.localeCompare(b, 'nl-BE'),
-  );
+  const statuses = new Set(state.data.orders.map((order) => getNormalizedStatus(order.status)).filter(Boolean));
+  return orderStatuses
+    .filter((status) => statuses.has(status.value))
+    .map((status) => status.value);
 }
 
 function getLineProductKey(line) {
@@ -2556,6 +3080,9 @@ function readOrderDraftFromForm(form) {
   return {
     locatie_id: String(formData.get('locatie_id') ?? ''),
     besteller_id: String(formData.get('besteller_id') ?? ''),
+    categorie: String(formData.get('categorie') ?? ''),
+    prioriteit: String(formData.get('prioriteit') ?? ''),
+    gewenst_tegen: String(formData.get('gewenst_tegen') ?? ''),
     opmerkingen: String(formData.get('opmerkingen') ?? ''),
     andere_producten: String(formData.get('andere_producten') ?? ''),
   };
@@ -2568,6 +3095,44 @@ function persistOrderDraft() {
 function clearOrderDraft() {
   state.orderDraft = {};
   localStorage.removeItem(orderDraftStorageKey);
+}
+
+function readOrderFilters() {
+  try {
+    const filters = JSON.parse(localStorage.getItem(orderFiltersStorageKey) || '{}');
+    return normalizeOrderFilters(filters);
+  } catch {
+    return normalizeOrderFilters({});
+  }
+}
+
+function readOrderFiltersFromForm(form) {
+  const formData = new FormData(form);
+  return normalizeOrderFilters({
+    search: formData.get('search'),
+    status: formData.get('status'),
+    location_id: formData.get('location_id'),
+    category: formData.get('category'),
+    priority: formData.get('priority'),
+    date_from: formData.get('date_from'),
+    date_to: formData.get('date_to'),
+  });
+}
+
+function normalizeOrderFilters(filters) {
+  return {
+    search: String(filters.search ?? '').trim(),
+    status: String(filters.status ?? ''),
+    location_id: String(filters.location_id ?? ''),
+    category: String(filters.category ?? ''),
+    priority: String(filters.priority ?? ''),
+    date_from: String(filters.date_from ?? ''),
+    date_to: String(filters.date_to ?? ''),
+  };
+}
+
+function persistOrderFilters() {
+  localStorage.setItem(orderFiltersStorageKey, JSON.stringify(state.orderFilters));
 }
 
 function readInkDraft() {
@@ -2721,5 +3286,5 @@ function persistAnalysisFilters() {
 
 function getRoute() {
   const route = window.location.hash.replace('#', '');
-  return ['bestellen', 'inkt', 'bestellingen', 'analyse', 'beheer'].includes(route) ? route : 'bestellen';
+  return ['start', 'bestellen', 'inkt', 'bestellingen', 'analyse', 'beheer'].includes(route) ? route : 'start';
 }

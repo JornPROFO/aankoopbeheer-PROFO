@@ -276,11 +276,22 @@ export async function disableInkCartridge(id) {
   }
 }
 
-export async function updateOrderStatus(id, status) {
+export async function updateOrderStatus(id, status, actor = {}) {
   const { error } = await supabase.from('aankoop_bestellingen').update({ status }).eq('id', id);
 
   if (error) {
     throw error;
+  }
+
+  try {
+    await supabase.from('aankoop_bestelling_statuslog').insert({
+      bestelling_id: id,
+      status,
+      actor_naam: actor.actorName || '',
+      actor_email: actor.actorEmail || '',
+    });
+  } catch {
+    // De statuswijziging zelf blijft leidend. De logtabel kan via de optionele SQL worden toegevoegd.
   }
 }
 

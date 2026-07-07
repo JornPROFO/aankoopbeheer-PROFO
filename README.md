@@ -1,14 +1,26 @@
 # PROFO Aankoopbeheer
 
-Interne bestelapp voor PROFO vzw. Medewerkers melden aan met hun PROFO-account, kiezen een locatie en besteller uit de bestaande Supabase-lijsten van Voertuigenbeheer, plaatsen producten in de winkelmand en sturen de bestelling door.
+Interne bestelapp voor PROFO vzw. Medewerkers melden aan met hun PROFO-account, kiezen een locatie en besteller uit de bestaande Supabase-lijsten, plaatsen producten in de winkelmand, controleren de samenvatting en dienen de bestelling in.
 
 ## Kern
 
+- Startscherm met nieuwe bestelling, opvolging en recente herhaalopties.
 - Catalogus met foto, omschrijving, leverancier, eenheid en prijs incl. btw.
-- Winkelmand met totaal te betalen en het btw-deel dat daarin inbegrepen is.
+- Winkelmand met categorie, prioriteit, gewenste datum, toelichting en samenvatting voor indienen.
 - Bestellingen gekoppeld aan bestaande `gebruikers` en `locaties`.
-- Beheerluik voor producten en prijzen, enkel voor beheerders.
-- Supabase Edge Function voor automatische mail naar `jorn.neeus@profo.be` en de besteller.
+- Duidelijke statussen zonder technische statuscodes in de gebruikersinterface.
+- Beheerluik voor producten, prijzen, printers, inkt/toner, analyse en statusopvolging.
+- Supabase Edge Function voor automatische mail, zonder dat de werking afhankelijk wordt van mail.
+
+## Gebruik en testen
+
+De praktische gebruiksflow, testscenario's, mobiele controles, rechtencontrole en mailafhankelijkheden staan in:
+
+```text
+docs/gebruik-en-testscenario-profo-aankoopbeheer.md
+```
+
+Gebruik dat document als vaste checklist wanneer er een nieuwe versie getest wordt met een medewerker, Jorn, Kathleen of een externe beheerder.
 
 ## Supabase
 
@@ -74,6 +86,27 @@ AANKOOPBEHEER_MAIL_TO=jorn.neeus@profo.be
 De beheerdersmail is bewust kort: die dient alleen als signaal dat er een bestelling klaarstaat. De inhoudelijke bestelbevestiging gaat naar de besteller.
 
 Zolang de Edge Function of mailprovider nog niet geconfigureerd is, wordt de bestelling wel bewaard maar verschijnt er een melding dat de automatische mail nog niet verzonden is. Voor echte automatische verzending is een mailprovider nodig, bijvoorbeeld Resend. De browser zelf kan dit niet betrouwbaar en veilig doen.
+
+## Vercel
+
+De repository is voorbereid voor Vercel met `vercel.json`.
+
+Gebruik in Vercel deze instellingen:
+
+```text
+Framework: Vite
+Build command: npm run build
+Output directory: dist
+```
+
+Zet in Vercel bij Environment Variables:
+
+```text
+VITE_SUPABASE_URL=https://rxkffollbimmsvwhucgd.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=<publishable key uit Supabase>
+```
+
+Als Vercel meldt dat de GitHub-gebruiker geen lid is van het team, moet de repository aan het juiste Vercel-account of team gekoppeld worden. De applicatie zelf kan dan pas publiek via een Vercel-adres gedeeld worden.
 
 ## Lokaal starten
 
