@@ -433,7 +433,7 @@ async function init() {
     state.session = await getCurrentSession();
     await bootstrapData();
   } catch (error) {
-    state.error = error.message;
+    state.error = getFriendlyAuthError(error);
     state.loading = false;
     render();
   }
@@ -454,7 +454,7 @@ async function bootstrapData() {
     state.appUser = await getActiveUserByEmail(state.session.user.email);
 
     if (!state.appUser) {
-      state.error = 'Je bent aangemeld, maar je staat nog niet actief in de PROFO-gebruikerslijst.';
+      state.error = 'Je bent aangemeld, maar dit e-mailadres staat nog niet actief in de PROFO-gebruikerslijst. Laat Jorn of Kathleen de gebruiker toevoegen of activeren in Aankoopbeheer.';
       state.loading = false;
       render();
       return;
@@ -1976,7 +1976,16 @@ async function handleAuth(form) {
       const name = String(formData.get('name') ?? '').trim();
       const result = await signUpWithPassword(email, password, { full_name: name || email });
       state.session = result.session;
-      state.notice = 'Account aangemaakt. Bevestig eventueel eerst je e-mailadres en meld daarna aan.';
+      state.authMode = result.session ? state.authMode : 'login';
+      state.notice = result.session
+        ? 'Account aangemaakt. Je wordt nu aangemeld. Als je alsnog geen toegang krijgt, moet dit e-mailadres actief staan in de PROFO-gebruikerslijst.'
+        : 'Account aangemaakt. Bevestig eerst je e-mailadres en meld daarna aan. Daarna moet dit e-mailadres ook actief staan in de PROFO-gebruikerslijst.';
+
+      if (!result.session) {
+        state.error = '';
+        render();
+        return;
+      }
     } else {
       state.session = await signInWithPassword(email, password);
       state.notice = '';
@@ -1984,9 +1993,27 @@ async function handleAuth(form) {
 
     await bootstrapData();
   } catch (error) {
-    state.error = error.message;
+    state.error = getFriendlyAuthError(error);
     render();
   }
+}
+
+function getFriendlyAuthError(error) {
+  const message = String(error?.message ?? '').toLowerCase();
+
+  if (message.includes('email not confirmed')) {
+    return 'Je account bestaat, maar het e-mailadres is nog niet bevestigd. Bevestig eerst de mail van Supabase of laat het account bevestigen in Supabase Authentication.';
+  }
+
+  if (message.includes('invalid login credentials')) {
+    return 'De combinatie van e-mailadres en wachtwoord klopt niet, of het account is nog niet bevestigd.';
+  }
+
+  if (message.includes('user already registered') || message.includes('already registered') || message.includes('already exists')) {
+    return 'Er bestaat al een account met dit e-mailadres. Gebruik Inloggen of laat het wachtwoord opnieuw instellen.';
+  }
+
+  return error?.message || 'Aanmelden lukt niet. Controleer het e-mailadres, het wachtwoord en of de gebruiker actief staat in de PROFO-gebruikerslijst.';
 }
 
 async function handleOrder(form, intent = 'submit') {
