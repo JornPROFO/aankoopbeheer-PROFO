@@ -39,6 +39,27 @@ export async function signUpWithPassword(email, password, metadata = {}) {
   };
 }
 
+export async function requestPasswordReset(email) {
+  const redirectTo = `${window.location.origin}${window.location.pathname}`;
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo,
+  });
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function updatePassword(password) {
+  const { data, error } = await supabase.auth.updateUser({ password });
+
+  if (error) {
+    throw error;
+  }
+
+  return data.user ?? null;
+}
+
 export async function signOut() {
   const { error } = await supabase.auth.signOut();
 
@@ -48,8 +69,8 @@ export async function signOut() {
 }
 
 export function onAuthChange(callback) {
-  const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-    callback(session ?? null);
+  const { data } = supabase.auth.onAuthStateChange((event, session) => {
+    callback(session ?? null, event);
   });
 
   return data.subscription;

@@ -2,9 +2,11 @@ import './styles/main.css';
 import {
   getCurrentSession,
   onAuthChange,
+  requestPasswordReset,
   signInWithPassword,
   signOut,
   signUpWithPassword,
+  updatePassword,
 } from './services/authService.js';
 import {
   createOrder,
@@ -95,6 +97,7 @@ const state = {
   inkReview: false,
   view: getRoute(),
   authMode: 'login',
+  passwordRecovery: false,
   notice: '',
   error: '',
   loading: true,
@@ -112,8 +115,18 @@ const state = {
   mailWarning: '',
 };
 
-onAuthChange(async (session) => {
+onAuthChange(async (session, event) => {
   state.session = session;
+
+  if (event === 'PASSWORD_RECOVERY') {
+    state.passwordRecovery = true;
+    state.loading = false;
+    state.error = '';
+    state.notice = 'Kies een nieuw wachtwoord voor je PROFO-account.';
+    render();
+    return;
+  }
+
   await bootstrapData();
 });
 
@@ -128,6 +141,11 @@ app.addEventListener('submit', async (event) => {
   if (form.matches('[data-auth-form]')) {
     event.preventDefault();
     await handleAuth(form);
+  }
+
+  if (form.matches('[data-password-update-form]')) {
+    event.preventDefault();
+    await handlePasswordUpdate(form);
   }
 
   if (form.matches('[data-order-form]')) {
@@ -472,6 +490,11 @@ async function bootstrapData() {
 }
 
 function render() {
+  if (state.passwordRecovery) {
+    app.innerHTML = renderPasswordRecovery();
+    return;
+  }
+
   if (!state.session) {
     app.innerHTML = renderAuth();
     return;
@@ -492,6 +515,7 @@ function render() {
 
 function renderAuth() {
   const isRegister = state.authMode === 'register';
+  const isReset = state.authMode === 'reset';
 
   return `
     <main class="auth-page">
@@ -504,11 +528,16 @@ function renderAuth() {
           </div>
         </div>
         <p class="auth-intro">
-          Meld aan met je PROFO-mailadres om materiaal voor je locatie te bestellen.
+          ${
+            isReset
+              ? 'Vul je PROFO-mailadres in. Je ontvangt een link waarmee je een nieuw wachtwoord kan kiezen.'
+              : 'Meld aan met je PROFO-mailadres om materiaal voor je locatie te bestellen.'
+          }
         </p>
         <div class="auth-tabs" role="tablist">
-          <button type="button" class="${!isRegister ? 'is-active' : ''}" data-auth-tab="login">Inloggen</button>
+          <button type="button" class="${!isRegister && !isReset ? 'is-active' : ''}" data-auth-tab="login">Inloggen</button>
           <button type="button" class="${isRegister ? 'is-active' : ''}" data-auth-tab="register">Registreren</button>
+          <button type="button" class="${isReset ? 'is-active' : ''}" data-auth-tab="reset">Wachtwoord vergeten</button>
         </div>
         ${state.error ? `<div class="auth-error">${escapeHtml(state.error)}</div>` : ''}
         ${state.notice ? `<div class="auth-notice">${escapeHtml(state.notice)}</div>` : ''}
@@ -525,15 +554,51 @@ function renderAuth() {
                 </label>`
               : ''
           }
-          <label class="field">
-            <span>Wachtwoord</span>
-            <input name="password" type="password" autocomplete="${isRegister ? 'new-password' : 'current-password'}" required />
-          </label>
-          <button class="primary-button" type="submit">${isRegister ? 'Account aanmaken' : 'Inloggen'}</button>
+          ${
+            isReset
+              ? ''
+              : `<label class="field">
+                  <span>Wachtwoord</span>
+                  <input name="password" type="password" autocomplete="${isRegister ? 'new-password' : 'current-password'}" required />
+                </label>`
+          }
+          <button class="primary-button" type="submit">${isReset ? 'Herstellink mailen' : isRegister ? 'Account aanmaken' : 'Inloggen'}</button>
         </form>
         <p class="auth-note">
           De app gebruikt dezelfde PROFO-gebruikerslijst en locatielijst als Voertuigenbeheer.
         </p>
+      </section>
+    </main>
+  `;
+}
+
+function renderPasswordRecovery() {
+  return `
+    <main class="auth-page">
+      <section class="auth-panel">
+        <div class="auth-brand">
+          <span class="brand-logo-box"><img src="/assets/profo-logo.png" alt="PROFO" /></span>
+          <div>
+            <p class="eyebrow">Aankoopbeheer</p>
+            <h1>Nieuw wachtwoord</h1>
+          </div>
+        </div>
+        <p class="auth-intro">
+          Kies hieronder een nieuw wachtwoord. Daarna kan je opnieuw aanmelden via de PROFO-bestelapp.
+        </p>
+        ${state.error ? `<div class="auth-error">${escapeHtml(state.error)}</div>` : ''}
+        ${state.notice ? `<div class="auth-notice">${escapeHtml(state.notice)}</div>` : ''}
+        <form class="auth-form" data-password-update-form>
+          <label class="field">
+            <span>Nieuw wachtwoord</span>
+            <input name="password" type="password" autocomplete="new-password" minlength="8" required />
+          </label>
+          <label class="field">
+            <span>Herhaal nieuw wachtwoord</span>
+            <input name="password_repeat" type="password" autocomplete="new-password" minlength="8" required />
+          </label>
+          <button class="primary-button" type="submit">Wachtwoord opslaan</button>
+        </form>
       </section>
     </main>
   `;
@@ -1972,6 +2037,15 @@ async function handleAuth(form) {
   }
 
   try {
+    if (state.authMode === 'reset') {
+      await requestPasswordReset(email);
+      state.authMode = 'login';
+      state.error = '';
+      state.notice = 'Als dit e-mailadres bestaat, is er een herstelmail verstuurd. Open de link in die mail om een nieuw wachtwoord te kiezen.';
+      render();
+      return;
+    }
+
     if (state.authMode === 'register') {
       const name = String(formData.get('name') ?? '').trim();
       const result = await signUpWithPassword(email, password, { full_name: name || email });
@@ -1998,6 +2072,35 @@ async function handleAuth(form) {
   }
 }
 
+async function handlePasswordUpdate(form) {
+  const formData = new FormData(form);
+  const password = String(formData.get('password') ?? '');
+  const repeatedPassword = String(formData.get('password_repeat') ?? '');
+
+  if (password.length < 8) {
+    state.error = 'Kies een wachtwoord van minstens 8 tekens.';
+    render();
+    return;
+  }
+
+  if (password !== repeatedPassword) {
+    state.error = 'De twee wachtwoorden zijn niet gelijk. Controleer het nieuwe wachtwoord en probeer opnieuw.';
+    render();
+    return;
+  }
+
+  try {
+    await updatePassword(password);
+    state.passwordRecovery = false;
+    state.error = '';
+    state.notice = 'Je wachtwoord is aangepast. Je bent nu aangemeld.';
+    await bootstrapData();
+  } catch (error) {
+    state.error = getFriendlyAuthError(error);
+    render();
+  }
+}
+
 function getFriendlyAuthError(error) {
   const message = String(error?.message ?? '').toLowerCase();
 
@@ -2011,6 +2114,10 @@ function getFriendlyAuthError(error) {
 
   if (message.includes('user already registered') || message.includes('already registered') || message.includes('already exists')) {
     return 'Er bestaat al een account met dit e-mailadres. Gebruik Inloggen of laat het wachtwoord opnieuw instellen.';
+  }
+
+  if (message.includes('token') || message.includes('otp') || message.includes('expired')) {
+    return 'De herstel-link is niet meer geldig. Vraag een nieuwe herstelmail aan via Wachtwoord vergeten.';
   }
 
   return error?.message || 'Aanmelden lukt niet. Controleer het e-mailadres, het wachtwoord en of de gebruiker actief staat in de PROFO-gebruikerslijst.';
