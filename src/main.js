@@ -563,6 +563,11 @@ function renderAuth() {
                 </label>`
           }
           <button class="primary-button" type="submit">${isReset ? 'Herstellink mailen' : isRegister ? 'Account aanmaken' : 'Inloggen'}</button>
+          ${
+            !isRegister && !isReset
+              ? '<button class="auth-forgot-link" type="button" data-auth-tab="reset">Wachtwoord vergeten?</button>'
+              : ''
+          }
         </form>
         <p class="auth-note">
           De app gebruikt dezelfde PROFO-gebruikerslijst en locatielijst als Voertuigenbeheer.

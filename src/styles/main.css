@@ -274,6 +274,21 @@ h4 {
   margin-top: 1.2rem;
 }
 
+.auth-forgot-link {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  color: var(--profo-red-dark);
+  background: transparent;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.auth-forgot-link:hover {
+  color: var(--profo-red);
+}
+
 .app-layout {
   display: grid;
   grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
