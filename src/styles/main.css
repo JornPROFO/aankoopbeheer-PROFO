@@ -736,6 +736,21 @@ h4 {
   overflow-wrap: anywhere;
 }
 
+.review-extra {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--page);
+}
+
+.review-extra p {
+  margin: 0;
+  color: var(--muted);
+  white-space: pre-wrap;
+}
+
 .review-total {
   padding-top: 0.75rem;
   border-top: 1px solid rgba(137, 24, 17, 0.22);

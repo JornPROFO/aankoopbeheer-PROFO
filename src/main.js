@@ -935,6 +935,7 @@ function renderCart(cartItems) {
   const selectedLocationId = state.orderDraft.locatie_id ?? '';
   const selectedBestellerId = state.orderDraft.besteller_id || currentUserId;
   const opmerkingen = state.orderDraft.opmerkingen ?? '';
+  const andereProducten = state.orderDraft.andere_producten ?? '';
   const submitLabel = state.orderReview ? 'Bestelling definitief doorsturen' : 'Bestelling controleren';
 
   return `
@@ -985,6 +986,10 @@ function renderCart(cartItems) {
         <span>Opmerking voor verwerking</span>
         <textarea name="opmerkingen" placeholder="Bijvoorbeeld dringendheid, voorraad bijna op, of levering na bepaalde datum.">${escapeHtml(opmerkingen)}</textarea>
       </label>
+      <label class="field">
+        <span>Andere producten</span>
+        <textarea name="andere_producten" placeholder="Product niet gevonden in de catalogus? Noteer hier wat nodig is, met merk/type of verpakking indien gekend.">${escapeHtml(andereProducten)}</textarea>
+      </label>
       ${state.orderReview ? renderOrderReview(cartItems, totals) : ''}
       <div class="form-actions">
         <button class="primary-button" type="submit">${submitLabel}</button>
@@ -998,6 +1003,7 @@ function renderCart(cartItems) {
 function renderOrderReview(cartItems, totals) {
   const location = state.data.locations.find((item) => String(item.id) === String(state.orderDraft.locatie_id));
   const besteller = state.data.users.find((item) => String(item.id) === String(state.orderDraft.besteller_id || state.appUser?.id));
+  const andereProducten = String(state.orderDraft.andere_producten ?? '').trim();
 
   return `
     <section class="cart-review">
@@ -1022,6 +1028,14 @@ function renderOrderReview(cartItems, totals) {
           })
           .join('')}
       </div>
+      ${
+        andereProducten
+          ? `<div class="review-extra">
+              <strong>Andere producten</strong>
+              <p>${escapeHtml(andereProducten)}</p>
+            </div>`
+          : ''
+      }
       <div class="review-total">
         <span>Totaal te betalen</span>
         <strong>${formatCurrency(totals.incl)}</strong>
@@ -1691,6 +1705,17 @@ async function handleOrder(form) {
   }
 
   const totals = calculateTotals(cartItems);
+  const opmerkingen = String(formData.get('opmerkingen') ?? '').trim();
+  const andereProducten = String(formData.get('andere_producten') ?? '').trim();
+  const hasOtherProductRequest = cartItems.some(({ product }) => isOtherProductRequest(product));
+
+  if (hasOtherProductRequest && !andereProducten) {
+    state.error = 'Beschrijf bij "Andere producten" welk product je wil laten bestellen.';
+    state.orderReview = false;
+    render();
+    return;
+  }
+
   const orderPayload = {
     locatie_id: location.id,
     locatie_naam: getLocationLabel(location),
@@ -1700,7 +1725,12 @@ async function handleOrder(form) {
     aangemaakt_door_id: state.appUser.id,
     aangemaakt_door_email: state.session.user.email,
     status: 'Nieuw',
-    opmerkingen: String(formData.get('opmerkingen') ?? '').trim(),
+    opmerkingen: [
+      opmerkingen,
+      andereProducten ? `Andere producten gevraagd:\n${andereProducten}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n\n'),
     totaal_excl_btw: totals.excl,
     totaal_btw: totals.vat,
     totaal_incl_btw: totals.incl,
@@ -2218,6 +2248,10 @@ function getProductPriceInclVat(product) {
   return roundMoney(parseDecimal(product.prijs_excl_btw));
 }
 
+function isOtherProductRequest(product) {
+  return String(product?.naam ?? '').trim().toLowerCase().startsWith('ander product');
+}
+
 function getCartridgePriceInclVat(cartridge) {
   return roundMoney(parseDecimal(cartridge.prijs_incl_btw));
 }
@@ -2523,6 +2557,7 @@ function readOrderDraftFromForm(form) {
     locatie_id: String(formData.get('locatie_id') ?? ''),
     besteller_id: String(formData.get('besteller_id') ?? ''),
     opmerkingen: String(formData.get('opmerkingen') ?? ''),
+    andere_producten: String(formData.get('andere_producten') ?? ''),
   };
 }
 
