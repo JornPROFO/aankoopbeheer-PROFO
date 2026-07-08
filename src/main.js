@@ -42,6 +42,7 @@ const inkCartridgeDraftStorageKey = 'profo-aankoopbeheer-ink-cartridge-draft';
 const analysisFiltersStorageKey = 'profo-aankoopbeheer-analysis-filters';
 const orderFiltersStorageKey = 'profo-aankoopbeheer-order-filters';
 const defaultImage = '/assets/gevouwen-handdoeken-voorbeeld.png';
+const incompleteProductNamePattern = /(nog te bepalen|ander product)/i;
 
 const productCategories = [
   'Kantoorbenodigdheden',
@@ -819,7 +820,7 @@ function renderFrequentProducts() {
   });
 
   const rows = [...counts.values()]
-    .filter((row) => state.data.products.some((product) => String(product.id) === row.id && product.actief !== false))
+    .filter((row) => state.data.products.some((product) => String(product.id) === row.id && isProductOrderable(product)))
     .sort((a, b) => b.quantity - a.quantity || a.label.localeCompare(b.label, 'nl-BE'))
     .slice(0, 5);
 
@@ -846,7 +847,7 @@ function renderFrequentProducts() {
 
 function renderOrderWorkspace() {
   const products = state.data.products
-    .filter((product) => product.actief !== false)
+    .filter(isProductOrderable)
     .sort((a, b) => {
       const order = Number(a.sort_order || 100) - Number(b.sort_order || 100);
       if (order !== 0) {
@@ -1114,9 +1115,11 @@ function renderProductCatalog(products) {
         <h3>Producten</h3>
         <span>${products.length} artikel${products.length === 1 ? '' : 'en'}</span>
       </div>
-      <div class="product-grid">
-        ${products.map(renderProductCard).join('')}
-      </div>
+      ${
+        products.length
+          ? `<div class="product-grid">${products.map(renderProductCard).join('')}</div>`
+          : '<div class="empty-state is-compact"><p>Er staan nog geen bestelklare producten in de catalogus.</p></div>'
+      }
     </section>
   `;
 }
@@ -1864,12 +1867,16 @@ function renderProductAdmin() {
 function renderAdminProductRow(product) {
   const supplierReference = parseSupplierReference(product.leverancier_url);
   const supplierUrl = normalizeHttpUrl(supplierReference.url);
+  const status = getProductAdminStatus(product);
 
   return `
     <article class="admin-product-row ${product.actief === false ? 'is-inactive' : ''}">
       <img src="${escapeHtml(product.image_url || defaultImage)}" alt="" loading="lazy" />
       <div>
-        <strong>${escapeHtml(product.naam)}</strong>
+        <div class="admin-product-title">
+          <strong>${escapeHtml(product.naam)}</strong>
+          <span class="product-status-chip ${escapeHtml(status.className)}">${escapeHtml(status.label)}</span>
+        </div>
         <span>${escapeHtml(product.categorie || 'Algemeen')} - ${formatCurrency(getProductPriceInclVat(product))} incl. btw</span>
         <span>${escapeHtml(getSupplierDisplay(product))}${product.eenheid ? ` - ${escapeHtml(product.eenheid)}` : ''}</span>
       </div>
@@ -2606,7 +2613,7 @@ function copyOrderToCart(orderId) {
       return;
     }
 
-    const product = state.data.products.find((item) => String(item.id) === String(line.product_id) && item.actief !== false);
+    const product = state.data.products.find((item) => String(item.id) === String(line.product_id) && isProductOrderable(item));
     if (!product) {
       return;
     }
@@ -2615,7 +2622,7 @@ function copyOrderToCart(orderId) {
   });
 
   if (!Object.keys(nextCart).length) {
-    state.error = 'Deze bestelling bevat geen producten die nog actief in de catalogus staan.';
+    state.error = 'Deze bestelling bevat geen producten die nu bestelbaar in de catalogus staan.';
     render();
     return;
   }
@@ -2642,6 +2649,14 @@ function copyOrderToCart(orderId) {
 }
 
 function addToCart(productId, step = 1) {
+  const product = state.data.products.find((item) => String(item.id) === String(productId));
+
+  if (!isProductOrderable(product)) {
+    state.error = 'Dit product is nog niet bestelbaar. Controleer prijs en basisgegevens in beheer.';
+    render();
+    return;
+  }
+
   const current = Number(state.cart[productId] || 0);
   state.cart[productId] = current + step;
   state.orderReview = false;
@@ -2652,6 +2667,16 @@ function addToCart(productId, step = 1) {
 
 function updateCart(productId, action) {
   const product = state.data.products.find((item) => String(item.id) === String(productId));
+
+  if (!isProductOrderable(product)) {
+    delete state.cart[productId];
+    state.orderReview = false;
+    state.error = 'Een product dat niet meer bestelbaar is, werd uit je winkelmand gehaald.';
+    persistCart();
+    render();
+    return;
+  }
+
   const step = Number(product?.minimum_bestelhoeveelheid || 1);
   const current = Number(state.cart[productId] || 0);
 
@@ -2738,7 +2763,7 @@ function getCartItems() {
       product: state.data.products.find((product) => String(product.id) === String(productId)),
       quantity: Number(quantity),
     }))
-    .filter((item) => item.product && item.quantity > 0);
+    .filter((item) => item.product && item.quantity > 0 && isProductOrderable(item.product));
 }
 
 function getInkItems() {
@@ -2822,6 +2847,35 @@ function getProductPriceInclVat(product) {
 
 function isOtherProductRequest(product) {
   return String(product?.naam ?? '').trim().toLowerCase().startsWith('ander product');
+}
+
+function isProductOrderable(product) {
+  if (!product || product.actief === false) {
+    return false;
+  }
+
+  return isProductComplete(product);
+}
+
+function isProductComplete(product) {
+  const name = String(product?.naam ?? '').trim();
+  const description = String(product?.omschrijving ?? '').trim();
+  const unit = String(product?.eenheid ?? '').trim();
+  const price = getProductPriceInclVat(product ?? {});
+
+  return Boolean(name) && Boolean(description) && Boolean(unit) && price > 0 && !incompleteProductNamePattern.test(name);
+}
+
+function getProductAdminStatus(product) {
+  if (product.actief === false) {
+    return { label: 'Niet zichtbaar', className: 'is-hidden' };
+  }
+
+  if (!isProductComplete(product)) {
+    return { label: 'Aanvullen', className: 'is-draft' };
+  }
+
+  return { label: 'Bestelbaar', className: 'is-ready' };
 }
 
 function getCartridgePriceInclVat(cartridge) {
