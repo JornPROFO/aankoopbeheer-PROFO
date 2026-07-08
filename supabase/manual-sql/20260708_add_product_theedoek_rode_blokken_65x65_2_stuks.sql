@@ -1,25 +1,25 @@
--- PROFO Aankoopbeheer - product toevoegen: Vaatdoeken 38 x 38 cm 10 stuks.
+-- PROFO Aankoopbeheer - product toevoegen: Theedoek Rode Blokken 65 x 65 cm 2 stuks.
 -- Voer dit bestand volledig uit in de Supabase SQL Editor.
 -- De prijs wordt in deze app als prijs inclusief btw gebruikt.
 --
 -- Bron voor de productgegevens: screenshot, productfoto en gecontroleerde 123schoon-productpagina op 08/07/2026.
 -- De normale catalogusprijs wordt gebruikt. Tijdelijke actieprijzen worden niet als permanente bestelprijs overgenomen.
--- Artikelnummer volgens aangeleverde bestandsnaam: SDR00311.
+-- Artikelnummer volgens aangeleverde bestandsnaam en 123schoon-productpagina: SDR06461.
 
 with bron as (
   select
-    'Vaatdoeken 38 x 38 cm - 10 stuks - 123schoon huismerk'::text as naam,
+    'Theedoek Rode Blokken 65 x 65 cm - 2 stuks - 123schoon huismerk'::text as naam,
     'Keuken'::text as categorie,
     '123schoon.nl'::text as leverancier,
-    '{"artikelnummer":"SDR00311","url":"https://www.123schoon.nl/123schoon-Vaatdoeken-38-x-38-cm-10-stuks-123schoon-huismerk-i6498.html"}'::text as leverancier_url,
-    'Set van 10 gele vaatdoeken van 38 x 38 cm. De doeken zijn gemaakt van viscose, nemen goed vocht op en zijn geschikt voor dagelijks schoonmaakwerk in keuken en sanitair. Wasbaar tot 60 graden.'::text as omschrijving,
-    'pak van 10 stuks'::text as eenheid,
-    2.99::numeric(12, 2) as prijs_excl_btw,
+    '{"artikelnummer":"SDR06461","url":"https://www.123schoon.nl/123schoon-Theedoek-Rode-Blokken-65-x-65-cm-2-stuks-123schoon-huismerk-i19474.html"}'::text as leverancier_url,
+    'Set van 2 theedoeken met rode blokken van 65 x 65 cm. De doeken zijn gemaakt van 100% katoen, nemen goed vocht op en zijn geschikt voor dagelijks gebruik in de keuken. Wasbaar tot 60 graden. Eerste keer apart wassen om kleurdoorloop te vermijden.'::text as omschrijving,
+    'pak van 2 stuks'::text as eenheid,
+    3.99::numeric(12, 2) as prijs_excl_btw,
     21::numeric(5, 2) as btw_percentage,
     1::integer as minimum_bestelhoeveelheid,
-    '/assets/123schoon-vaatdoeken-38x38-10-stuks.jpg'::text as image_url,
+    '/assets/123schoon-theedoek-rode-blokken-65x65-2-stuks.jpg'::text as image_url,
     true::boolean as actief,
-    400::integer as sort_order
+    405::integer as sort_order
 ),
 target as (
   select product.id
@@ -27,7 +27,7 @@ target as (
   cross join bron
   where lower(product.naam) in (
     lower(bron.naam),
-    lower('Vaatdoeken - product nog te bepalen')
+    lower('Theedoeken - product nog te bepalen')
   )
   order by
     case
@@ -101,4 +101,4 @@ select
   actief,
   image_url
 from public.aankoop_producten
-where lower(naam) = lower('Vaatdoeken 38 x 38 cm - 10 stuks - 123schoon huismerk');
+where lower(naam) = lower('Theedoek Rode Blokken 65 x 65 cm - 2 stuks - 123schoon huismerk');
