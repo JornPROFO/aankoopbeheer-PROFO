@@ -1,6 +1,10 @@
--- PROFO Aankoopbeheer - NU UITVOEREN in Supabase SQL Editor.
--- Product: 123schoon Bezemsteel Hout 1,30 m.
--- Kopieer de volledige inhoud naar de Supabase SQL Editor en voer alles uit.
+-- PROFO Aankoopbeheer - product toevoegen: 123schoon Bezemsteel Hout 1,30 m.
+-- Voer dit bestand volledig uit in de Supabase SQL Editor.
+-- De prijs wordt in deze app als prijs inclusief btw gebruikt.
+--
+-- Bron voor de productgegevens: screenshot, productfoto en gecontroleerde 123schoon-productpagina op 08/07/2026.
+-- De normale catalogusprijs wordt gebruikt. Tijdelijke actieprijzen worden niet als permanente bestelprijs overgenomen.
+-- Artikelnummer volgens de 123schoon-productpagina: SDR00001.
 
 with bron as (
   select
