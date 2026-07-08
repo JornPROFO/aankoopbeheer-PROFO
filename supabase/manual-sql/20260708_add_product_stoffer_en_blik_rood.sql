@@ -1,6 +1,10 @@
--- PROFO Aankoopbeheer - NU UITVOEREN in Supabase SQL Editor.
--- Product: Stoffer en blik kunststof met rubberrand rood - 123schoon huismerk.
--- Kopieer de volledige inhoud naar de Supabase SQL Editor en voer alles uit.
+-- PROFO Aankoopbeheer - product toevoegen: Stoffer en blik kunststof met rubberrand rood.
+-- Voer dit bestand volledig uit in de Supabase SQL Editor.
+-- De prijs wordt in deze app als prijs inclusief btw gebruikt.
+--
+-- Bron voor de productgegevens: screenshot, productfoto en aangeleverde 123schoon-productlink op 08/07/2026.
+-- De normale catalogusprijs wordt gebruikt. Tijdelijke actieprijzen worden niet als permanente bestelprijs overgenomen.
+-- Artikelnummer volgens aangeleverde bestandsnaam: SDR06503.
 
 with bron as (
   select
