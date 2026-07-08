@@ -1,5 +1,18 @@
 import { supabase } from '../config/supabase.js';
 
+const productionAppUrl = 'https://aankoopbeheer-profo.vercel.app/';
+
+function getPasswordResetRedirectUrl() {
+  const currentUrl = new URL(window.location.href);
+  const isLocalHost = ['localhost', '127.0.0.1'].includes(currentUrl.hostname);
+
+  if (isLocalHost) {
+    return productionAppUrl;
+  }
+
+  return `${window.location.origin}${window.location.pathname}`;
+}
+
 export async function getCurrentSession() {
   const { data, error } = await supabase.auth.getSession();
 
@@ -40,7 +53,7 @@ export async function signUpWithPassword(email, password, metadata = {}) {
 }
 
 export async function requestPasswordReset(email) {
-  const redirectTo = `${window.location.origin}${window.location.pathname}`;
+  const redirectTo = getPasswordResetRedirectUrl();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo,
   });

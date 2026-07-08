@@ -937,6 +937,14 @@ h4 {
   font-size: 0.9rem;
 }
 
+.field-hint {
+  display: block;
+  margin-top: 0.1rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
 .field input,
 .field select,
 .field textarea {

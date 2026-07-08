@@ -97,6 +97,7 @@ const state = {
   inkReview: false,
   view: getRoute(),
   authMode: 'login',
+  authEmail: '',
   passwordRecovery: false,
   notice: '',
   error: '',
@@ -186,6 +187,8 @@ app.addEventListener('input', handleAnalysisFilterChange);
 app.addEventListener('change', handleAnalysisFilterChange);
 app.addEventListener('input', handleOrderFilterChange);
 app.addEventListener('change', handleOrderFilterChange);
+app.addEventListener('input', handleAuthFieldChange);
+app.addEventListener('change', handleAuthFieldChange);
 
 app.addEventListener('click', async (event) => {
   const target = event.target.closest('button, a');
@@ -195,10 +198,17 @@ app.addEventListener('click', async (event) => {
   }
 
   if (target.matches('[data-auth-tab]')) {
+    const emailField = app.querySelector('[data-auth-form] input[name="email"]');
+
+    if (emailField) {
+      state.authEmail = String(emailField.value ?? '');
+    }
+
     state.authMode = target.dataset.authTab;
     state.error = '';
     state.notice = '';
     render();
+    return;
   }
 
   if (target.matches('[data-sign-out]')) {
@@ -544,7 +554,18 @@ function renderAuth() {
         <form class="auth-form" data-auth-form>
           <label class="field">
             <span>PROFO-mailadres</span>
-            <input name="email" type="email" autocomplete="email" placeholder="voornaam.naam@profo.be" required />
+            <input
+              name="email"
+              type="email"
+              autocomplete="username"
+              inputmode="email"
+              autocapitalize="none"
+              spellcheck="false"
+              placeholder="jorn.neeus@profo.be"
+              value="${escapeHtml(state.authEmail || '')}"
+              required
+            />
+            <small class="field-hint">Vul je volledige PROFO-mailadres in. Alleen je naam is niet voldoende.</small>
           </label>
           ${
             isRegister
@@ -2030,13 +2051,26 @@ function renderAdminCartridgeRow(cartridge) {
   `;
 }
 
+function handleAuthFieldChange(event) {
+  const field = event.target;
+
+  if (!field?.matches?.('[data-auth-form] input[name="email"]')) {
+    return;
+  }
+
+  state.authEmail = String(field.value ?? '');
+}
+
 async function handleAuth(form) {
   const formData = new FormData(form);
   const email = String(formData.get('email') ?? '').trim().toLowerCase();
   const password = String(formData.get('password') ?? '');
+  state.authEmail = email;
 
-  if (!email.endsWith('@profo.be')) {
-    state.error = 'Gebruik je PROFO-mailadres.';
+  const validationMessage = getProfoEmailValidationMessage(email);
+
+  if (validationMessage) {
+    state.error = validationMessage;
     render();
     return;
   }
@@ -2106,6 +2140,26 @@ async function handlePasswordUpdate(form) {
   }
 }
 
+function getProfoEmailValidationMessage(email) {
+  if (!email) {
+    return 'Vul je volledige PROFO-mailadres in.';
+  }
+
+  if (!email.includes('@')) {
+    return 'Vul je volledige PROFO-mailadres in, bijvoorbeeld jorn.neeus@profo.be. Alleen je naam is niet voldoende.';
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return 'Controleer het e-mailadres. Het moet eruitzien als voornaam.naam@profo.be.';
+  }
+
+  if (!email.endsWith('@profo.be')) {
+    return 'Gebruik je PROFO-mailadres dat eindigt op @profo.be.';
+  }
+
+  return '';
+}
+
 function getFriendlyAuthError(error) {
   const message = String(error?.message ?? '').toLowerCase();
 
@@ -2113,8 +2167,12 @@ function getFriendlyAuthError(error) {
     return 'Je account bestaat, maar het e-mailadres is nog niet bevestigd. Bevestig eerst de mail van Supabase of laat het account bevestigen in Supabase Authentication.';
   }
 
+  if (message.includes('invalid email')) {
+    return 'Vul je volledige PROFO-mailadres in, bijvoorbeeld jorn.neeus@profo.be.';
+  }
+
   if (message.includes('invalid login credentials')) {
-    return 'De combinatie van e-mailadres en wachtwoord klopt niet, of het account is nog niet bevestigd.';
+    return 'Aanmelden lukt niet met dit e-mailadres en wachtwoord. Controleer of je het volledige PROFO-mailadres gebruikt, bijvoorbeeld jorn.neeus@profo.be. Gebruik na een reset exact het nieuwe wachtwoord.';
   }
 
   if (message.includes('user already registered') || message.includes('already registered') || message.includes('already exists')) {
