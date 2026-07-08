@@ -1,9 +1,10 @@
--- PROFO Aankoopbeheer - NU UITVOEREN in Supabase SQL Editor.
--- Doel: dit product manueel activeren in de live catalogus.
+-- PROFO Aankoopbeheer - product toevoegen: Huishoudemmer groen 10 liter.
+-- Voer dit bestand volledig uit in de Supabase SQL Editor.
+-- De prijs wordt in deze app als prijs inclusief btw gebruikt.
 --
--- Kopieer de volledige inhoud van dit bestand naar de Supabase SQL Editor
--- en voer alles in een keer uit. De select onderaan toont meteen of het
--- product actief staat.
+-- Bron voor de productgegevens: screenshot, productfoto en gecontroleerde 123schoon-productpagina op 08/07/2026.
+-- De normale catalogusprijs wordt gebruikt. Tijdelijke actieprijzen worden niet als permanente bestelprijs overgenomen.
+-- Artikelnummer volgens aangeleverde bestandsnaam en 123schoon-productpagina: SDR00208.
 
 with bron as (
   select
