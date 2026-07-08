@@ -1,6 +1,10 @@
--- PROFO Aankoopbeheer - NU UITVOEREN in Supabase SQL Editor.
--- Product: Vuilniszakken 35 liter - 50 stuks - HDPE - Wit - 123schoon.
--- Kopieer de volledige inhoud naar de Supabase SQL Editor en voer alles uit.
+-- PROFO Aankoopbeheer - product toevoegen: Vuilniszakken 35 liter - 50 stuks - HDPE - Wit.
+-- Voer dit bestand volledig uit in de Supabase SQL Editor.
+-- De prijs wordt in deze app als prijs inclusief btw gebruikt.
+--
+-- Bron voor de productgegevens: screenshot, productfoto en gecontroleerde 123schoon-productpagina op 08/07/2026.
+-- De normale catalogusprijs wordt gebruikt. Tijdelijke actieprijzen worden niet als permanente bestelprijs overgenomen.
+-- Artikelnummer volgens aangeleverde bestandsnaam en 123schoon-productpagina: SDR00421.
 
 with bron as (
   select
