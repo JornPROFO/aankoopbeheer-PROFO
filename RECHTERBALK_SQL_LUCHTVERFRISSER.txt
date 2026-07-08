@@ -1,0 +1,92 @@
+-- PROFO Aankoopbeheer - NU UITVOEREN in Supabase SQL Editor.
+-- Product: At Home Scents Luchtverfrisser Spray - Lavender Retreat 400 ml.
+-- Kopieer de volledige inhoud naar de Supabase SQL Editor en voer alles uit.
+
+with bron as (
+  select
+    'At Home Scents Luchtverfrisser Spray - Lavender Retreat 400 ml'::text as naam,
+    'Sanitair en hygiene'::text as categorie,
+    '123schoon.nl'::text as leverancier,
+    '{"artikelnummer":"SAT00074","url":"https://www.123schoon.nl/At-Home-Scents-Luchtverfrisser-Spray-Lavender-Retreat-400-ml-i15045.html"}'::text as leverancier_url,
+    'Luchtverfrisser spray met lavendelgeur voor het verfrissen van de lucht en het onderdrukken van onaangename geuren, bijvoorbeeld in sanitaire ruimtes. Spuitbus van 400 ml. Gebruik volgens het etiket en zorg voor voldoende ventilatie bij gebruik.'::text as omschrijving,
+    'spuitbus van 400 ml'::text as eenheid,
+    2.99::numeric(12, 2) as prijs_excl_btw,
+    21::numeric(5, 2) as btw_percentage,
+    1::integer as minimum_bestelhoeveelheid,
+    '/assets/at-home-scents-luchtverfrisser-lavender-retreat-400ml.jpg'::text as image_url,
+    true::boolean as actief,
+    220::integer as sort_order
+),
+target as (
+  select product.id
+  from public.aankoop_producten product
+  cross join bron
+  where lower(product.naam) = lower(bron.naam)
+  order by product.id
+  limit 1
+),
+bijgewerkt as (
+  update public.aankoop_producten product
+  set
+    naam = bron.naam,
+    categorie = bron.categorie,
+    leverancier = bron.leverancier,
+    leverancier_url = bron.leverancier_url,
+    omschrijving = bron.omschrijving,
+    eenheid = bron.eenheid,
+    prijs_excl_btw = bron.prijs_excl_btw,
+    btw_percentage = bron.btw_percentage,
+    minimum_bestelhoeveelheid = bron.minimum_bestelhoeveelheid,
+    image_url = bron.image_url,
+    actief = bron.actief,
+    sort_order = bron.sort_order,
+    updated_at = now()
+  from bron
+  where product.id in (select id from target)
+  returning product.id
+)
+insert into public.aankoop_producten (
+  naam,
+  categorie,
+  leverancier,
+  leverancier_url,
+  omschrijving,
+  eenheid,
+  prijs_excl_btw,
+  btw_percentage,
+  minimum_bestelhoeveelheid,
+  image_url,
+  actief,
+  sort_order
+)
+select
+  bron.naam,
+  bron.categorie,
+  bron.leverancier,
+  bron.leverancier_url,
+  bron.omschrijving,
+  bron.eenheid,
+  bron.prijs_excl_btw,
+  bron.btw_percentage,
+  bron.minimum_bestelhoeveelheid,
+  bron.image_url,
+  bron.actief,
+  bron.sort_order
+from bron
+where not exists (select 1 from bijgewerkt)
+  and not exists (
+    select 1
+    from public.aankoop_producten product
+    where lower(product.naam) = lower(bron.naam)
+  );
+
+select
+  naam,
+  categorie,
+  leverancier,
+  leverancier_url,
+  prijs_excl_btw,
+  actief,
+  image_url
+from public.aankoop_producten
+where lower(naam) = lower('At Home Scents Luchtverfrisser Spray - Lavender Retreat 400 ml');
