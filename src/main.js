@@ -931,7 +931,7 @@ function renderInkWorkspace() {
   const selectedBestellerId = state.inkDraft.besteller_id || currentUserId;
   const printersForLocation = getPrintersForLocation(selectedLocationId);
   const selectedPrinter = state.data.printers.find((printer) => String(printer.id) === String(selectedPrinterId));
-  const allPrinterCartridges = selectedPrinter ? getAllCartridgesForPrinter(selectedPrinter.id) : [];
+  const activePrinterCartridges = selectedPrinter ? getCartridgesForPrinter(selectedPrinter.id) : [];
   const inkItems = getInkItems();
   const totals = calculateInkTotals(inkItems);
   const submitLabel = state.inkReview ? 'Inktbestelling definitief doorsturen' : 'Inktbestelling controleren';
@@ -999,7 +999,7 @@ function renderInkWorkspace() {
           <h3>Welke kleuren?</h3>
           <span>${inkItems.length} gekozen</span>
         </div>
-        ${renderInkOptions(allPrinterCartridges)}
+        ${renderInkOptions(activePrinterCartridges)}
       </section>
 
       <aside class="cart-panel">
@@ -3018,16 +3018,48 @@ function getPrintersForLocation(locationId) {
 }
 
 function getCartridgesForPrinter(printerId) {
-  return state.data.cartridges.filter(
-    (cartridge) =>
-      cartridge.actief !== false &&
-      String(cartridge.printer_id) === String(printerId || ''),
+  const activeCartridges = state.data.cartridges.filter(
+    (cartridge) => cartridge.actief !== false && String(cartridge.printer_id) === String(printerId || ''),
+  );
+  const preferredByColor = new Map();
+
+  activeCartridges.forEach((cartridge) => {
+    const key = String(cartridge.kleur || cartridge.id);
+    const current = preferredByColor.get(key);
+
+    if (!current || compareCartridgePreference(cartridge, current) < 0) {
+      preferredByColor.set(key, cartridge);
+    }
+  });
+
+  return [...preferredByColor.values()].sort(
+    (a, b) =>
+      Number(a.sort_order ?? 100) - Number(b.sort_order ?? 100) ||
+      String(a.kleur ?? '').localeCompare(String(b.kleur ?? ''), 'nl-BE') ||
+      String(a.naam ?? '').localeCompare(String(b.naam ?? ''), 'nl-BE'),
   );
 }
 
-function getAllCartridgesForPrinter(printerId) {
-  return state.data.cartridges.filter(
-    (cartridge) => String(cartridge.printer_id) === String(printerId || ''),
+function compareCartridgePreference(a, b) {
+  const aName = String(a?.naam ?? '').toLowerCase();
+  const bName = String(b?.naam ?? '').toLowerCase();
+  const aSupplier = String(a?.leverancier ?? '').toLowerCase();
+  const bSupplier = String(b?.leverancier ?? '').toLowerCase();
+  const scores = [
+    Number(aName.includes('123inkt')) - Number(bName.includes('123inkt')),
+    Number(!aName.includes('originele')) - Number(!bName.includes('originele')),
+    Number(aSupplier.includes('123inkt')) - Number(bSupplier.includes('123inkt')),
+    Number(getCartridgePriceInclVat(a) > 0) - Number(getCartridgePriceInclVat(b) > 0),
+  ];
+  const preference = scores.find((score) => score !== 0);
+
+  if (preference) {
+    return -preference;
+  }
+
+  return (
+    Number(a?.sort_order ?? 100) - Number(b?.sort_order ?? 100) ||
+    Number(a?.id ?? 0) - Number(b?.id ?? 0)
   );
 }
 
