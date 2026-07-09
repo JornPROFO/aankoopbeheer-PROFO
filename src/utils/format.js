@@ -33,10 +33,25 @@ export function getUserRole(user) {
 }
 
 const beheerderEmails = new Set(['jorn.neeus@profo.be', 'kathleen.nerinckx@profo.be']);
+const adminRoles = new Set(['admin', 'beheerder', 'beheerder aankoop', 'aankoopbeheerder', 'superadmin']);
+const superAdminRoles = new Set(['superadmin']);
+
+export function normalizeRole(value) {
+  return String(value ?? '')
+    .trim()
+    .toLowerCase();
+}
 
 export function isAdminUser(user, sessionEmail = '') {
   const email = String(user?.email || sessionEmail || '').trim().toLowerCase();
-  return beheerderEmails.has(email);
+  const role = normalizeRole(getUserRole(user));
+  return adminRoles.has(role) || beheerderEmails.has(email);
+}
+
+export function isSuperAdminUser(user, sessionEmail = '') {
+  const email = String(user?.email || sessionEmail || '').trim().toLowerCase();
+  const role = normalizeRole(getUserRole(user));
+  return superAdminRoles.has(role) || email === 'jorn.neeus@profo.be';
 }
 
 export function formatCurrency(value) {

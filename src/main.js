@@ -117,6 +117,7 @@ const state = {
   orderFilters: readOrderFilters(),
   previewProductId: '',
   mailWarning: '',
+  installPrompt: null,
 };
 
 onAuthChange(async (session, event) => {
@@ -136,6 +137,21 @@ onAuthChange(async (session, event) => {
 
 window.addEventListener('hashchange', () => {
   state.view = getRoute();
+  render();
+});
+
+window.addEventListener('beforeinstallprompt', (event) => {
+  event.preventDefault();
+  state.installPrompt = event;
+
+  if (state.session && state.appUser) {
+    render();
+  }
+});
+
+window.addEventListener('appinstalled', () => {
+  state.installPrompt = null;
+  state.notice = 'Aankoopbeheer is geïnstalleerd.';
   render();
 });
 
@@ -219,6 +235,10 @@ app.addEventListener('click', async (event) => {
     state.session = null;
     state.appUser = null;
     render();
+  }
+
+  if (target.matches('[data-install-app]')) {
+    await handleAppInstall();
   }
 
   if (target.matches('[data-add-product]')) {
@@ -460,6 +480,8 @@ function handleOrderFilterChange(event) {
 }
 
 async function init() {
+  registerServiceWorker();
+
   try {
     state.session = await getCurrentSession();
     await bootstrapData();
@@ -468,6 +490,40 @@ async function init() {
     state.loading = false;
     render();
   }
+}
+
+function registerServiceWorker() {
+  if (!('serviceWorker' in navigator) || !import.meta.env.PROD) {
+    return;
+  }
+
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      // De app blijft bruikbaar wanneer registratie door browserinstellingen wordt geweigerd.
+    });
+  });
+}
+
+async function handleAppInstall() {
+  if (!state.installPrompt) {
+    return;
+  }
+
+  const promptEvent = state.installPrompt;
+  state.installPrompt = null;
+  promptEvent.prompt();
+
+  try {
+    const choice = await promptEvent.userChoice;
+
+    if (choice?.outcome === 'accepted') {
+      state.notice = 'Aankoopbeheer is toegevoegd als app.';
+    }
+  } catch {
+    // Sommige browsers geven geen userChoice terug. De installatieprompt zelf is dan voldoende.
+  }
+
+  render();
 }
 
 async function bootstrapData() {
@@ -672,6 +728,7 @@ function renderShell() {
       </div>
       <div class="header-actions">
         <span class="environment-pill">${escapeHtml(userLabel)}</span>
+        ${state.installPrompt ? '<button class="header-button" type="button" data-install-app>Installeren</button>' : ''}
         <button class="header-button" type="button" data-sign-out>Afmelden</button>
       </div>
     </header>

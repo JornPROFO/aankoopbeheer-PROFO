@@ -30,6 +30,12 @@ docs/security-roadmap-en-rollenmatrix-profo-aankoopbeheer.md
 
 Gebruik dat document als basis voor de rollenmatrix, RLS-controle, logging, bewaartermijnen, incidentopvolging en de latere verwerkingsregisterfiche.
 
+De installatie als app op laptop, Android en iOS staat in:
+
+```text
+docs/installatie-profo-aankoopbeheer.md
+```
+
 ## Supabase
 
 Voer eerst dit bestand uit in de Supabase SQL-editor:
