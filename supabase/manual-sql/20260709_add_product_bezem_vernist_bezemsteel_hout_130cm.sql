@@ -1,6 +1,10 @@
--- PROFO Aankoopbeheer - NU UITVOEREN in Supabase SQL Editor.
--- Product: Bezem vernist + bezemsteel hout 1,30 meter.
--- Kopieer de volledige inhoud naar de Supabase SQL Editor en voer alles uit.
+-- PROFO Aankoopbeheer - product toevoegen: Bezem vernist + bezemsteel hout 1,30 meter.
+-- Voer dit bestand volledig uit in de Supabase SQL Editor.
+-- De prijs wordt in deze app als prijs inclusief btw gebruikt.
+--
+-- Bron voor de productgegevens: screenshot, productfoto en gecontroleerde 123schoon-productpagina op 09/07/2026.
+-- De normale catalogusprijs wordt gebruikt. Tijdelijke actieprijzen worden niet als permanente bestelprijs overgenomen.
+-- Artikelnummer volgens de 123schoon-productpagina: SDR00004.
 
 with bron as (
   select
