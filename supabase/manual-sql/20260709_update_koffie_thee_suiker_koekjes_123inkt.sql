@@ -1,0 +1,236 @@
+-- PROFO Aankoopbeheer
+-- Koffie, thee, suiker en koekjes: lege catalogusregels vervangen door concrete bestelproducten.
+-- Bron: 123inkt.be, gecontroleerd op 09/07/2026.
+-- Werkwijze: hoofdzakelijk huismerk; waar geen passend huismerk gevonden werd, is gekozen voor een courante kantoorverpakking.
+-- Opmerking: in deze applicatie wordt prijs_excl_btw historisch gebruikt als bestelprijs inclusief btw.
+
+with bron (
+  oude_naam,
+  naam,
+  categorie,
+  leverancier,
+  leverancier_url,
+  match_status,
+  omschrijving,
+  eenheid,
+  prijs_incl_btw,
+  btw_percentage,
+  minimum_bestelhoeveelheid,
+  image_url,
+  sort_order
+) as (
+  values
+    (
+      'Koffiebonen - product nog te bepalen',
+      '123inkt Gold medium roast koffiebonen 1 kg',
+      'Koffie en vergaderingen',
+      '123inkt.be',
+      'https://www.123inkt.be/123inkt-Gold-medium-roast-koffiebonen-1-kg-52207C-i75343.html',
+      'Huismerkproduct geselecteerd voor koffiebonen.',
+      'Koffiebonen Gold medium roast van 123inkt in verpakking van 1 kg. Geschikt voor volautomatische koffiemachines en algemeen gebruik in de koffiehoek.',
+      'zak',
+      17.95,
+      6.00,
+      1,
+      'https://www.123inkt.be/image/123inkt_Gold_medium_roast_koffiebonen_1_kg_52207C_300968_m1_big.jpg',
+      300
+    ),
+    (
+      'Koffiepads - product nog te bepalen',
+      '123inkt koffiepads Regular - 36 stuks',
+      'Koffie en vergaderingen',
+      '123inkt.be',
+      'https://www.123inkt.be/123inkt-koffiepads-Regular-36-stuks-52170C-i84694.html',
+      'Huismerkproduct geselecteerd voor koffiepads.',
+      'Regular koffiepads van 123inkt, verpakking met 36 pads. Geschikt voor Senseo-compatibele toestellen.',
+      'pak',
+      6.50,
+      6.00,
+      1,
+      'https://www.123inkt.be/image/123inkt_koffiepads_Regular_36_stuks_52170C_301170_m1_big.jpg',
+      305
+    ),
+    (
+      'Koffiecups - product nog te bepalen',
+      'Douwe Egberts Lungo Original koffiecups - 20 stuks',
+      'Koffie en vergaderingen',
+      '123inkt.be',
+      'https://www.123inkt.be/Douwe-Egberts-Lungo-Original-koffiecups-20-stuks-4028222-i107759.html',
+      'Geen passend 123inkt-huismerk voor koffiecups gevonden; courante kantoorvariant gekozen.',
+      'Lungo Original koffiecups van Douwe Egberts, verpakking met 20 stuks. Geschikt voor L''OR Barista en Nespresso Original koffiemachines.',
+      'doos',
+      8.50,
+      6.00,
+      1,
+      'https://www.123inkt.be/image/Douwe_Egberts_Lungo_Original_koffiecups_20_stuks_4028222_423908_m2_big.jpg',
+      310
+    ),
+    (
+      'Gemalen koffie - product nog te bepalen',
+      '123inkt Traditional snelfilterkoffie 1 kg',
+      'Koffie en vergaderingen',
+      '123inkt.be',
+      'https://www.123inkt.be/123inkt-Traditional-snelfilterkoffie-1-kg-300974C-300975-52770C-i75350.html',
+      'Huismerkproduct geselecteerd voor gemalen/filterkoffie.',
+      'Traditional snelfilterkoffie van 123inkt in verpakking van 1 kg. Geschikt voor filterkoffie en algemeen gebruik in de koffiehoek.',
+      'pak',
+      13.50,
+      6.00,
+      1,
+      'https://www.123inkt.be/image/123inkt_Traditional_snelfilterkoffie_1_kg_300974C_300975_52770C_300975_m1_big.jpg',
+      315
+    ),
+    (
+      'Oploskoffie - product nog te bepalen',
+      'Douwe Egberts Aroma Rood oploskoffie 200 g',
+      'Koffie en vergaderingen',
+      '123inkt.be',
+      'https://www.123inkt.be/Douwe-Egberts-Aroma-Rood-oploskoffie-200-g-i62273.html',
+      'Geen passend 123inkt-huismerk voor oploskoffie gevonden; courante kantoorvariant gekozen.',
+      'Aroma Rood oploskoffie van Douwe Egberts in verpakking van 200 gram. Geschikt voor snelle bereiding zonder koffietoestel.',
+      'pot',
+      9.75,
+      6.00,
+      1,
+      'https://www.123inkt.be/image/Douwe_Egberts_Aroma_Rood_oploskoffie_200_g_422010_m1_big.jpg',
+      320
+    ),
+    (
+      'Koffiemelk of melkjes - product nog te bepalen',
+      '123inkt creamersticks - 500 stuks',
+      'Koffie en vergaderingen',
+      '123inkt.be',
+      'https://www.123inkt.be/123inkt-creamersticks-500-stuks-61709C-i71507.html',
+      'Huismerkproduct geselecteerd als praktisch alternatief voor koffiemelk of melkjes.',
+      'Creamersticks van 123inkt, verpakking met 500 stuks van 2,5 gram. Praktisch en hygienisch voor koffiehoeken en vergaderingen.',
+      'doos',
+      13.95,
+      6.00,
+      1,
+      'https://www.123inkt.be/image/123inkt_creamersticks_500_stuks_61709C_300724_m1_big.jpg',
+      325
+    ),
+    (
+      'Suikersticks of suikerklontjes - product nog te bepalen',
+      '123inkt suikersticks - 500 stuks',
+      'Koffie en vergaderingen',
+      '123inkt.be',
+      'https://www.123inkt.be/123inkt-suikersticks-500-stuks-61710C-i71508.html',
+      'Huismerkproduct geselecteerd voor suiker.',
+      'Suikersticks van 123inkt, verpakking met 500 stuks van 4 gram. Geschikt voor koffie, thee en vergaderingen.',
+      'doos',
+      10.95,
+      6.00,
+      1,
+      'https://www.123inkt.be/image/123inkt_suikersticks_500_stuks_62411C_300725_m1_big.jpg',
+      330
+    ),
+    (
+      'Koekjes voor koffie of meetings - product nog te bepalen',
+      'Lotus Biscoff speculoos - 300 stuks',
+      'Koffie en vergaderingen',
+      '123inkt.be',
+      'https://www.123inkt.be/Lotus-Biscoff-speculoos-300-stuks-86618-i118531.html',
+      'Geen passend 123inkt-huismerk voor koekjes gevonden; courante kantoorverpakking gekozen.',
+      'Lotus Biscoff speculoos in grootverpakking van 300 stuks. Geschikt als koekje bij koffie, overlegmomenten en bezoekers.',
+      'doos',
+      21.95,
+      6.00,
+      1,
+      'https://www.123inkt.be/image/Lotus_Biscoff_speculoos_300_stuks_86618_422956_m1_big.jpg',
+      335
+    ),
+    (
+      null,
+      'Combideal 123inkt thee 3 smaken - 300 stuks',
+      'Koffie en vergaderingen',
+      '123inkt.be',
+      'https://www.123inkt.be/123inkt-Combideal-123inkt-thee-3-smaken-300-stuks-i98591.html',
+      'Huismerkproduct geselecteerd voor thee; reguliere prijs gebruikt in plaats van tijdelijke korting.',
+      'Combideal van 123inkt thee met 300 theezakjes in drie smaken: English Breakfast, Green Tea Lemon en Rooibos.',
+      'doos',
+      21.50,
+      6.00,
+      1,
+      'https://www.123inkt.be/image/Combideal%3A_123inkt_thee_3_smaken_300_stuks_302060_m1_big.jpg',
+      340
+    )
+),
+bijgewerkt as (
+  update public.aankoop_producten product
+  set
+    naam = bron.naam,
+    categorie = bron.categorie,
+    leverancier = bron.leverancier,
+    leverancier_url = jsonb_build_object(
+      'url', bron.leverancier_url,
+      'match_status', bron.match_status,
+      'prijsbron', '123inkt.be',
+      'prijsdatum', '2026-07-09',
+      'prijssoort', 'reguliere prijs incl. btw'
+    )::text,
+    omschrijving = bron.omschrijving,
+    eenheid = bron.eenheid,
+    prijs_excl_btw = bron.prijs_incl_btw,
+    btw_percentage = bron.btw_percentage,
+      minimum_bestelhoeveelheid = bron.minimum_bestelhoeveelheid,
+    image_url = bron.image_url,
+    actief = true,
+    sort_order = bron.sort_order,
+    updated_at = now()
+  from bron
+  where
+    (bron.oude_naam is not null and lower(product.naam) = lower(bron.oude_naam))
+    or lower(product.naam) = lower(bron.naam)
+  returning product.naam
+),
+ingevoegd as (
+  insert into public.aankoop_producten (
+    naam,
+    categorie,
+    leverancier,
+    leverancier_url,
+    omschrijving,
+    eenheid,
+    prijs_excl_btw,
+    btw_percentage,
+    minimum_bestelhoeveelheid,
+    image_url,
+    actief,
+    sort_order,
+    created_at,
+    updated_at
+  )
+  select
+    bron.naam,
+    bron.categorie,
+    bron.leverancier,
+    jsonb_build_object(
+      'url', bron.leverancier_url,
+      'match_status', bron.match_status,
+      'prijsbron', '123inkt.be',
+      'prijsdatum', '2026-07-09',
+      'prijssoort', 'reguliere prijs incl. btw'
+    )::text,
+    bron.omschrijving,
+    bron.eenheid,
+    bron.prijs_incl_btw,
+    bron.btw_percentage,
+    bron.minimum_bestelhoeveelheid,
+    bron.image_url,
+    true,
+    bron.sort_order,
+    now(),
+    now()
+  from bron
+  where bron.oude_naam is null
+    and not exists (
+    select 1
+    from public.aankoop_producten product
+    where lower(product.naam) = lower(bron.naam)
+  )
+  returning naam
+)
+select 'bijgewerkt' as controle, count(*) as aantal from bijgewerkt
+union all
+select 'ingevoegd' as controle, count(*) as aantal from ingevoegd;
