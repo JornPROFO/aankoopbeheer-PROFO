@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" role="img" aria-labelledby="title desc">
+  <title id="title">EHBO-aanvulling</title>
+  <desc id="desc">Illustratie van een EHBO-koffer met verbandmiddelen.</desc>
+  <rect width="640" height="480" fill="#f9f9f9"/>
+  <rect x="128" y="132" width="384" height="252" rx="28" fill="#ffffff" stroke="#d9dce2" stroke-width="10"/>
+  <rect x="258" y="92" width="124" height="62" rx="18" fill="#ffffff" stroke="#d9dce2" stroke-width="10"/>
+  <path d="M286 255h-70v-58h70v-70h68v70h70v58h-70v70h-68z" fill="#b61917"/>
+  <rect x="182" y="336" width="276" height="14" rx="7" fill="#f5dedd"/>
+  <rect x="196" y="362" width="248" height="10" rx="5" fill="#ce5f5a" opacity=".55"/>
+  <circle cx="516" cy="170" r="34" fill="#f5dedd"/>
+  <path d="M516 148v44M494 170h44" stroke="#b61917" stroke-width="12" stroke-linecap="round"/>
+</svg>

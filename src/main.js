@@ -43,6 +43,8 @@ const analysisFiltersStorageKey = 'profo-aankoopbeheer-analysis-filters';
 const orderFiltersStorageKey = 'profo-aankoopbeheer-order-filters';
 const defaultImage = '/assets/gevouwen-handdoeken-voorbeeld.png';
 const incompleteProductNamePattern = /(nog te bepalen|ander product)/i;
+const ehboCategory = 'Veiligheid/EHBO';
+const ehboDefaultImage = '/assets/ehbo-koffer-a-aanvulling.svg';
 
 const productCategories = [
   'Kantoorbenodigdheden',
@@ -677,6 +679,7 @@ function renderShell() {
       <nav class="sidebar" aria-label="Hoofdnavigatie">
         ${navLink('start', 'Start')}
         ${navLink('bestellen', 'Nieuwe bestelling')}
+        ${navLink('ehbo', 'EHBO')}
         ${navLink('inkt', 'Inkt')}
         ${navLink('bestellingen', 'Bestellingen')}
         ${admin ? navLink('analyse', 'Analyse') : ''}
@@ -718,6 +721,10 @@ function renderCurrentView(admin) {
 
   if (state.view === 'inkt') {
     return renderInkWorkspace();
+  }
+
+  if (state.view === 'ehbo') {
+    return renderEhboWorkspace();
   }
 
   if (state.view === 'beheer' && admin) {
@@ -763,6 +770,11 @@ function renderStart(admin) {
         <span>Inkt en toner</span>
         <strong>Bestellen per printer</strong>
         <small>Kies locatie, printer en de nodige kleuren of set.</small>
+      </a>
+      <a class="action-card" href="#ehbo">
+        <span>EHBO</span>
+        <strong>Koffer A aanvullen</strong>
+        <small>Bestel verbandmiddelen en EHBO-materiaal per locatie.</small>
       </a>
       <a class="action-card" href="#bestellingen">
         <span>Opvolging</span>
@@ -846,16 +858,7 @@ function renderFrequentProducts() {
 }
 
 function renderOrderWorkspace() {
-  const products = state.data.products
-    .filter(isProductOrderable)
-    .sort((a, b) => {
-      const order = Number(a.sort_order || 100) - Number(b.sort_order || 100);
-      if (order !== 0) {
-        return order;
-      }
-
-      return String(a.naam || '').localeCompare(String(b.naam || ''), 'nl-BE');
-    });
+  const products = getSortedOrderableProducts();
   const cartItems = getCartItems();
 
   return `
@@ -878,6 +881,41 @@ function renderOrderWorkspace() {
       <aside class="cart-panel">
         <div class="panel-header">
           <h3>Winkelmand</h3>
+          <span>${cartItems.length} product${cartItems.length === 1 ? '' : 'en'}</span>
+        </div>
+        ${renderCart(cartItems)}
+      </aside>
+    </section>
+  `;
+}
+
+function renderEhboWorkspace() {
+  const products = getSortedOrderableProducts().filter(isEhboProduct);
+  const cartItems = getCartItems();
+
+  return `
+    <section class="page-heading">
+      <div>
+        <p class="eyebrow">EHBO</p>
+        <h2>EHBO-koffer A aanvullen</h2>
+      </div>
+      <p class="page-intro">
+        Gebruik deze lijst om de EHBO-koffers op de locaties gericht aan te vullen na controle of gebruik van materiaal.
+      </p>
+    </section>
+    ${state.error ? `<div class="warning-panel">${escapeHtml(state.error)}</div>` : ''}
+    ${state.notice ? `<div class="notice-panel">${escapeHtml(state.notice)}</div>` : ''}
+    ${state.mailWarning ? `<div class="warning-panel">${escapeHtml(state.mailWarning)}</div>` : ''}
+    <section class="order-layout">
+      <div class="catalog-panel">
+        ${renderProductCatalog(products, {
+          title: 'Aanvulartikelen EHBO-koffer A',
+          emptyText: 'Er staan nog geen EHBO-artikelen klaar voor bestelling.',
+        })}
+      </div>
+      <aside class="cart-panel">
+        <div class="panel-header">
+          <h3>EHBO-mand</h3>
           <span>${cartItems.length} product${cartItems.length === 1 ? '' : 'en'}</span>
         </div>
         ${renderCart(cartItems)}
@@ -1108,24 +1146,27 @@ function renderInkReview(inkItems, totals) {
   `;
 }
 
-function renderProductCatalog(products) {
+function renderProductCatalog(products, options = {}) {
+  const title = options.title || 'Producten';
+  const emptyText = options.emptyText || 'Er staan nog geen bestelklare producten in de catalogus.';
+
   return `
     <section class="category-section">
       <div class="catalog-toolbar">
-        <h3>Producten</h3>
+        <h3>${escapeHtml(title)}</h3>
         <span>${products.length} artikel${products.length === 1 ? '' : 'en'}</span>
       </div>
       ${
         products.length
           ? `<div class="product-grid">${products.map(renderProductCard).join('')}</div>`
-          : '<div class="empty-state is-compact"><p>Er staan nog geen bestelklare producten in de catalogus.</p></div>'
+          : `<div class="empty-state is-compact"><p>${escapeHtml(emptyText)}</p></div>`
       }
     </section>
   `;
 }
 
 function renderProductCard(product) {
-  const image = product.image_url || defaultImage;
+  const image = product.image_url || (isEhboProduct(product) ? ehboDefaultImage : defaultImage);
   const step = Number(product.minimum_bestelhoeveelheid || 1);
 
   return `
@@ -1147,8 +1188,8 @@ function renderProductCard(product) {
         </div>
         <dl class="product-meta">
           <div><dt>Eenheid</dt><dd>${escapeHtml(product.eenheid || 'stuks')}</dd></div>
-          <div><dt>Prijs</dt><dd>${formatCurrency(getProductPriceInclVat(product))}</dd></div>
-          <div><dt>Btw</dt><dd>inbegrepen</dd></div>
+          <div><dt>Prijs</dt><dd>${escapeHtml(getProductPriceLabel(product))}</dd></div>
+          <div><dt>Btw</dt><dd>${escapeHtml(getProductVatLabel(product))}</dd></div>
         </dl>
         <button class="primary-button product-button" type="button" data-add-product="${escapeHtml(product.id)}" data-step="${escapeHtml(step)}">
           In winkelmand
@@ -1169,7 +1210,7 @@ function renderProductPreview() {
     return '';
   }
 
-  const image = product.image_url || defaultImage;
+  const image = product.image_url || (isEhboProduct(product) ? ehboDefaultImage : defaultImage);
 
   return `
     <div class="image-modal" role="dialog" aria-modal="true" aria-labelledby="product-preview-title">
@@ -1200,10 +1241,11 @@ function renderCart(cartItems) {
   }
 
   const totals = calculateTotals(cartItems);
+  const hasPriceToConfirm = cartItems.some(({ product }) => isProductPriceToConfirm(product));
   const currentUserId = state.appUser?.id ?? '';
   const selectedLocationId = state.orderDraft.locatie_id ?? '';
   const selectedBestellerId = state.orderDraft.besteller_id || currentUserId;
-  const selectedCategory = state.orderDraft.categorie || 'Huishoudproducten';
+  const selectedCategory = state.orderDraft.categorie || getDefaultOrderCategory(cartItems);
   const selectedPriority = state.orderDraft.prioriteit || 'normaal';
   const desiredDate = state.orderDraft.gewenst_tegen || '';
   const opmerkingen = state.orderDraft.opmerkingen ?? '';
@@ -1219,7 +1261,7 @@ function renderCart(cartItems) {
               <article class="cart-line">
                 <div>
                   <strong>${escapeHtml(product.naam)}</strong>
-                  <span>${escapeHtml(product.eenheid || 'stuks')} - ${formatCurrency(getProductPriceInclVat(product))} incl. btw</span>
+                  <span>${escapeHtml(product.eenheid || 'stuks')} - ${escapeHtml(getProductPriceLabel(product))}</span>
                 </div>
                 <div class="quantity-control" aria-label="Aantal">
                   <button type="button" data-cart-action="decrease" data-product-id="${escapeHtml(product.id)}">-</button>
@@ -1235,8 +1277,13 @@ function renderCart(cartItems) {
       <div class="cart-totals">
         <div><span>Prijs incl. btw</span><strong>${formatCurrency(totals.incl)}</strong></div>
         <div><span>Waarvan btw</span><strong>${formatCurrency(totals.vat)}</strong></div>
-        <div class="grand-total"><span>Totaal te betalen</span><strong>${formatCurrency(totals.incl)}</strong></div>
+        <div class="grand-total"><span>${hasPriceToConfirm ? 'Totaal gekende prijzen' : 'Totaal te betalen'}</span><strong>${formatCurrency(totals.incl)}</strong></div>
       </div>
+      ${
+        hasPriceToConfirm
+          ? '<div class="notice-panel">Een of meerdere EHBO-artikelen hebben nog geen vaste catalogusprijs. Aankoop bevestigt de effectieve prijs bij verwerking.</div>'
+          : ''
+      }
       <label class="field">
         <span>Locatie</span>
         <select name="locatie_id" required>
@@ -1302,7 +1349,7 @@ function renderOrderReview(cartItems, totals) {
   const location = state.data.locations.find((item) => String(item.id) === String(state.orderDraft.locatie_id));
   const besteller = state.data.users.find((item) => String(item.id) === String(state.orderDraft.besteller_id || state.appUser?.id));
   const andereProducten = String(state.orderDraft.andere_producten ?? '').trim();
-  const selectedCategory = state.orderDraft.categorie || 'Huishoudproducten';
+  const selectedCategory = state.orderDraft.categorie || getDefaultOrderCategory(cartItems);
   const selectedPriority = state.orderDraft.prioriteit || 'normaal';
   const desiredDate = state.orderDraft.gewenst_tegen || '';
   const opmerkingen = String(state.orderDraft.opmerkingen ?? '').trim();
@@ -1350,7 +1397,7 @@ function renderOrderReview(cartItems, totals) {
           : ''
       }
       <div class="review-total">
-        <span>Totaal te betalen</span>
+        <span>${cartItems.some(({ product }) => isProductPriceToConfirm(product)) ? 'Totaal gekende prijzen' : 'Totaal te betalen'}</span>
         <strong>${formatCurrency(totals.incl)}</strong>
       </div>
     </section>
@@ -2229,6 +2276,7 @@ async function handleOrder(form, intent = 'submit') {
   const prioriteit = String(formData.get('prioriteit') ?? 'normaal').trim() || 'normaal';
   const gewenstTegen = String(formData.get('gewenst_tegen') ?? '').trim();
   const hasOtherProductRequest = cartItems.some(({ product }) => isOtherProductRequest(product));
+  const hasPriceToConfirm = cartItems.some(({ product }) => isProductPriceToConfirm(product));
 
   if (hasOtherProductRequest && !andereProducten) {
     state.error = 'Beschrijf bij "Andere producten" welk product je wil laten bestellen.';
@@ -2250,6 +2298,7 @@ async function handleOrder(form, intent = 'submit') {
       `Categorie: ${categorie}`,
       `Prioriteit: ${prioriteit}`,
       gewenstTegen ? `Gewenst tegen: ${gewenstTegen}` : '',
+      hasPriceToConfirm ? 'Prijsafspraak: een of meerdere EHBO-artikelen hebben nog geen vaste catalogusprijs. Aankoop bevestigt de effectieve prijs bij verwerking.' : '',
       opmerkingen ? `Toelichting:\n${opmerkingen}` : '',
       andereProducten ? `Andere producten gevraagd:\n${andereProducten}` : '',
     ]
@@ -2659,6 +2708,13 @@ function addToCart(productId, step = 1) {
 
   const current = Number(state.cart[productId] || 0);
   state.cart[productId] = current + step;
+  if (state.view === 'ehbo' && (!state.orderDraft.categorie || state.orderDraft.categorie === 'Huishoudproducten')) {
+    state.orderDraft = {
+      ...state.orderDraft,
+      categorie: ehboCategory,
+    };
+    persistOrderDraft();
+  }
   state.orderReview = false;
   state.error = '';
   persistCart();
@@ -2766,6 +2822,27 @@ function getCartItems() {
     .filter((item) => item.product && item.quantity > 0 && isProductOrderable(item.product));
 }
 
+function getSortedOrderableProducts() {
+  return state.data.products
+    .filter(isProductOrderable)
+    .sort((a, b) => {
+      const order = Number(a.sort_order || 100) - Number(b.sort_order || 100);
+      if (order !== 0) {
+        return order;
+      }
+
+      return String(a.naam || '').localeCompare(String(b.naam || ''), 'nl-BE');
+    });
+}
+
+function getDefaultOrderCategory(cartItems) {
+  if (cartItems.length && cartItems.every(({ product }) => isEhboProduct(product))) {
+    return ehboCategory;
+  }
+
+  return 'Huishoudproducten';
+}
+
 function getInkItems() {
   return Object.entries(state.inkDraft.quantities ?? {})
     .map(([cartridgeId, quantity]) => ({
@@ -2845,8 +2922,24 @@ function getProductPriceInclVat(product) {
   return roundMoney(parseDecimal(product.prijs_excl_btw));
 }
 
+function getProductPriceLabel(product) {
+  return isProductPriceToConfirm(product) ? 'Prijs te bevestigen' : `${formatCurrency(getProductPriceInclVat(product))} incl. btw`;
+}
+
+function getProductVatLabel(product) {
+  return isProductPriceToConfirm(product) ? 'bij verwerking' : 'inbegrepen';
+}
+
 function isOtherProductRequest(product) {
   return String(product?.naam ?? '').trim().toLowerCase().startsWith('ander product');
+}
+
+function isEhboProduct(product) {
+  return String(product?.categorie ?? '').trim() === ehboCategory;
+}
+
+function isProductPriceToConfirm(product) {
+  return isEhboProduct(product) && getProductPriceInclVat(product ?? {}) <= 0;
 }
 
 function isProductOrderable(product) {
@@ -2863,7 +2956,7 @@ function isProductComplete(product) {
   const unit = String(product?.eenheid ?? '').trim();
   const price = getProductPriceInclVat(product ?? {});
 
-  return Boolean(name) && Boolean(description) && Boolean(unit) && price > 0 && !incompleteProductNamePattern.test(name);
+  return Boolean(name) && Boolean(description) && Boolean(unit) && (price > 0 || isProductPriceToConfirm(product)) && !incompleteProductNamePattern.test(name);
 }
 
 function getProductAdminStatus(product) {
@@ -3537,5 +3630,5 @@ function persistAnalysisFilters() {
 
 function getRoute() {
   const route = window.location.hash.replace('#', '');
-  return ['start', 'bestellen', 'inkt', 'bestellingen', 'analyse', 'beheer'].includes(route) ? route : 'start';
+  return ['start', 'bestellen', 'ehbo', 'inkt', 'bestellingen', 'analyse', 'beheer'].includes(route) ? route : 'start';
 }
