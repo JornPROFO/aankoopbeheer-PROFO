@@ -22,6 +22,14 @@ docs/gebruik-en-testscenario-profo-aankoopbeheer.md
 
 Gebruik dat document als vaste checklist wanneer er een nieuwe versie getest wordt met een medewerker, Jorn, Kathleen of een externe beheerder.
 
+De governance-, privacy- en beveiligingsafspraken voor de stap van piloot naar beheerste toepassing staan in:
+
+```text
+docs/security-roadmap-en-rollenmatrix-profo-aankoopbeheer.md
+```
+
+Gebruik dat document als basis voor de rollenmatrix, RLS-controle, logging, bewaartermijnen, incidentopvolging en de latere verwerkingsregisterfiche.
+
 ## Supabase
 
 Voer eerst dit bestand uit in de Supabase SQL-editor:
