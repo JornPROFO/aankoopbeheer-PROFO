@@ -22,7 +22,7 @@ Bestellingen zijn organisatiegegevens met een persoonsgegevenscomponent. De verw
 
 | Rol | Doel | Mag zien | Mag aanmaken | Mag wijzigen | Mag verwijderen |
 | --- | --- | --- | --- | --- | --- |
-| Gebruiker | Bestellen voor de eigen werking of locatie | Eigen bestellingen en eigen concepten. Productcatalogus, EHBO-lijst en inkt/tonerkeuzes die actief bestelbaar zijn. | Nieuwe bestellingen, concepten en opmerkingen bij de eigen bestelling. | Eigen concepten en eigen nog niet verwerkte aanvragen beperkt corrigeren, zolang de bestelling nog niet in behandeling is. | Geen harde delete. Hoogstens eigen concept leegmaken of annuleren als dat functioneel voorzien wordt. |
+| Gebruiker | Bestellen voor de eigen werking of locatie | Eigen ingediende bestellingen. Productcatalogus, EHBO-lijst en inkt/tonerkeuzes die actief bestelbaar zijn. | Nieuwe bestellingen en opmerkingen bij de eigen bestelling. | Eigen nog niet verwerkte aanvragen beperkt corrigeren, als dat functioneel voorzien wordt en zolang de bestelling nog niet in behandeling is. | Geen harde delete. |
 | Beheerder aankoop | Bestellingen verwerken en catalogus beheren | Alle bestellingen, bestelregels, producten, EHBO-artikelen, inkt/toner, printers, leveranciersinformatie en analyses. | Producten, catalogusregels, printer- en tonerregels, statusnotities en verwerkingsacties. | Statussen, productgegevens, prijzen, actieve/inactieve artikelen, catalogusvolgorde, mailopvolging en verwerkingsnotities. | Geen gewone delete in de app. Deactiveren of archiveren is de standaard. |
 | Superadmin | Technisch en uitzonderlijk beheer | Alles wat nodig is voor technische ondersteuning, rechtenbeheer en incidentopvolging. | Gebruikers- en rolconfiguratie, technische correcties, noodherstelacties. | RLS- en configuratiecorrecties, gebruikersactivatie, noodcorrecties en technische instellingen. | Alleen uitzonderlijk en gedocumenteerd. Harde delete gebeurt niet als normale beheeractie. |
 | Locatieverantwoordelijke of regiodirecteur | Mogelijke latere rol voor lokale opvolging | Bestellingen van de eigen locatie of regio. | Eventueel bestellingen namens de locatie. | Eventueel status of interne toelichting voor de eigen locatie, als PROFO dat beleidsmatig wil. | Geen delete. |
@@ -36,7 +36,7 @@ Voorlopig blijft een regiodirecteur in Aankoopbeheer best gewoon gebruiker, tenz
 | Productcatalogus | Actieve producten zien en bestellen. | Producten toevoegen, corrigeren, deactiveren en prijzen beheren. | Technische correcties en bulkherstel. |
 | EHBO | Actieve EHBO-aanvulartikelen zien en bestellen. | EHBO-lijst beheren, prijzen/afbeeldingen aanvullen en niet-bestelbare regels deactiveren. | Technische correcties en bulkimport. |
 | Inkt en toner | Alleen actieve, bestelbare cartridges/toners zien per gekozen printer. | Printers, cartridges, prijzen en leverancierslinks beheren. Inactieve regels mogen in beheer zichtbaar blijven. | Technische correcties en RLS-controle. |
-| Bestellingen | Eigen bestellingen en eigen concepten zien. | Alle bestellingen opvolgen en statussen beheren. | Alles voor technische ondersteuning en audit. |
+| Bestellingen | Eigen ingediende bestellingen zien. | Alle bestellingen opvolgen, statussen beheren en de invoerlijst voor externe bestelplatformen gebruiken. | Alles voor technische ondersteuning en audit. |
 | Analyse | Niet zichtbaar. | Overzichten voor opvolging, budgetindicatie en bestelpatronen. | Volledige controle, inclusief technische analyses. |
 | Gebruikers | Eigen identiteit via login. Geen gebruikersbeheer. | Normaal geen gebruikersbeheer, tenzij PROFO dat expliciet toewijst. | Gebruikers activeren/deactiveren en rollen beheren. |
 | Mailstatus | Eigen bevestiging en beperkte melding in de app. | Mailstatus opvolgen bij verwerking. | Technische foutanalyse. |
@@ -51,13 +51,13 @@ De exacte SQL moet nog per tabel worden afgetoetst, maar de gewenste richting is
 | `locaties` | Actieve locaties zichtbaar voor ingelogde gebruikers. | Alleen beheerder/superadmin. | Alleen beheerder/superadmin. | Niet via app. |
 | `aankoop_producten` | Gebruikers zien alleen actieve en bestelbare producten. Beheer ziet ook inactieve regels. | Beheerder/superadmin. | Beheerder/superadmin. | Niet via app; deactiveren. |
 | `aankoop_printers` | Gebruikers zien alleen actieve printers voor hun bestelproces. Beheer ziet ook inactieve printers. | Beheerder/superadmin. | Beheerder/superadmin. | Niet via app; deactiveren. |
-| `aankoop_printer_cartridges` | Gebruikers zien alleen actieve bestelbare regels. Beheer ziet ook concepten en inactieve regels. | Beheerder/superadmin. | Beheerder/superadmin. | Niet via app; deactiveren. |
-| `aankoop_bestellingen` | Gebruiker ziet eigen bestellingen. Beheerder ziet alle bestellingen. | Ingelogde actieve gebruiker. | Gebruiker beperkt zolang concept of nog niet verwerkt. Beheerder voor status en opvolging. | Niet via app. |
-| `aankoop_bestelregels` | Zelfde zichtbaarheid als de bovenliggende bestelling. | Via bestelling door actieve gebruiker. | Beperkt zolang concept of nog niet verwerkt. | Niet via app. |
+| `aankoop_printer_cartridges` | Gebruikers zien alleen actieve bestelbare regels. Beheer ziet ook inactieve regels voor opvolging en correctie. | Beheerder/superadmin. | Beheerder/superadmin. | Niet via app; deactiveren. |
+| `aankoop_bestellingen` | Gebruiker ziet eigen bestellingen. Beheerder ziet alle bestellingen. | Ingelogde actieve gebruiker. | Gebruiker beperkt zolang de aanvraag nog niet verwerkt is, als die correctiemogelijkheid functioneel voorzien wordt. Beheerder voor status en opvolging. | Niet via app. |
+| `aankoop_bestelregels` | Zelfde zichtbaarheid als de bovenliggende bestelling. | Via bestelling door actieve gebruiker. | Beperkt zolang nog niet verwerkt. Beheerder voor opvolging en correcties. | Niet via app. |
 | `aankoop_statuslog` | Gebruiker ziet relevante status op eigen bestelling. Beheer ziet log voor opvolging. | Automatisch via statuswijziging. | Niet manueel, tenzij technische correctie. | Niet via app. |
 | `aankoop_audit_log` | Niet zichtbaar voor gewone gebruiker. Beperkt zichtbaar voor beheer/superadmin. | Automatisch. | Niet manueel. | Niet via app. |
 
-De belangrijkste technische afspraak is dat delete voor gewone gebruikers nergens nodig is. Functioneel verwijderen betekent in deze app: concept leegmaken, bestelling annuleren, product deactiveren of regel archiveren. Harde delete blijft voor uitzonderlijk technisch onderhoud en moet traceerbaar zijn.
+De belangrijkste technische afspraak is dat delete voor gewone gebruikers nergens nodig is. Functioneel verwijderen betekent in deze app: winkelmand leegmaken voor indiening, bestelling annuleren indien dat later functioneel voorzien wordt, product deactiveren of regel archiveren. Harde delete blijft voor uitzonderlijk technisch onderhoud en moet traceerbaar zijn.
 
 ## Logging en aantoonbaarheid
 
@@ -94,7 +94,6 @@ De bewaartermijnen moeten nog beleidsmatig worden vastgelegd. Mijn voorstel als 
 
 | Gegevens | Voorstel bewaartermijn | Reden |
 | --- | --- | --- |
-| Conceptbestellingen | 3 tot 6 maanden | Concepten zijn werkmateriaal en hoeven niet lang te blijven staan. |
 | Ingediende bestellingen en bestelregels | 5 tot 7 jaar | Nuttig voor interne controle, budgetopvolging, leveranciersvragen en boekhoudkundige aansluiting. Afstemming met boekhouding is nodig. |
 | Statuslogs | Zelfde termijn als bestelling | Nodig om verwerking en beslissingen te kunnen reconstrueren. |
 | Catalogusgegevens | Actief zolang artikel gebruikt wordt; daarna historisch bewaren zolang bestellingen ernaar verwijzen | Oude bestellingen moeten begrijpelijk blijven. |
@@ -167,7 +166,7 @@ Minimaal te testen voor ingebruikname:
 1. Rollenmatrix finaliseren en bevestigen wie beheerder en superadmin is.
 2. RLS per tabel controleren: select, insert, update en delete.
 3. Gebruikersbeheer aanscherpen: alleen actieve PROFO-gebruikers, deactiveren in plaats van verwijderen.
-4. Catalogusbeheer opschonen: alleen actieve bestelbare producten in de gewone flow; concepten alleen in beheer.
+4. Catalogusbeheer opschonen: alleen actieve bestelbare producten in de gewone flow; inactieve of voorbereidende regels alleen in beheer.
 5. Audit en statuslog vastleggen op de acties die we echt willen kunnen aantonen.
 6. Verwerkingsregisterfiche en korte privacy-nota opmaken.
 7. Bewaartermijnen afkloppen met boekhouding/directie.

@@ -526,6 +526,16 @@ h4 {
   margin-bottom: 1rem;
 }
 
+.order-export-panel {
+  margin-bottom: 1rem;
+}
+
+.panel-intro {
+  margin: 0.75rem 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 .order-filter-grid {
   grid-template-columns: minmax(180px, 1.2fr) repeat(6, minmax(120px, 1fr));
   gap: 0.7rem;
@@ -1082,7 +1092,6 @@ h4 {
   background: #eef7f1;
 }
 
-.status-concept,
 .status-extra-informatie-gevraagd {
   color: #69501f;
   background: #fff7df;
