@@ -813,6 +813,17 @@ h4 {
 .cart-panel {
   position: sticky;
   top: 1rem;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  max-height: calc(100vh - 2rem);
+  overflow: hidden;
+}
+
+.cart-panel > form {
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+  scrollbar-gutter: stable;
 }
 
 .cart-line {
@@ -1544,6 +1555,14 @@ h4 {
 
   .cart-panel {
     position: static;
+    display: block;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .cart-panel > form {
+    overflow: visible;
+    padding-right: 0;
   }
 }
 
