@@ -36,6 +36,12 @@ De installatie als app op laptop, Android en iOS staat in:
 docs/installatie-profo-aankoopbeheer.md
 ```
 
+De mail- en DNS-afspraken voor Resend staan in:
+
+```text
+docs/mail-en-dns-resend.md
+```
+
 ## Supabase
 
 Voer eerst dit bestand uit in de Supabase SQL-editor:
@@ -83,7 +89,7 @@ Die kan je na stap 0 rechtstreeks uitvoeren in Supabase.
 De app mag geen tweede Outlook openen en werkt niet met handmatige mailknoppen. De bedoeling is:
 
 1. de bestelling wordt bewaard in Supabase;
-2. de app roept automatisch de Edge Function `bright-endpoint` aan;
+2. de app roept automatisch de Edge Function `send-aankoopbestelling` aan;
 3. de besteller krijgt automatisch een bevestiging met de inhoud van de bestelling;
 4. Jorn krijgt automatisch een korte melding dat er een bestelling klaarstaat voor verwerking.
 
@@ -96,6 +102,8 @@ RESEND_API_KEY
 MAIL_FROM
 AANKOOPBEHEER_MAIL_TO=jorn.neeus@profo.be
 ```
+
+Gebruik voor `MAIL_FROM` alleen een afzender op een domein of subdomein dat in Resend volledig geverifieerd is. Zolang de DNS-check in Resend faalt, zullen bevestigingsmails niet betrouwbaar vertrekken.
 
 De beheerdersmail is bewust kort: die dient alleen als signaal dat er een bestelling klaarstaat. De inhoudelijke bestelbevestiging gaat naar de besteller.
 

@@ -25,7 +25,7 @@ serve(async (req) => {
     const beheerderMail = Deno.env.get('AANKOOPBEHEER_MAIL_TO') ?? 'jorn.neeus@profo.be';
 
     if (!supabaseUrl || !serviceRoleKey || !resendApiKey) {
-      return json({ error: 'Mailfunctie is nog niet volledig geconfigureerd.' }, 500);
+      return json({ error: 'Mailfunctie is nog niet volledig geconfigureerd. Controleer SUPABASE_URL, SERVICE_ROLE_KEY en RESEND_API_KEY in de Supabase Edge Function secrets.' }, 500);
     }
 
     const supabase = createClient(supabaseUrl, serviceRoleKey);
@@ -155,7 +155,8 @@ async function sendMail(options: {
   });
 
   if (!response.ok) {
-    throw new Error(`Mail kon niet worden verzonden: ${await response.text()}`);
+    const body = await response.text();
+    throw new Error(`Mail kon niet worden verzonden via Resend. Controleer of MAIL_FROM bij een verified Resend-domein hoort en of SPF/DKIM/Return-Path correct gevalideerd zijn. Resend antwoordde: ${body}`);
   }
 }
 

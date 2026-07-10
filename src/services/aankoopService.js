@@ -160,7 +160,7 @@ export async function createOrder(orderPayload, linePayloads) {
 }
 
 export async function invokeOrderMail(orderId) {
-  const { data, error } = await supabase.functions.invoke('bright-endpoint', {
+  const { data, error } = await supabase.functions.invoke('send-aankoopbestelling', {
     body: {
       bestelling_id: orderId,
     },
