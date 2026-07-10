@@ -537,12 +537,17 @@ h4 {
 }
 
 .order-filter-grid {
-  grid-template-columns: minmax(180px, 1.2fr) repeat(6, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 0.7rem;
 }
 
 .order-filter-grid .field {
   margin-bottom: 0;
+}
+
+.order-filter-grid .field:first-child,
+.order-filter-grid .field:nth-child(3) {
+  grid-column: span 2;
 }
 
 .form-actions .primary-button {
@@ -961,6 +966,7 @@ h4 {
 .field {
   display: grid;
   gap: 0.35rem;
+  min-width: 0;
   margin-bottom: 0.8rem;
 }
 
@@ -1001,6 +1007,7 @@ h4 {
 .field select,
 .field textarea {
   width: 100%;
+  min-width: 0;
   min-height: 42px;
   border: 1px solid #d8c4c3;
   border-radius: 6px;
@@ -1343,12 +1350,17 @@ h4 {
 }
 
 .analysis-filter-grid {
-  grid-template-columns: repeat(7, minmax(130px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 0.7rem;
 }
 
 .analysis-filter-grid .field {
   margin-bottom: 0;
+}
+
+.analysis-filter-grid .field:nth-child(3),
+.analysis-filter-grid .field:nth-child(4) {
+  grid-column: span 2;
 }
 
 .analysis-actions {
@@ -1601,6 +1613,11 @@ h4 {
 
   .product-grid {
     grid-template-columns: 1fr;
+  }
+
+  .analysis-filter-grid .field,
+  .order-filter-grid .field {
+    grid-column: auto;
   }
 
   .product-card {
