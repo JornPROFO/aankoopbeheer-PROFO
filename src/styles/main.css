@@ -1152,7 +1152,8 @@ h4 {
   resize: vertical;
 }
 
-.auto-category-summary {
+.auto-category-summary,
+.readonly-field {
   min-height: 42px;
   padding: 0.65rem 0.7rem;
   border: 1px solid #d8c4c3;
@@ -1160,11 +1161,13 @@ h4 {
   background: #fffafa;
 }
 
-.auto-category-summary strong {
+.auto-category-summary strong,
+.readonly-field strong {
   color: var(--profo-red-dark);
 }
 
-.auto-category-summary small {
+.auto-category-summary small,
+.readonly-field small {
   color: var(--muted);
   line-height: 1.35;
 }

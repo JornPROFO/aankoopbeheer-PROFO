@@ -1366,6 +1366,8 @@ function renderInkWorkspace() {
   const selectedPrinterId = state.inkDraft.printer_id ?? '';
   const currentUserId = state.appUser?.id ?? '';
   const selectedBestellerId = state.inkDraft.besteller_id || currentUserId;
+  const currentUser = findUserById(currentUserId) ?? state.appUser;
+  const canChooseBesteller = canSubmitForOtherUsers();
   const printersForLocation = getPrintersForLocation(selectedLocationId);
   const selectedPrinter = state.data.printers.find((printer) => String(printer.id) === String(selectedPrinterId));
   const activePrinterCartridges = selectedPrinter ? getCartridgesForPrinter(selectedPrinter.id) : [];
@@ -1393,14 +1395,7 @@ function renderInkWorkspace() {
           <span>wie, waar en welke printer</span>
         </div>
         <div class="form-grid two">
-          <label class="field">
-            <span>Wie bestelt de inkt?</span>
-            <select name="besteller_id" required>
-              ${state.data.users
-                .map((user) => `<option value="${escapeHtml(user.id)}" ${String(user.id) === String(selectedBestellerId) ? 'selected' : ''}>${escapeHtml(getUserLabel(user))}</option>`)
-                .join('')}
-            </select>
-          </label>
+          ${renderBestellerInput('Wie bestelt de inkt?', selectedBestellerId, currentUser, canChooseBesteller)}
           <label class="field">
             <span>Voor welke locatie?</span>
             <select name="locatie_id" required>
@@ -1583,6 +1578,36 @@ function renderInkReview(inkItems, totals) {
   `;
 }
 
+function renderBestellerInput(label, selectedBestellerId, currentUser, canChooseBesteller) {
+  if (canChooseBesteller) {
+    return `
+      <label class="field">
+        <span>${escapeHtml(label)}</span>
+        <select name="besteller_id" required>
+          ${state.data.users
+            .map((user) => `<option value="${escapeHtml(user.id)}" ${String(user.id) === String(selectedBestellerId) ? 'selected' : ''}>${escapeHtml(getUserLabel(user))}</option>`)
+            .join('')}
+        </select>
+      </label>
+    `;
+  }
+
+  const userId = currentUser?.id ?? state.appUser?.id ?? '';
+
+  return `
+    <div class="field readonly-field">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(currentUser ? getUserLabel(currentUser) : 'Ingelogde gebruiker')}</strong>
+      <small>Automatisch gekoppeld aan de ingelogde gebruiker.</small>
+      <input type="hidden" name="besteller_id" value="${escapeHtml(userId)}" />
+    </div>
+  `;
+}
+
+function canSubmitForOtherUsers() {
+  return false;
+}
+
 function renderProductCatalog(products, options = {}) {
   const title = options.title || 'Producten';
   const totalCount = Number(options.totalCount ?? products.length);
@@ -1691,6 +1716,8 @@ function renderCart(cartItems) {
   const currentUserId = state.appUser?.id ?? '';
   const selectedLocationId = state.orderDraft.locatie_id ?? '';
   const selectedBestellerId = state.orderDraft.besteller_id || currentUserId;
+  const currentUser = findUserById(currentUserId) ?? state.appUser;
+  const canChooseBesteller = canSubmitForOtherUsers();
   const selectedCategory = getDefaultOrderCategory(cartItems);
   const opmerkingen = state.orderDraft.opmerkingen ?? '';
   const andereProducten = state.orderDraft.andere_producten ?? '';
@@ -1737,14 +1764,7 @@ function renderCart(cartItems) {
             .join('')}
         </select>
       </label>
-      <label class="field">
-        <span>Besteller</span>
-        <select name="besteller_id" required>
-          ${state.data.users
-            .map((user) => `<option value="${escapeHtml(user.id)}" ${String(user.id) === String(selectedBestellerId) ? 'selected' : ''}>${escapeHtml(getUserLabel(user))}</option>`)
-            .join('')}
-        </select>
-      </label>
+      ${renderBestellerInput('Besteller', selectedBestellerId, currentUser, canChooseBesteller)}
       <div class="field auto-category-summary">
         <span>Categorie</span>
         <strong>${escapeHtml(selectedCategory)}</strong>
@@ -1872,6 +1892,8 @@ function renderOrderCard(order, admin, approver) {
   const normalizedStatus = getNormalizedStatus(order.status);
   const freeText = getOrderFreeText(order);
   const actionStatuses = getOrderActionStatuses(order, admin, approver);
+  const createdByUser = findUserById(order.aangemaakt_door_id);
+  const createdByLabel = createdByUser ? getUserLabel(createdByUser) : order.aangemaakt_door_email || 'Niet gekend';
 
   return `
     <article class="order-card">
@@ -1885,6 +1907,7 @@ function renderOrderCard(order, admin, approver) {
       <dl class="order-meta">
         <div><dt>Locatie</dt><dd>${escapeHtml(order.locatie_naam)}</dd></div>
         <div><dt>Besteller</dt><dd>${escapeHtml(order.besteller_naam)}<br /><span>${escapeHtml(order.besteller_email)}</span></dd></div>
+        <div><dt>Aangemaakt door</dt><dd>${escapeHtml(createdByLabel)}<br /><span>${escapeHtml(order.aangemaakt_door_email || '')}</span></dd></div>
         <div><dt>Categorie</dt><dd>${escapeHtml(meta.categorie || 'Niet vermeld')}</dd></div>
         <div><dt>Prioriteit</dt><dd>${escapeHtml(getPriorityLabel(meta.prioriteit || 'normaal'))}</dd></div>
         <div><dt>Gewenst tegen</dt><dd>${escapeHtml(meta.gewenst_tegen ? formatDateLabel(meta.gewenst_tegen) : 'Niet vermeld')}</dd></div>
@@ -2707,6 +2730,13 @@ async function handleOrder(form) {
     return;
   }
 
+  if (!canSubmitForOtherUsers() && String(besteller.id) !== String(state.appUser?.id)) {
+    state.error = 'Je kan alleen een bestelling indienen op je eigen naam. Neem contact op met aankoopbeheer als dit voor iemand anders moet gebeuren.';
+    state.orderReview = false;
+    render();
+    return;
+  }
+
   if (form.dataset.orderReview !== 'true') {
     state.error = '';
     state.orderReview = true;
@@ -2808,6 +2838,13 @@ async function handleInkOrder(form) {
 
   if (!location || !besteller || !printer) {
     state.error = 'Kies een besteller, locatie en printer.';
+    render();
+    return;
+  }
+
+  if (!canSubmitForOtherUsers() && String(besteller.id) !== String(state.appUser?.id)) {
+    state.error = 'Je kan alleen een inktbestelling indienen op je eigen naam. Neem contact op met aankoopbeheer als dit voor iemand anders moet gebeuren.';
+    state.inkReview = false;
     render();
     return;
   }
