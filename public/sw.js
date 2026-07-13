@@ -1,4 +1,4 @@
-const CACHE_NAME = 'profo-aankoopbeheer-v1';
+const CACHE_NAME = 'profo-aankoopbeheer-v2';
 const CORE_ASSETS = [
   '/',
   '/manifest.webmanifest',
@@ -64,5 +64,54 @@ self.addEventListener('fetch', (event) => {
         return response;
       });
     }),
+  );
+});
+
+self.addEventListener('push', (event) => {
+  let payload = {};
+
+  try {
+    payload = event.data?.json() ?? {};
+  } catch {
+    payload = {
+      title: 'PROFO Aankoopbeheer',
+      body: event.data?.text() ?? 'Er is een nieuwe melding in Aankoopbeheer.',
+    };
+  }
+
+  const title = payload.title || 'PROFO Aankoopbeheer';
+  const options = {
+    body: payload.body || 'Er is een nieuwe melding in Aankoopbeheer.',
+    icon: '/assets/icons/aankoopbeheer-icon-192.png',
+    badge: '/assets/icons/aankoopbeheer-icon-192.png',
+    tag: payload.tag || `aankoop-melding-${payload.notificationId ?? Date.now()}`,
+    renotify: true,
+    data: {
+      url: payload.url || '/#start',
+      notificationId: payload.notificationId ?? null,
+    },
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  const targetUrl = new URL(event.notification.data?.url || '/#start', self.location.origin).href;
+
+  event.waitUntil(
+    clients
+      .matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        const existingClient = clientList.find((client) => client.url.startsWith(self.location.origin));
+
+        if (existingClient) {
+          existingClient.navigate(targetUrl);
+          return existingClient.focus();
+        }
+
+        return clients.openWindow(targetUrl);
+      }),
   );
 });

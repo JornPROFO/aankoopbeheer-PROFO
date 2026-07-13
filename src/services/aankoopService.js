@@ -215,6 +215,54 @@ export async function markNotificationRead(id) {
   }
 }
 
+export async function savePushSubscription(payload) {
+  const { data, error } = await supabase.rpc('aankoop_push_abonnement_opslaan', {
+    p_endpoint: payload.endpoint,
+    p_p256dh: payload.p256dh,
+    p_auth: payload.auth,
+    p_user_agent: payload.user_agent ?? null,
+    p_platform: payload.platform ?? null,
+  });
+
+  if (error) {
+    if (isMissingPushSupport(error)) {
+      return null;
+    }
+
+    throw error;
+  }
+
+  return data ?? null;
+}
+
+export async function disablePushSubscription(endpoint) {
+  const { error } = await supabase.rpc('aankoop_push_abonnement_deactiveren', {
+    p_endpoint: endpoint,
+  });
+
+  if (error) {
+    if (isMissingPushSupport(error)) {
+      return;
+    }
+
+    throw error;
+  }
+}
+
+export async function sendPushNotification(notificationId) {
+  const { data, error } = await supabase.functions.invoke('send-aankoop-push', {
+    body: {
+      melding_id: notificationId,
+    },
+  });
+
+  if (error) {
+    throw new Error(await getFunctionErrorMessage(error));
+  }
+
+  return data ?? null;
+}
+
 export async function invokeOrderMail(orderId) {
   const { data, error } = await supabase.functions.invoke('send-aankoopbestelling', {
     body: {
@@ -261,6 +309,16 @@ function isMissingNotificationsTable(error) {
   const message = String(error?.message ?? '').toLowerCase();
   const code = String(error?.code ?? '');
   return code === '42P01' || code === '42883' || message.includes('aankoop_meldingen') || message.includes('aankoop_melding_toevoegen');
+}
+
+function isMissingPushSupport(error) {
+  const message = String(error?.message ?? '').toLowerCase();
+  const code = String(error?.code ?? '');
+  return code === '42P01'
+    || code === '42883'
+    || message.includes('aankoop_push_abonnementen')
+    || message.includes('aankoop_push_abonnement_opslaan')
+    || message.includes('aankoop_push_abonnement_deactiveren');
 }
 
 export async function saveProduct(payload, id = null) {

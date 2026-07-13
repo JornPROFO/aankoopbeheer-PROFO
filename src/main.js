@@ -11,12 +11,15 @@ import {
 import {
   createOrder,
   createNotification,
+  disablePushSubscription,
   disableInkCartridge,
   disableProduct,
   disablePrinter,
   getActiveUserByEmail,
   loadAankoopData,
   markNotificationRead,
+  savePushSubscription,
+  sendPushNotification,
   saveInkCartridge,
   saveProduct,
   savePrinter,
@@ -49,6 +52,7 @@ const ehboDefaultImage = '/assets/ehbo-koffer-a-aanvulling.svg';
 const defaultDocumentTitle = 'PROFO Aankoopbeheer';
 const passiveRefreshMs = 15000;
 const passiveRefreshViews = new Set(['start', 'bestellingen', 'analyse', 'beheer']);
+const pushPublicKey = import.meta.env.VITE_PUSH_PUBLIC_KEY ?? '';
 let passiveRefreshTimer = null;
 let passiveRefreshRunning = false;
 
@@ -129,6 +133,7 @@ const state = {
   previewProductId: '',
   mailWarning: '',
   installPrompt: null,
+  pushBusy: false,
 };
 
 onAuthChange(async (session, event) => {
@@ -261,6 +266,14 @@ app.addEventListener('click', async (event) => {
 
   if (target.matches('[data-install-app]')) {
     await handleAppInstall();
+  }
+
+  if (target.matches('[data-enable-push]')) {
+    await handlePushEnable();
+  }
+
+  if (target.matches('[data-disable-push]')) {
+    await handlePushDisable();
   }
 
   if (target.matches('[data-add-product]')) {
@@ -556,6 +569,176 @@ async function handleAppInstall() {
   render();
 }
 
+function isPushSupported() {
+  return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+}
+
+function getPushPermission() {
+  if (!('Notification' in window)) {
+    return 'unsupported';
+  }
+
+  return Notification.permission;
+}
+
+function getPushStatusMessage() {
+  if (!isPushSupported()) {
+    return 'Pushmeldingen worden niet ondersteund door deze browser of installatievorm.';
+  }
+
+  if (!pushPublicKey) {
+    return 'Pushmeldingen zijn technisch voorbereid, maar de publieke VAPID-sleutel is nog niet ingesteld.';
+  }
+
+  if (getPushPermission() === 'denied') {
+    return 'Pushmeldingen zijn geblokkeerd in de browserinstellingen van dit toestel.';
+  }
+
+  if (getPushPermission() === 'granted') {
+    return 'Pushmeldingen staan op dit toestel klaar voor Aankoopbeheer.';
+  }
+
+  return 'Ontvang een melding wanneer een bestelling klaarstaat, goedgekeurd of geweigerd wordt.';
+}
+
+async function getPushRegistration() {
+  const registration = await navigator.serviceWorker.getRegistration();
+
+  if (registration) {
+    return registration;
+  }
+
+  await navigator.serviceWorker.register('/sw.js');
+  return navigator.serviceWorker.ready;
+}
+
+async function handlePushEnable() {
+  if (state.pushBusy) {
+    return;
+  }
+
+  if (!isPushSupported()) {
+    state.error = 'Deze browser ondersteunt geen pushmeldingen voor deze app.';
+    render();
+    return;
+  }
+
+  if (!pushPublicKey) {
+    state.error = 'Pushmeldingen zijn voorbereid, maar VITE_PUSH_PUBLIC_KEY ontbreekt nog in de Vercel-instellingen.';
+    render();
+    return;
+  }
+
+  state.pushBusy = true;
+  state.error = '';
+  state.notice = '';
+  render();
+
+  try {
+    const permission = await Notification.requestPermission();
+
+    if (permission !== 'granted') {
+      state.error = permission === 'denied'
+        ? 'Pushmeldingen zijn geweigerd. Dit kan je later aanpassen in de browserinstellingen.'
+        : 'Pushmeldingen werden nog niet ingeschakeld.';
+      return;
+    }
+
+    const registration = await getPushRegistration();
+    const existingSubscription = await registration.pushManager.getSubscription();
+    const subscription = existingSubscription ?? await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(pushPublicKey),
+    });
+
+    const savedSubscriptionId = await savePushSubscription(getPushSubscriptionPayload(subscription));
+
+    if (!savedSubscriptionId) {
+      state.error = 'Pushmeldingen zijn nog niet actief in Supabase. Voer eerst het SQL-bestand voor pushnotificaties uit.';
+      return;
+    }
+
+    state.notice = 'Pushmeldingen zijn ingeschakeld voor dit toestel.';
+  } catch (error) {
+    state.error = error.message || 'Pushmeldingen konden niet worden ingeschakeld.';
+  } finally {
+    state.pushBusy = false;
+    render();
+  }
+}
+
+async function handlePushDisable() {
+  if (state.pushBusy || !isPushSupported()) {
+    return;
+  }
+
+  state.pushBusy = true;
+  state.error = '';
+  state.notice = '';
+  render();
+
+  try {
+    const registration = await navigator.serviceWorker.getRegistration();
+    const subscription = await registration?.pushManager.getSubscription();
+
+    if (subscription) {
+      const endpoint = subscription.endpoint;
+      await disablePushSubscription(endpoint);
+      await subscription.unsubscribe();
+    }
+
+    state.notice = 'Pushmeldingen zijn uitgeschakeld voor dit toestel.';
+  } catch (error) {
+    state.error = error.message || 'Pushmeldingen konden niet worden uitgeschakeld.';
+  } finally {
+    state.pushBusy = false;
+    render();
+  }
+}
+
+async function syncExistingPushSubscription() {
+  if (!isPushSupported() || !pushPublicKey || getPushPermission() !== 'granted') {
+    return;
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.getRegistration();
+    const subscription = await registration?.pushManager.getSubscription();
+
+    if (subscription) {
+      await savePushSubscription(getPushSubscriptionPayload(subscription));
+    }
+  } catch {
+    // Push is aanvullend. Een tijdelijke fout mag de gewone bestelstroom niet hinderen.
+  }
+}
+
+function getPushSubscriptionPayload(subscription) {
+  const json = subscription.toJSON();
+  const keys = json.keys ?? {};
+
+  return {
+    endpoint: json.endpoint,
+    p256dh: keys.p256dh,
+    auth: keys.auth,
+    user_agent: navigator.userAgent,
+    platform: navigator.platform,
+  };
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = `${base64String}${padding}`.replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let index = 0; index < rawData.length; index += 1) {
+    outputArray[index] = rawData.charCodeAt(index);
+  }
+
+  return outputArray;
+}
+
 async function bootstrapData() {
   state.loading = true;
   state.setupError = '';
@@ -581,6 +764,7 @@ async function bootstrapData() {
     state.data = await loadAankoopData({ includeInactiveProducts: admin });
     state.error = '';
     syncAppBadge();
+    syncExistingPushSubscription();
     startPassiveRefresh();
   } catch (error) {
     state.setupError = error.message;
@@ -998,12 +1182,34 @@ function renderNotificationsPanel() {
         <h3>Meldingen</h3>
         <span>${unreadCount} ongelezen</span>
       </div>
+      ${renderPushControls()}
       ${
         notifications.length
           ? `<div class="notification-list">
               ${notifications.map(renderNotificationCard).join('')}
             </div>`
           : '<div class="empty-state is-compact"><p>Er zijn momenteel geen meldingen voor jou.</p></div>'
+      }
+    </div>
+  `;
+}
+
+function renderPushControls() {
+  const permission = getPushPermission();
+  const canEnable = isPushSupported() && pushPublicKey && permission !== 'denied';
+  const isEnabled = permission === 'granted';
+  const statusClass = isEnabled ? 'is-ok' : permission === 'denied' || !pushPublicKey ? 'is-warning' : '';
+
+  return `
+    <div class="push-control ${statusClass}">
+      <div>
+        <strong>Pushmeldingen</strong>
+        <span>${escapeHtml(getPushStatusMessage())}</span>
+      </div>
+      ${
+        isEnabled
+          ? `<button class="ghost-button" type="button" data-disable-push ${state.pushBusy ? 'disabled' : ''}>Uitschakelen</button>`
+          : `<button class="ghost-button" type="button" data-enable-push ${!canEnable || state.pushBusy ? 'disabled' : ''}>Inschakelen</button>`
       }
     </div>
   `;
@@ -2934,6 +3140,9 @@ async function sendOrderNotifications(users, order, payload) {
 
       if (notificationId) {
         sent += 1;
+        await sendPushNotification(notificationId).catch(() => {
+          // Push is aanvullend op de interne melding. De bestelling zelf mag hierdoor niet falen.
+        });
       }
     } catch {
       failed = true;
