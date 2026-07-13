@@ -397,10 +397,19 @@ export async function disableInkCartridge(id) {
 }
 
 export async function updateOrderStatus(id, status, actor = {}) {
-  const { error } = await supabase.from('aankoop_bestellingen').update({ status }).eq('id', id);
+  const { data, error } = await supabase
+    .from('aankoop_bestellingen')
+    .update({ status })
+    .eq('id', id)
+    .select(orderSelect)
+    .maybeSingle();
 
   if (error) {
     throw error;
+  }
+
+  if (!data) {
+    throw new Error('De status kon niet worden aangepast. De bestelling werd niet gevonden of je hebt onvoldoende rechten voor deze wijziging.');
   }
 
   try {
@@ -413,6 +422,8 @@ export async function updateOrderStatus(id, status, actor = {}) {
   } catch {
     // De statuswijziging zelf blijft leidend. De logtabel kan via de optionele SQL worden toegevoegd.
   }
+
+  return data;
 }
 
 export async function updateOrderMailStatus(id, mailStatus) {

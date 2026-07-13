@@ -3092,14 +3092,17 @@ function copyCartridgeToDraft(cartridge) {
 async function handleStatusChange(orderId, status) {
   try {
     const order = state.data.orders.find((item) => String(item.id) === String(orderId));
-    await updateOrderStatus(orderId, status, {
+    const updatedOrder = await updateOrderStatus(orderId, status, {
       actorName: getUserLabel(state.appUser),
       actorEmail: state.session?.user?.email ?? '',
     });
+    const orderForNotification = mergeUpdatedOrder(order, updatedOrder);
+    state.data.orders = state.data.orders.map((item) => (String(item.id) === String(orderId) ? orderForNotification : item));
+    render();
     state.mailWarning = '';
 
-    if (order) {
-      await notifyOrderStatusChanged(order, status);
+    if (orderForNotification) {
+      await notifyOrderStatusChanged(orderForNotification, status);
     }
 
     state.notice = status === 'Goedgekeurd'
@@ -3110,6 +3113,18 @@ async function handleStatusChange(orderId, status) {
     state.error = error.message;
     render();
   }
+}
+
+function mergeUpdatedOrder(existingOrder, updatedOrder) {
+  if (!updatedOrder) {
+    return existingOrder;
+  }
+
+  return {
+    ...(existingOrder ?? {}),
+    ...updatedOrder,
+    regels: existingOrder?.regels ?? updatedOrder.regels ?? [],
+  };
 }
 
 async function handleNotificationRead(notificationId) {
