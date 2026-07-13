@@ -152,20 +152,18 @@ where gebruiker.actief = true
 on conflict do nothing;
 
 -- Invulblok teamkoppelingen.
--- Vul hier de exacte namen aan vanuit de SharePoint-teamlijst.
--- Laat dit blok leeg zolang de teamlijst nog niet is overgenomen.
-create temporary table profo_aankoop_teamkoppelingen (
-  goedkeurder_naam text not null,
-  teamlid_naam text not null
-) on commit drop;
+-- Vul de echte rijen aan zodra de SharePoint-teamlijst is overgenomen.
+-- Laat het blok voorlopig leeg: dan worden alleen de rollen en Timothy organisatiebreed gezet.
+with profo_aankoop_teamkoppelingen (goedkeurder_naam, teamlid_naam) as (
+  select null::text, null::text
+  where false
 
--- Voorbeeld, pas zelf aan met echte rijen uit de teamlijst:
--- insert into profo_aankoop_teamkoppelingen (goedkeurder_naam, teamlid_naam) values
---   ('Karima Lakdim', 'Naam Teamlid 1'),
---   ('Nathan Blondeel', 'Naam Teamlid 2'),
---   ('Annelies Vuye', 'Naam Teamlid 3'),
---   ('Joke DeLille', 'Naam Teamlid 4');
-
+  -- Voorbeeld, pas later aan met echte rijen:
+  -- union all select 'Karima Lakdim', 'Naam Teamlid 1'
+  -- union all select 'Nathan Blondeel', 'Naam Teamlid 2'
+  -- union all select 'Annelies Vuye', 'Naam Teamlid 3'
+  -- union all select 'Joke DeLille', 'Naam Teamlid 4'
+)
 insert into public.aankoop_goedkeurder_scopes (goedkeurder_id, scope_type, teamlid_id, actief)
 select goedkeurder.id, 'teamlid', teamlid.id, true
 from profo_aankoop_teamkoppelingen koppeling
