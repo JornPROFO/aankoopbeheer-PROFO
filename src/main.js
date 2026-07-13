@@ -29,6 +29,7 @@ import {
   getLocationLabel,
   getUserLabel,
   isAdminUser,
+  isApproverUser,
   parseDecimal,
   roundMoney,
 } from './utils/format.js';
@@ -63,7 +64,7 @@ const priorityOptions = [
 ];
 
 const orderStatuses = [
-  { value: 'Ingediend', label: 'Ingediend', description: 'Ontvangen en klaar voor nazicht.' },
+  { value: 'Ter goedkeuring', label: 'Ter goedkeuring', description: 'Wacht op controle door de bevoegde goedkeurder.' },
   { value: 'In behandeling', label: 'In behandeling', description: 'Wordt bekeken of voorbereid.' },
   { value: 'Goedgekeurd', label: 'Goedgekeurd', description: 'Mag besteld of verwerkt worden.' },
   { value: 'Extra informatie gevraagd', label: 'Info gevraagd', description: 'Er is nog verduidelijking nodig.' },
@@ -74,12 +75,13 @@ const orderStatuses = [
   { value: 'Afgesloten', label: 'Afgesloten', description: 'Administratief afgewerkt.' },
 ];
 
-const externalEntryStatuses = new Set(['Ingediend', 'In behandeling', 'Goedgekeurd']);
-const defaultOrderFilterStatuses = ['Ingediend', 'In behandeling', 'Goedgekeurd', 'Besteld', 'Gedeeltelijk geleverd', 'Geleverd', 'Afgesloten'];
+const externalEntryStatuses = new Set(['Goedgekeurd', 'In behandeling']);
+const defaultOrderFilterStatuses = ['Ter goedkeuring', 'Goedgekeurd', 'In behandeling', 'Besteld', 'Gedeeltelijk geleverd', 'Geleverd', 'Afgesloten'];
 
 const legacyStatusMap = {
-  Concept: 'Ingediend',
-  Nieuw: 'Ingediend',
+  Concept: 'Ter goedkeuring',
+  Nieuw: 'Ter goedkeuring',
+  Ingediend: 'Ter goedkeuring',
   'In verwerking': 'In behandeling',
   'Besteld bij leverancier': 'Besteld',
   Geannuleerd: 'Geweigerd',
@@ -722,6 +724,7 @@ function renderAccessIssue() {
 
 function renderShell() {
   const admin = isAdminUser(state.appUser, state.session.user.email);
+  const approver = isApproverUser(state.appUser, state.session.user.email);
   const userLabel = getUserLabel(state.appUser);
 
   return `
@@ -750,7 +753,7 @@ function renderShell() {
         ${admin ? navLink('beheer', 'Beheer') : ''}
       </nav>
       <main class="content">
-        ${state.setupError ? renderSetupError() : renderCurrentView(admin)}
+        ${state.setupError ? renderSetupError() : renderCurrentView(admin, approver)}
       </main>
     </div>
     ${renderProductPreview()}
@@ -774,13 +777,13 @@ function renderSetupError() {
   `;
 }
 
-function renderCurrentView(admin) {
+function renderCurrentView(admin, approver) {
   if (state.view === 'start') {
-    return renderStart(admin);
+    return renderStart(admin, approver);
   }
 
   if (state.view === 'bestellingen') {
-    return renderOrders(admin);
+    return renderOrders(admin, approver);
   }
 
   if (state.view === 'inkt') {
@@ -802,8 +805,8 @@ function renderCurrentView(admin) {
   return renderOrderWorkspace();
 }
 
-function renderStart(admin) {
-  const ownOrders = getVisibleOrders(admin);
+function renderStart(admin, approver) {
+  const ownOrders = getVisibleOrders(admin, approver);
   const recentOrders = ownOrders.slice(0, 3);
   const cartItems = getCartItems();
   const urgentOrders = ownOrders.filter((order) => {
@@ -842,7 +845,7 @@ function renderStart(admin) {
       </a>
       <a class="action-card" href="#bestellingen">
         <span>Opvolging</span>
-        <strong>Mijn bestellingen</strong>
+        <strong>${approver && !admin ? 'Goed te keuren' : 'Mijn bestellingen'}</strong>
         <small>${ownOrders.length} bestelling(en), waarvan ${urgentOrders.length} met hoge prioriteit.</small>
       </a>
     </section>
@@ -1467,14 +1470,15 @@ function renderOrderReview(cartItems, totals) {
   `;
 }
 
-function renderOrders(admin) {
-  const orders = getFilteredOrders(admin);
+function renderOrders(admin, approver) {
+  const orders = getFilteredOrders(admin, approver);
+  const orderTitle = admin ? 'Alle bestellingen' : approver ? 'Goed te keuren bestellingen' : 'Mijn bestellingen';
 
   return `
     <section class="page-heading">
       <div>
         <p class="eyebrow">Opvolging</p>
-        <h2>${admin ? 'Alle bestellingen' : 'Mijn bestellingen'}</h2>
+        <h2>${orderTitle}</h2>
       </div>
       <p class="page-intro">
         Elke bestelling blijft raadpleegbaar met locatie, besteller, prioriteit, status en de gevraagde materialen.
@@ -1482,9 +1486,9 @@ function renderOrders(admin) {
     </section>
     ${state.notice ? `<div class="notice-panel">${escapeHtml(state.notice)}</div>` : ''}
     ${state.mailWarning ? `<div class="warning-panel">${escapeHtml(state.mailWarning)}</div>` : ''}
-    ${renderOrderFilters(admin)}
+    ${renderOrderFilters(admin, approver)}
     ${admin ? renderExternalEntryPanel() : ''}
-    ${orders.length ? `<div class="order-list">${orders.map((order) => renderOrderCard(order, admin)).join('')}</div>` : '<div class="empty-state"><p>Geen bestellingen gevonden voor deze filter.</p></div>'}
+    ${orders.length ? `<div class="order-list">${orders.map((order) => renderOrderCard(order, admin, approver)).join('')}</div>` : '<div class="empty-state"><p>Geen bestellingen gevonden voor deze filter.</p></div>'}
   `;
 }
 
@@ -1504,16 +1508,17 @@ function renderExternalEntryPanel() {
         </button>
       </div>
       <p class="panel-intro">
-        Deze lijst bundelt ingediende, lopende en goedgekeurde bestellingen per leverancier. Na invoer op de externe website zet beheer de betrokken bestelling op Besteld.
+        Deze lijst bundelt goedgekeurde en lopende bestellingen per leverancier. Na invoer op de externe website zet beheer de betrokken bestelling op Besteld.
       </p>
     </section>
   `;
 }
 
-function renderOrderCard(order, admin) {
+function renderOrderCard(order, admin, approver) {
   const meta = getOrderMeta(order);
   const normalizedStatus = getNormalizedStatus(order.status);
   const freeText = getOrderFreeText(order);
+  const actionStatuses = getOrderActionStatuses(order, admin, approver);
 
   return `
     <article class="order-card">
@@ -1551,9 +1556,9 @@ function renderOrderCard(order, admin) {
         <button class="ghost-button" type="button" data-copy-order="${escapeHtml(order.id)}">Opnieuw gebruiken</button>
       </div>
       ${
-        admin
+        actionStatuses.length
           ? `<div class="record-actions">
-              ${['In behandeling', 'Goedgekeurd', 'Extra informatie gevraagd', 'Geweigerd', 'Besteld', 'Gedeeltelijk geleverd', 'Geleverd', 'Afgesloten']
+              ${actionStatuses
                 .map((status) => `<button class="ghost-button" type="button" data-order-id="${escapeHtml(order.id)}" data-status="${escapeHtml(status)}">${escapeHtml(status)}</button>`)
                 .join('')}
             </div>`
@@ -1563,15 +1568,16 @@ function renderOrderCard(order, admin) {
   `;
 }
 
-function renderOrderFilters(admin) {
+function renderOrderFilters(admin, approver) {
   const filters = state.orderFilters;
   const statusOptions = getOrderStatusOptions();
+  const scopeLabel = admin ? 'beheer' : approver ? 'goedkeuring' : 'eigen bestellingen';
 
   return `
     <form class="panel order-filter-panel" data-order-filter-form>
       <div class="panel-header">
         <h3>Zoeken en filteren</h3>
-        <span>${admin ? 'beheer' : 'eigen bestellingen'}</span>
+        <span>${scopeLabel}</span>
       </div>
       <div class="form-grid order-filter-grid">
         <label class="field">
@@ -1628,7 +1634,7 @@ function renderOrderFilters(admin) {
 }
 
 function renderStatusTrail(status) {
-  const visibleStatuses = ['Ingediend', 'In behandeling', 'Goedgekeurd', 'Besteld', 'Gedeeltelijk geleverd', 'Geleverd', 'Afgesloten'];
+  const visibleStatuses = ['Ter goedkeuring', 'Goedgekeurd', 'In behandeling', 'Besteld', 'Gedeeltelijk geleverd', 'Geleverd', 'Afgesloten'];
   const currentIndex = visibleStatuses.indexOf(status);
 
   return `
@@ -2379,7 +2385,7 @@ async function handleOrder(form) {
     besteller_email: besteller.email,
     aangemaakt_door_id: state.appUser.id,
     aangemaakt_door_email: state.session.user.email,
-    status: 'Ingediend',
+    status: 'Ter goedkeuring',
     opmerkingen: [
       `Categorie: ${categorie}`,
       `Prioriteit: ${prioriteit}`,
@@ -2393,7 +2399,7 @@ async function handleOrder(form) {
     totaal_excl_btw: totals.excl,
     totaal_btw: totals.vat,
     totaal_incl_btw: totals.incl,
-    mail_status: 'Automatische mail wordt verzonden',
+    mail_status: 'Automatische mail naar goedkeurder wordt verzonden',
   };
 
   const linePayloads = cartItems.map(({ product, quantity }) => {
@@ -2425,14 +2431,14 @@ async function handleOrder(form) {
       } catch {
         // De bestelling zelf is al bewaard; de waarschuwing hieronder blijft dan de belangrijkste feedback.
       }
-      state.mailWarning = 'De bestelling is bewaard. De automatische mail is nog niet verzonden, maar de bestelling staat intern klaar voor verwerking.';
+      state.mailWarning = 'De bestelling is bewaard. De automatische mail is nog niet verzonden, maar de aanvraag staat wel klaar voor goedkeuring.';
     }
 
     state.cart = {};
     state.orderReview = false;
     persistCart();
     clearOrderDraft();
-    state.notice = 'De bestelling is ingediend en staat klaar voor verwerking.';
+    state.notice = 'De bestelling is doorgestuurd en staat klaar voor goedkeuring.';
     state.view = 'bestellingen';
     window.location.hash = '#bestellingen';
     await bootstrapData();
@@ -2491,7 +2497,7 @@ async function handleInkOrder(form) {
     besteller_email: besteller.email,
     aangemaakt_door_id: state.appUser.id,
     aangemaakt_door_email: state.session.user.email,
-    status: 'Ingediend',
+    status: 'Ter goedkeuring',
     opmerkingen: [
       'Inktbestelling',
       'Categorie: IT-materiaal',
@@ -2504,7 +2510,7 @@ async function handleInkOrder(form) {
     totaal_excl_btw: totals.excl,
     totaal_btw: totals.vat,
     totaal_incl_btw: totals.incl,
-    mail_status: 'Automatische mail wordt verzonden',
+    mail_status: 'Automatische mail naar goedkeurder wordt verzonden',
   };
 
   const linePayloads = inkItems.map(({ cartridge, quantity }) => {
@@ -2536,12 +2542,12 @@ async function handleInkOrder(form) {
       } catch {
         // De bestelling zelf is bewaard; de waarschuwing blijft zichtbaar in de app.
       }
-      state.mailWarning = 'De inktbestelling is bewaard. De automatische mail is nog niet verzonden, maar de bestelling staat intern klaar voor verwerking.';
+      state.mailWarning = 'De inktbestelling is bewaard. De automatische mail is nog niet verzonden, maar de aanvraag staat wel klaar voor goedkeuring.';
     }
 
     clearInkDraft();
     state.inkReview = false;
-    state.notice = 'De inktbestelling is ingediend en staat klaar voor verwerking.';
+    state.notice = 'De inktbestelling is doorgestuurd en staat klaar voor goedkeuring.';
     state.view = 'bestellingen';
     window.location.hash = '#bestellingen';
     await bootstrapData();
@@ -2725,7 +2731,22 @@ async function handleStatusChange(orderId, status) {
       actorName: getUserLabel(state.appUser),
       actorEmail: state.session?.user?.email ?? '',
     });
-    state.notice = 'Status aangepast.';
+    if (['Goedgekeurd', 'Geweigerd', 'Extra informatie gevraagd'].includes(status)) {
+      try {
+        await invokeOrderMail(orderId);
+      } catch (mailError) {
+        const mailStatus = `Mailfout na statuswijziging: ${mailError.message}`.slice(0, 240);
+        try {
+          await updateOrderMailStatus(orderId, mailStatus);
+        } catch {
+          // De status is al aangepast; de waarschuwing hieronder is de belangrijkste feedback.
+        }
+        state.mailWarning = 'De status is aangepast, maar de automatische melding is nog niet verzonden.';
+      }
+    }
+    state.notice = status === 'Goedgekeurd'
+      ? 'Bestelling goedgekeurd. Aankoopbeheer krijgt de melding om de bestelling bij de leverancier in te voeren.'
+      : `Status aangepast naar ${status}.`;
     await bootstrapData();
   } catch (error) {
     state.error = error.message;
@@ -3162,8 +3183,8 @@ function getSupplierDisplay(product) {
   return reference.artikelnummer ? `${supplier} - art. ${reference.artikelnummer}` : supplier;
 }
 
-function getVisibleOrders(admin) {
-  if (admin) {
+function getVisibleOrders(admin, approver = false) {
+  if (admin || approver) {
     return state.data.orders;
   }
 
@@ -3180,8 +3201,22 @@ function getVisibleOrders(admin) {
   });
 }
 
-function getFilteredOrders(admin) {
-  return getVisibleOrders(admin).filter((order) => orderMatchesOrderFilters(order, state.orderFilters));
+function getFilteredOrders(admin, approver = false) {
+  return getVisibleOrders(admin, approver).filter((order) => orderMatchesOrderFilters(order, state.orderFilters));
+}
+
+function getOrderActionStatuses(order, admin, approver) {
+  const status = getNormalizedStatus(order.status);
+
+  if (admin) {
+    return ['Ter goedkeuring', 'Goedgekeurd', 'In behandeling', 'Extra informatie gevraagd', 'Geweigerd', 'Besteld', 'Gedeeltelijk geleverd', 'Geleverd', 'Afgesloten'];
+  }
+
+  if (approver && ['Ter goedkeuring', 'Extra informatie gevraagd'].includes(status)) {
+    return ['Goedgekeurd', 'Extra informatie gevraagd', 'Geweigerd'];
+  }
+
+  return [];
 }
 
 function getExternalEntryRows() {
@@ -3473,7 +3508,7 @@ function getOrderFreeText(order) {
 }
 
 function getNormalizedStatus(status) {
-  const value = String(status || 'Ingediend').trim();
+  const value = String(status || 'Ter goedkeuring').trim();
   return legacyStatusMap[value] || value;
 }
 

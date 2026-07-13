@@ -1,0 +1,6 @@
+-- PROFO Aankoopbeheer - goedkeuringsflow en rollen
+-- Kopieerbare uitvoerversie voor de Supabase SQL Editor:
+-- RECHTERBALK_SQL_GOEDKEURINGSFLOW.txt
+--
+-- Dit korte dossierbestand verwijst bewust naar het rechterbalkbestand,
+-- zodat er maar één actieve SQL-versie moet worden gekopieerd en uitgevoerd.

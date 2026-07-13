@@ -10,7 +10,13 @@ Een medewerker meldt zich aan met het PROFO-account en komt op het startscherm. 
 - eigen bestellingen opvolgen;
 - een recente bestelling opnieuw gebruiken.
 
-Bij een nieuwe bestelling kiest de medewerker de locatie, de besteller, de categorie, de prioriteit en eventueel een gewenste datum. Producten worden eerst in het winkelmandje geplaatst. Pas daarna krijgt de medewerker een samenvatting. Op dat moment kan de bestelling nog aangepast worden. Er worden geen halve bestellingen of conceptbestellingen bewaard: wie indient, maakt bewust een aanvraag aan die door aankoop kan worden verwerkt.
+Bij een nieuwe bestelling kiest de medewerker de locatie, de besteller, de categorie, de prioriteit en eventueel een gewenste datum. Producten worden eerst in het winkelmandje geplaatst. Pas daarna krijgt de medewerker een samenvatting. Op dat moment kan de bestelling nog aangepast worden. Er worden geen halve bestellingen of conceptbestellingen bewaard: wie indient, maakt bewust een aanvraag aan die ter goedkeuring wordt doorgestuurd.
+
+## Gebruik door goedkeurder
+
+De algemeen directeur en de regiodirecteurs krijgen een aparte goedkeuringsrol. Zij kunnen bestellingen binnen hun bevoegdheid controleren en daarna goedkeuren, weigeren of extra informatie vragen. Pas na goedkeuring komt de bestelling op de invoerlijst voor aankoopbeheer, zodat Jorn of Kathleen ze kan invoeren bij de externe leverancier.
+
+De voorziene goedkeurders zijn Timothy Van Raemdonck, Karima Lakdim, Nathan Blondeel, Annelies Vuye en Joke DeLille. De exacte koppeling tussen regiodirecteur en teamleden wordt beheerd in Supabase via goedkeuringsscopes en moet overeenkomen met de actuele personeels- of teamlijst.
 
 ## Gebruik door beheerder
 
@@ -29,9 +35,9 @@ Bij elke bestelling ziet de beheerder minstens:
 - mailstatus;
 - huidige status.
 
-Een beheerder kan de status aanpassen naar onder meer in behandeling, goedgekeurd, extra informatie gevraagd, geweigerd, besteld, gedeeltelijk geleverd, geleverd of afgesloten. De applicatie probeert elke statuswijziging ook in een aparte statuslog te bewaren. Als die optionele logtabel nog niet in Supabase bestaat, blijft de statuswijziging zelf wel werken.
+Een beheerder kan de status aanpassen naar onder meer ter goedkeuring, goedgekeurd, in behandeling, extra informatie gevraagd, geweigerd, besteld, gedeeltelijk geleverd, geleverd of afgesloten. De applicatie probeert elke statuswijziging ook in een aparte statuslog te bewaren. Als die optionele logtabel nog niet in Supabase bestaat, blijft de statuswijziging zelf wel werken.
 
-Voor de praktische verwerking kan de beheerder een invoerlijst voor externe bestelplatformen openen. Die lijst bundelt ingediende, lopende en goedgekeurde bestelregels per leverancier. De lijst kan via de browser afgedrukt of als PDF bewaard worden. Na invoer op de externe website zet beheer de betrokken bestelling op Besteld.
+Voor de praktische verwerking kan de beheerder een invoerlijst voor externe bestelplatformen openen. Die lijst bundelt goedgekeurde en lopende bestelregels per leverancier. De lijst kan via de browser afgedrukt of als PDF bewaard worden. Na invoer op de externe website zet beheer de betrokken bestelling op Besteld.
 
 ## Rechten en zichtbaarheid
 
@@ -47,6 +53,7 @@ Te controleren:
 - een gewone medewerker ziet geen beheerknop;
 - een gewone medewerker kan geen producten aanpassen;
 - een gewone medewerker ziet alleen de bestellingen die voor hem of haar bedoeld zijn;
+- een goedkeurder ziet alleen bestellingen binnen de toegewezen scope;
 - Jorn en Kathleen zien beheer, analyse en alle bestellingen;
 - directe databasevragen via de app leveren geen gegevens op buiten de toegelaten rechten.
 
@@ -67,8 +74,9 @@ De applicatie mag bruikbaar blijven zonder mail. Mail is ondersteunend, niet lei
 
 Voorziene automatische mails:
 
-- bevestiging van ingediende bestelling aan de besteller;
-- melding aan beheerder bij nieuwe bestelling;
+- bevestiging van doorgestuurde bestelling aan de besteller;
+- melding aan goedkeurder bij nieuwe bestelling;
+- melding aan aankoopbeheer wanneer een bestelling goedgekeurd is;
 - melding bij statuswijziging;
 - vraag om extra informatie;
 - melding bij levering of afsluiting.
@@ -88,15 +96,17 @@ Zolang Resend en de DNS-validatie nog niet volledig klaar zijn, moet de interne 
 9. Controleer als medewerker of de bestelling zichtbaar is bij eigen bestellingen.
 10. Controleer als beheerder of dezelfde bestelling zichtbaar is in het beheerbeeld.
 11. Filter als beheerder op locatie, status, categorie, prioriteit en datum.
-12. Wijzig de status naar in behandeling, goedgekeurd, besteld en geleverd.
-13. Open als beheerder de invoerlijst externe sites en controleer of de nog te bestellen regels per leverancier gegroepeerd staan.
-14. Print de invoerlijst of bewaar ze als PDF via de browser.
-15. Test een weigering of vraag om extra informatie.
-16. Gebruik een vorige bestelling opnieuw en controleer of de producten opnieuw in het winkelmandje staan.
-17. Test de inktmodule: kies locatie, printer en gekoppelde kleuren of set.
-18. Test op smartphone of smalle browserbreedte.
-19. Test foutafhandeling door verplicht veld leeg te laten.
-20. Test dat de applicatie blijft werken wanneer mail tijdelijk faalt.
+12. Controleer als goedkeurder of de bestelling zichtbaar is binnen de eigen scope.
+13. Keur de bestelling goed en controleer of aankoopbeheer daarna een melding krijgt.
+14. Test een weigering of vraag om extra informatie.
+15. Wijzig als beheerder de status naar in behandeling, besteld en geleverd.
+16. Open als beheerder de invoerlijst externe sites en controleer of alleen goedgekeurde of lopende regels per leverancier gegroepeerd staan.
+17. Print de invoerlijst of bewaar ze als PDF via de browser.
+18. Gebruik een vorige bestelling opnieuw en controleer of de producten opnieuw in het winkelmandje staan.
+19. Test de inktmodule: kies locatie, printer en gekoppelde kleuren of set.
+20. Test op smartphone of smalle browserbreedte.
+21. Test foutafhandeling door verplicht veld leeg te laten.
+22. Test dat de applicatie blijft werken wanneer mail tijdelijk faalt.
 
 ## Aandachtspunten
 

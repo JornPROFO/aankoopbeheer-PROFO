@@ -1,6 +1,6 @@
 # PROFO Aankoopbeheer - security-roadmap en rollenmatrix
 
-Laatste bijwerking: 09/07/2026
+Laatste bijwerking: 13/07/2026
 
 ## Kern
 
@@ -23,11 +23,12 @@ Bestellingen zijn organisatiegegevens met een persoonsgegevenscomponent. De verw
 | Rol | Doel | Mag zien | Mag aanmaken | Mag wijzigen | Mag verwijderen |
 | --- | --- | --- | --- | --- | --- |
 | Gebruiker | Bestellen voor de eigen werking of locatie | Eigen ingediende bestellingen. Productcatalogus, EHBO-lijst en inkt/tonerkeuzes die actief bestelbaar zijn. | Nieuwe bestellingen en opmerkingen bij de eigen bestelling. | Eigen nog niet verwerkte aanvragen beperkt corrigeren, als dat functioneel voorzien wordt en zolang de bestelling nog niet in behandeling is. | Geen harde delete. |
+| Goedkeurder aankoop | Bestellingen inhoudelijk controleren binnen toegewezen bevoegdheid | Bestellingen van het eigen team, de eigen regio of organisatiebreed volgens toegewezen scope. | Eigen bestellingen zoals gewone gebruiker. | Goedkeuren, weigeren of extra informatie vragen zolang de bestelling in goedkeuringsfase zit. | Geen delete. |
 | Beheerder aankoop | Bestellingen verwerken en catalogus beheren | Alle bestellingen, bestelregels, producten, EHBO-artikelen, inkt/toner, printers, leveranciersinformatie en analyses. | Producten, catalogusregels, printer- en tonerregels, statusnotities en verwerkingsacties. | Statussen, productgegevens, prijzen, actieve/inactieve artikelen, catalogusvolgorde, mailopvolging en verwerkingsnotities. | Geen gewone delete in de app. Deactiveren of archiveren is de standaard. |
 | Superadmin | Technisch en uitzonderlijk beheer | Alles wat nodig is voor technische ondersteuning, rechtenbeheer en incidentopvolging. | Gebruikers- en rolconfiguratie, technische correcties, noodherstelacties. | RLS- en configuratiecorrecties, gebruikersactivatie, noodcorrecties en technische instellingen. | Alleen uitzonderlijk en gedocumenteerd. Harde delete gebeurt niet als normale beheeractie. |
 | Locatieverantwoordelijke of regiodirecteur | Mogelijke latere rol voor lokale opvolging | Bestellingen van de eigen locatie of regio. | Eventueel bestellingen namens de locatie. | Eventueel status of interne toelichting voor de eigen locatie, als PROFO dat beleidsmatig wil. | Geen delete. |
 
-Voorlopig blijft een regiodirecteur in Aankoopbeheer best gewoon gebruiker, tenzij PROFO expliciet beslist dat lokale opvolging van bestellingen op regio- of locatieniveau nodig is. Die keuze is organisatorisch belangrijker dan technisch: zodra een regiodirecteur meer ziet dan eigen bestellingen, ontstaat er een ruimere verwerkingsnoodzaak die ook in het verwerkingsregister en de privacy-informatie moet worden beschreven.
+De goedkeuringsrol is op 13/07/2026 organisatorisch uitgebreid. Timothy Van Raemdonck krijgt als algemeen directeur organisatiebreed goedkeuringsrecht. Karima Lakdim, Nathan Blondeel, Annelies Vuye en Joke DeLille krijgen als regiodirecteur een goedkeuringsrol voor de medewerkers die tot hun regio of team behoren. De exacte teamkoppeling moet uit de actuele personeels- of teamlijst worden overgenomen in de goedkeuringsscopes.
 
 ## Praktische rechten per onderdeel
 
@@ -36,7 +37,7 @@ Voorlopig blijft een regiodirecteur in Aankoopbeheer best gewoon gebruiker, tenz
 | Productcatalogus | Actieve producten zien en bestellen. | Producten toevoegen, corrigeren, deactiveren en prijzen beheren. | Technische correcties en bulkherstel. |
 | EHBO | Actieve EHBO-aanvulartikelen zien en bestellen. | EHBO-lijst beheren, prijzen/afbeeldingen aanvullen en niet-bestelbare regels deactiveren. | Technische correcties en bulkimport. |
 | Inkt en toner | Alleen actieve, bestelbare cartridges/toners zien per gekozen printer. | Printers, cartridges, prijzen en leverancierslinks beheren. Inactieve regels mogen in beheer zichtbaar blijven. | Technische correcties en RLS-controle. |
-| Bestellingen | Eigen ingediende bestellingen zien. | Alle bestellingen opvolgen, statussen beheren en de invoerlijst voor externe bestelplatformen gebruiken. | Alles voor technische ondersteuning en audit. |
+| Bestellingen | Eigen ingediende bestellingen zien. | Alle bestellingen opvolgen, statussen beheren en de invoerlijst voor externe bestelplatformen gebruiken nadat een bestelling is goedgekeurd. | Alles voor technische ondersteuning en audit. |
 | Analyse | Niet zichtbaar. | Overzichten voor opvolging, budgetindicatie en bestelpatronen. | Volledige controle, inclusief technische analyses. |
 | Gebruikers | Eigen identiteit via login. Geen gebruikersbeheer. | Normaal geen gebruikersbeheer, tenzij PROFO dat expliciet toewijst. | Gebruikers activeren/deactiveren en rollen beheren. |
 | Mailstatus | Eigen bevestiging en beperkte melding in de app. | Mailstatus opvolgen bij verwerking. | Technische foutanalyse. |
@@ -52,8 +53,8 @@ De exacte SQL moet nog per tabel worden afgetoetst, maar de gewenste richting is
 | `aankoop_producten` | Gebruikers zien alleen actieve en bestelbare producten. Beheer ziet ook inactieve regels. | Beheerder/superadmin. | Beheerder/superadmin. | Niet via app; deactiveren. |
 | `aankoop_printers` | Gebruikers zien alleen actieve printers voor hun bestelproces. Beheer ziet ook inactieve printers. | Beheerder/superadmin. | Beheerder/superadmin. | Niet via app; deactiveren. |
 | `aankoop_printer_cartridges` | Gebruikers zien alleen actieve bestelbare regels. Beheer ziet ook inactieve regels voor opvolging en correctie. | Beheerder/superadmin. | Beheerder/superadmin. | Niet via app; deactiveren. |
-| `aankoop_bestellingen` | Gebruiker ziet eigen bestellingen. Beheerder ziet alle bestellingen. | Ingelogde actieve gebruiker. | Gebruiker beperkt zolang de aanvraag nog niet verwerkt is, als die correctiemogelijkheid functioneel voorzien wordt. Beheerder voor status en opvolging. | Niet via app. |
-| `aankoop_bestelregels` | Zelfde zichtbaarheid als de bovenliggende bestelling. | Via bestelling door actieve gebruiker. | Beperkt zolang nog niet verwerkt. Beheerder voor opvolging en correcties. | Niet via app. |
+| `aankoop_bestellingen` | Gebruiker ziet eigen bestellingen. Goedkeurder ziet bestellingen binnen de eigen scope. Beheerder ziet alle bestellingen. | Ingelogde actieve gebruiker. | Goedkeurder mag alleen goedkeuren, weigeren of extra informatie vragen binnen de eigen scope. Beheerder voor verwerking en opvolging. | Niet via app. |
+| `aankoop_bestelregels` | Zelfde zichtbaarheid als de bovenliggende bestelling. | Via bestelling door actieve gebruiker. | Niet door gewone gebruiker na doorsturen. Beheerder voor opvolging en correcties. | Niet via app. |
 | `aankoop_statuslog` | Gebruiker ziet relevante status op eigen bestelling. Beheer ziet log voor opvolging. | Automatisch via statuswijziging. | Niet manueel, tenzij technische correctie. | Niet via app. |
 | `aankoop_audit_log` | Niet zichtbaar voor gewone gebruiker. Beperkt zichtbaar voor beheer/superadmin. | Automatisch. | Niet manueel. | Niet via app. |
 
@@ -153,13 +154,14 @@ Minimaal te testen voor ingebruikname:
 3. Gewone gebruiker ziet alleen eigen bestellingen.
 4. Gewone gebruiker kan geen producten, prijzen, printers of cartridges aanpassen.
 5. Gewone gebruiker ziet bij inkt/toner alleen actieve bestelbare keuzes.
-6. Beheerder ziet alle bestellingen en kan statussen wijzigen.
-7. Beheerder kan producten, EHBO-artikelen, printers en cartridges beheren.
-8. Gedeactiveerde gebruiker kan niet meer binnen.
-9. Gebruiker probeert via browsertools een product of bestelling van iemand anders aan te passen; RLS moet dit blokkeren.
-10. Beheerder deactiveert een product; het product verdwijnt uit de gewone catalogus maar blijft historisch begrijpelijk in oude bestellingen.
-11. Mailfout blokkeert de bestelling niet, maar wordt zichtbaar voor beheer.
-12. Een testincident wordt geregistreerd en beoordeeld volgens de datalekprocedure.
+6. Goedkeurder ziet alleen bestellingen binnen de toegewezen scope en kan goedkeuren, weigeren of extra informatie vragen.
+7. Beheerder ziet alle bestellingen en kan statussen wijzigen.
+8. Beheerder kan producten, EHBO-artikelen, printers en cartridges beheren.
+9. Gedeactiveerde gebruiker kan niet meer binnen.
+10. Gebruiker probeert via browsertools een product of bestelling van iemand anders aan te passen; RLS moet dit blokkeren.
+11. Beheerder deactiveert een product; het product verdwijnt uit de gewone catalogus maar blijft historisch begrijpelijk in oude bestellingen.
+12. Mailfout blokkeert de bestelling niet, maar wordt zichtbaar voor beheer.
+13. Een testincident wordt geregistreerd en beoordeeld volgens de datalekprocedure.
 
 ## Praktische volgorde
 

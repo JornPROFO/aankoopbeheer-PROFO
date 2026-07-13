@@ -34,6 +34,7 @@ export function getUserRole(user) {
 
 const beheerderEmails = new Set(['jorn.neeus@profo.be', 'kathleen.nerinckx@profo.be']);
 const adminRoles = new Set(['admin', 'beheerder', 'beheerder aankoop', 'aankoopbeheerder', 'superadmin']);
+const approverRoles = new Set(['goedkeurder aankoop', 'algemeen directeur', 'regiodirecteur']);
 const superAdminRoles = new Set(['superadmin']);
 
 export function normalizeRole(value) {
@@ -46,6 +47,12 @@ export function isAdminUser(user, sessionEmail = '') {
   const email = String(user?.email || sessionEmail || '').trim().toLowerCase();
   const role = normalizeRole(getUserRole(user));
   return adminRoles.has(role) || beheerderEmails.has(email);
+}
+
+export function isApproverUser(user, sessionEmail = '') {
+  const email = String(user?.email || sessionEmail || '').trim().toLowerCase();
+  const role = normalizeRole(getUserRole(user));
+  return approverRoles.has(role) || isAdminUser(user, email);
 }
 
 export function isSuperAdminUser(user, sessionEmail = '') {
