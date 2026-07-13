@@ -66,7 +66,7 @@ export async function loadAankoopData({ includeInactiveProducts = false } = {}) 
     cartridgesQuery.eq('actief', true);
   }
 
-  const [products, printers, cartridges, users, locations, orders] = await Promise.all([
+  const [products, printers, cartridges, users, locations, orders, notifications] = await Promise.all([
     run(productsQuery),
     run(printersQuery),
     run(cartridgesQuery),
@@ -85,6 +85,7 @@ export async function loadAankoopData({ includeInactiveProducts = false } = {}) 
         .order('naam', { ascending: true }),
     ),
     getOrders(),
+    getNotifications(),
   ]);
 
   return {
@@ -94,7 +95,26 @@ export async function loadAankoopData({ includeInactiveProducts = false } = {}) 
     users,
     locations,
     orders,
+    notifications,
   };
+}
+
+export async function getNotifications() {
+  try {
+    return await run(
+      supabase
+        .from('aankoop_meldingen')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(60),
+    );
+  } catch (error) {
+    if (isMissingNotificationsTable(error)) {
+      return [];
+    }
+
+    throw error;
+  }
 }
 
 export async function getOrders() {
@@ -159,6 +179,42 @@ export async function createOrder(orderPayload, linePayloads) {
   return order;
 }
 
+export async function createNotification(payload) {
+  const { data, error } = await supabase.rpc('aankoop_melding_toevoegen', {
+    p_gebruiker_id: payload.gebruiker_id,
+    p_bestelling_id: payload.bestelling_id ?? null,
+    p_type: payload.type,
+    p_titel: payload.titel,
+    p_boodschap: payload.boodschap,
+    p_actie_url: payload.actie_url ?? '#bestellingen',
+  });
+
+  if (error) {
+    if (isMissingNotificationsTable(error)) {
+      return null;
+    }
+
+    throw error;
+  }
+
+  return data ?? null;
+}
+
+export async function markNotificationRead(id) {
+  const { error } = await supabase
+    .from('aankoop_meldingen')
+    .update({ gelezen_op: new Date().toISOString() })
+    .eq('id', id);
+
+  if (error) {
+    if (isMissingNotificationsTable(error)) {
+      return;
+    }
+
+    throw error;
+  }
+}
+
 export async function invokeOrderMail(orderId) {
   const { data, error } = await supabase.functions.invoke('send-aankoopbestelling', {
     body: {
@@ -199,6 +255,12 @@ async function getFunctionErrorMessage(error) {
   }
 
   return error.message || 'De automatische mailfunctie gaf een fout terug.';
+}
+
+function isMissingNotificationsTable(error) {
+  const message = String(error?.message ?? '').toLowerCase();
+  const code = String(error?.code ?? '');
+  return code === '42P01' || code === '42883' || message.includes('aankoop_meldingen') || message.includes('aankoop_melding_toevoegen');
 }
 
 export async function saveProduct(payload, id = null) {

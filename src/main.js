@@ -10,16 +10,16 @@ import {
 } from './services/authService.js';
 import {
   createOrder,
+  createNotification,
   disableInkCartridge,
   disableProduct,
   disablePrinter,
   getActiveUserByEmail,
-  invokeOrderMail,
   loadAankoopData,
+  markNotificationRead,
   saveInkCartridge,
   saveProduct,
   savePrinter,
-  updateOrderMailStatus,
   updateOrderStatus,
 } from './services/aankoopService.js';
 import {
@@ -97,6 +97,7 @@ const state = {
     users: [],
     locations: [],
     orders: [],
+    notifications: [],
   },
   cart: readCart(),
   orderDraft: readOrderDraft(),
@@ -304,6 +305,10 @@ app.addEventListener('click', async (event) => {
 
   if (target.matches('[data-status]')) {
     await handleStatusChange(target.dataset.orderId, target.dataset.status);
+  }
+
+  if (target.matches('[data-notification-read]')) {
+    await handleNotificationRead(target.dataset.notificationRead);
   }
 
   if (target.matches('[data-admin-section]')) {
@@ -726,6 +731,7 @@ function renderShell() {
   const admin = isAdminUser(state.appUser, state.session.user.email);
   const approver = isApproverUser(state.appUser, state.session.user.email);
   const userLabel = getUserLabel(state.appUser);
+  const unreadCount = getUnreadNotifications().length;
 
   return `
     <header class="app-header">
@@ -744,7 +750,7 @@ function renderShell() {
     </header>
     <div class="app-layout">
       <nav class="sidebar" aria-label="Hoofdnavigatie">
-        ${navLink('start', 'Start')}
+        ${navLink('start', 'Start', unreadCount)}
         ${navLink('bestellen', 'Nieuwe bestelling')}
         ${navLink('ehbo', 'EHBO')}
         ${navLink('inkt', 'Inkt')}
@@ -760,9 +766,9 @@ function renderShell() {
   `;
 }
 
-function navLink(id, label) {
+function navLink(id, label, badge = 0) {
   const active = state.view === id ? 'is-active' : '';
-  return `<a class="nav-link ${active}" href="#${id}">${escapeHtml(label)}</a>`;
+  return `<a class="nav-link ${active}" href="#${id}"><span>${escapeHtml(label)}</span>${badge ? `<strong class="nav-badge">${escapeHtml(badge)}</strong>` : ''}</a>`;
 }
 
 function renderSetupError() {
@@ -850,6 +856,7 @@ function renderStart(admin, approver) {
       </a>
     </section>
     <section class="dashboard-grid">
+      ${renderNotificationsPanel()}
       <div class="panel">
         <div class="panel-header">
           <h3>Recente bestellingen</h3>
@@ -880,6 +887,45 @@ function renderCompactOrder(order) {
         <small>${formatDateTime(order.created_at)} - ${escapeHtml(getStatusLabel(order.status))}${meta.prioriteit ? ` - ${escapeHtml(getPriorityLabel(meta.prioriteit))}` : ''}</small>
       </div>
       <button class="ghost-button" type="button" data-copy-order="${escapeHtml(order.id)}">Herhaal</button>
+    </article>
+  `;
+}
+
+function renderNotificationsPanel() {
+  const notifications = getVisibleNotifications().slice(0, 6);
+  const unreadCount = notifications.filter((notification) => !notification.gelezen_op).length;
+
+  return `
+    <div class="panel notification-panel">
+      <div class="panel-header">
+        <h3>Meldingen</h3>
+        <span>${unreadCount} ongelezen</span>
+      </div>
+      ${
+        notifications.length
+          ? `<div class="notification-list">
+              ${notifications.map(renderNotificationCard).join('')}
+            </div>`
+          : '<div class="empty-state is-compact"><p>Er zijn momenteel geen meldingen voor jou.</p></div>'
+      }
+    </div>
+  `;
+}
+
+function renderNotificationCard(notification) {
+  const isUnread = !notification.gelezen_op;
+
+  return `
+    <article class="notification-card ${isUnread ? 'is-unread' : ''}">
+      <div>
+        <strong>${escapeHtml(notification.titel || 'Melding')}</strong>
+        <span>${escapeHtml(notification.boodschap || '')}</span>
+        <small>${formatDateTime(notification.created_at)}</small>
+      </div>
+      <div class="notification-actions">
+        ${notification.actie_url ? `<a class="text-link" href="${escapeHtml(notification.actie_url)}">Bekijken</a>` : ''}
+        ${isUnread ? `<button class="text-button" type="button" data-notification-read="${escapeHtml(notification.id)}">Gelezen</button>` : ''}
+      </div>
     </article>
   `;
 }
@@ -1536,7 +1582,7 @@ function renderOrderCard(order, admin, approver) {
         <div><dt>Prioriteit</dt><dd>${escapeHtml(getPriorityLabel(meta.prioriteit || 'normaal'))}</dd></div>
         <div><dt>Gewenst tegen</dt><dd>${escapeHtml(meta.gewenst_tegen ? formatDateLabel(meta.gewenst_tegen) : 'Niet vermeld')}</dd></div>
         <div><dt>Totaal</dt><dd>${formatCurrency(order.totaal_incl_btw)}</dd></div>
-        <div><dt>Mail</dt><dd>${escapeHtml(order.mail_status || 'Nog niet verzonden')}</dd></div>
+        <div><dt>Melding</dt><dd>${escapeHtml(order.mail_status || 'Interne opvolging')}</dd></div>
       </dl>
       ${renderStatusTrail(normalizedStatus)}
       <div class="line-table">
@@ -2399,7 +2445,7 @@ async function handleOrder(form) {
     totaal_excl_btw: totals.excl,
     totaal_btw: totals.vat,
     totaal_incl_btw: totals.incl,
-    mail_status: 'Automatische mail naar goedkeurder wordt verzonden',
+    mail_status: 'Interne melding in Aankoopbeheer',
   };
 
   const linePayloads = cartItems.map(({ product, quantity }) => {
@@ -2421,18 +2467,7 @@ async function handleOrder(form) {
   try {
     const order = await createOrder(orderPayload, linePayloads);
     state.mailWarning = '';
-
-    try {
-      await invokeOrderMail(order.id);
-    } catch (mailError) {
-      const mailStatus = `Mailfout: ${mailError.message}`.slice(0, 240);
-      try {
-        await updateOrderMailStatus(order.id, mailStatus);
-      } catch {
-        // De bestelling zelf is al bewaard; de waarschuwing hieronder blijft dan de belangrijkste feedback.
-      }
-      state.mailWarning = 'De bestelling is bewaard. De automatische mail is nog niet verzonden, maar de aanvraag staat wel klaar voor goedkeuring.';
-    }
+    await notifyOrderSubmitted(order);
 
     state.cart = {};
     state.orderReview = false;
@@ -2510,7 +2545,7 @@ async function handleInkOrder(form) {
     totaal_excl_btw: totals.excl,
     totaal_btw: totals.vat,
     totaal_incl_btw: totals.incl,
-    mail_status: 'Automatische mail naar goedkeurder wordt verzonden',
+    mail_status: 'Interne melding in Aankoopbeheer',
   };
 
   const linePayloads = inkItems.map(({ cartridge, quantity }) => {
@@ -2532,18 +2567,7 @@ async function handleInkOrder(form) {
   try {
     const order = await createOrder(orderPayload, linePayloads);
     state.mailWarning = '';
-
-    try {
-      await invokeOrderMail(order.id);
-    } catch (mailError) {
-      const mailStatus = `Mailfout: ${mailError.message}`.slice(0, 240);
-      try {
-        await updateOrderMailStatus(order.id, mailStatus);
-      } catch {
-        // De bestelling zelf is bewaard; de waarschuwing blijft zichtbaar in de app.
-      }
-      state.mailWarning = 'De inktbestelling is bewaard. De automatische mail is nog niet verzonden, maar de aanvraag staat wel klaar voor goedkeuring.';
-    }
+    await notifyOrderSubmitted(order);
 
     clearInkDraft();
     state.inkReview = false;
@@ -2727,23 +2751,17 @@ function copyCartridgeToDraft(cartridge) {
 
 async function handleStatusChange(orderId, status) {
   try {
+    const order = state.data.orders.find((item) => String(item.id) === String(orderId));
     await updateOrderStatus(orderId, status, {
       actorName: getUserLabel(state.appUser),
       actorEmail: state.session?.user?.email ?? '',
     });
-    if (['Goedgekeurd', 'Geweigerd', 'Extra informatie gevraagd'].includes(status)) {
-      try {
-        await invokeOrderMail(orderId);
-      } catch (mailError) {
-        const mailStatus = `Mailfout na statuswijziging: ${mailError.message}`.slice(0, 240);
-        try {
-          await updateOrderMailStatus(orderId, mailStatus);
-        } catch {
-          // De status is al aangepast; de waarschuwing hieronder is de belangrijkste feedback.
-        }
-        state.mailWarning = 'De status is aangepast, maar de automatische melding is nog niet verzonden.';
-      }
+    state.mailWarning = '';
+
+    if (order) {
+      await notifyOrderStatusChanged(order, status);
     }
+
     state.notice = status === 'Goedgekeurd'
       ? 'Bestelling goedgekeurd. Aankoopbeheer krijgt de melding om de bestelling bij de leverancier in te voeren.'
       : `Status aangepast naar ${status}.`;
@@ -2752,6 +2770,116 @@ async function handleStatusChange(orderId, status) {
     state.error = error.message;
     render();
   }
+}
+
+async function handleNotificationRead(notificationId) {
+  try {
+    await markNotificationRead(notificationId);
+    state.notice = 'Melding gemarkeerd als gelezen.';
+    state.error = '';
+    await bootstrapData();
+  } catch (error) {
+    state.error = error.message;
+    render();
+  }
+}
+
+async function notifyOrderSubmitted(order) {
+  const recipients = uniqueActiveUsers([
+    ...getOrderStakeholderUsers(order),
+    ...getApprovalNotificationUsers(),
+  ]);
+
+  const sent = await sendOrderNotifications(recipients, order, {
+    type: 'bestelling_ingediend',
+    titel: 'Nieuwe bestelling ter goedkeuring',
+    boodschap: `Bestelling ${order.id} voor ${order.locatie_naam || 'een locatie'} staat klaar in Aankoopbeheer.`,
+  });
+
+  if (!sent) {
+    state.mailWarning = 'De bestelling is bewaard. Voer nog de SQL voor interne meldingen uit zodat collega\'s automatisch een melding in de app krijgen.';
+  }
+}
+
+async function notifyOrderStatusChanged(order, status) {
+  const normalizedStatus = getNormalizedStatus(status);
+  const stakeholderUsers = getOrderStakeholderUsers(order);
+  const adminUsers = normalizedStatus === 'Goedgekeurd' ? getAdminNotificationUsers() : [];
+  const recipients = uniqueActiveUsers([...stakeholderUsers, ...adminUsers]);
+  const statusLabel = getStatusLabel(status);
+  const title = normalizedStatus === 'Goedgekeurd' ? 'Bestelling goedgekeurd' : `Bestelling ${statusLabel.toLowerCase()}`;
+  const message = normalizedStatus === 'Goedgekeurd'
+    ? `Bestelling ${order.id} is goedgekeurd en mag bij de leverancier worden ingevoerd.`
+    : `Bestelling ${order.id} kreeg de status "${statusLabel}".`;
+
+  const sent = await sendOrderNotifications(recipients, order, {
+    type: `status_${normalizedStatus.toLowerCase().replaceAll(' ', '_')}`,
+    titel: title,
+    boodschap: message,
+  });
+
+  if (!sent) {
+    state.mailWarning = 'De status is aangepast. Voer nog de SQL voor interne meldingen uit zodat de betrokken collega dit ook in de app ziet.';
+  }
+}
+
+async function sendOrderNotifications(users, order, payload) {
+  let sent = 0;
+  let failed = false;
+
+  for (const user of users) {
+    try {
+      const notificationId = await createNotification({
+        gebruiker_id: user.id,
+        bestelling_id: order.id,
+        type: payload.type,
+        titel: payload.titel,
+        boodschap: payload.boodschap,
+        actie_url: '#bestellingen',
+      });
+
+      if (notificationId) {
+        sent += 1;
+      }
+    } catch {
+      failed = true;
+    }
+  }
+
+  return sent > 0 && !failed;
+}
+
+function getOrderStakeholderUsers(order) {
+  return uniqueActiveUsers([
+    findUserById(order.besteller_id),
+    findUserById(order.aangemaakt_door_id),
+  ]);
+}
+
+function getApprovalNotificationUsers() {
+  return state.data.users.filter((user) => isApproverUser(user, user.email));
+}
+
+function getAdminNotificationUsers() {
+  return state.data.users.filter((user) => isAdminUser(user, user.email));
+}
+
+function findUserById(id) {
+  return state.data.users.find((user) => String(user.id) === String(id)) ?? null;
+}
+
+function uniqueActiveUsers(users) {
+  const unique = new Map();
+
+  users.forEach((user) => {
+    if (!user || user.actief === false || !user.id) {
+      return;
+    }
+
+    unique.set(String(user.id), user);
+  });
+
+  return [...unique.values()];
 }
 
 function copyOrderToCart(orderId) {
@@ -3199,6 +3327,14 @@ function getVisibleOrders(admin, approver = false) {
 
     return [bestellerId, aangemaaktDoorId].includes(userId) || [bestellerEmail, aangemaaktDoorEmail].includes(email);
   });
+}
+
+function getVisibleNotifications() {
+  return [...(state.data.notifications ?? [])].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+}
+
+function getUnreadNotifications() {
+  return getVisibleNotifications().filter((notification) => !notification.gelezen_op);
 }
 
 function getFilteredOrders(admin, approver = false) {
