@@ -46,6 +46,7 @@ const defaultImage = '/assets/gevouwen-handdoeken-voorbeeld.png';
 const incompleteProductNamePattern = /(nog te bepalen|ander product)/i;
 const ehboCategory = 'Veiligheid/EHBO';
 const ehboDefaultImage = '/assets/ehbo-koffer-a-aanvulling.svg';
+const defaultDocumentTitle = 'PROFO Aankoopbeheer';
 
 const productCategories = [
   'Kantoorbenodigdheden',
@@ -564,6 +565,7 @@ async function bootstrapData() {
     const admin = isAdminUser(state.appUser, state.session.user.email);
     state.data = await loadAankoopData({ includeInactiveProducts: admin });
     state.error = '';
+    syncAppBadge();
   } catch (error) {
     state.setupError = error.message;
   } finally {
@@ -573,6 +575,8 @@ async function bootstrapData() {
 }
 
 function render() {
+  syncAppBadge();
+
   if (state.passwordRecovery) {
     app.innerHTML = renderPasswordRecovery();
     return;
@@ -594,6 +598,27 @@ function render() {
   }
 
   app.innerHTML = renderShell();
+}
+
+function syncAppBadge() {
+  const unreadCount = state.session && state.appUser ? getUnreadNotifications().length : 0;
+  document.title = unreadCount ? `(${unreadCount}) ${defaultDocumentTitle}` : defaultDocumentTitle;
+
+  if (!('setAppBadge' in navigator) && !('clearAppBadge' in navigator)) {
+    return;
+  }
+
+  const badgeAction = unreadCount > 0 && 'setAppBadge' in navigator
+    ? navigator.setAppBadge(unreadCount)
+    : 'clearAppBadge' in navigator
+      ? navigator.clearAppBadge()
+      : null;
+
+  if (badgeAction?.catch) {
+    badgeAction.catch(() => {
+      // Badge-ondersteuning verschilt per toestel en installatievorm. De app zelf blijft leidend.
+    });
+  }
 }
 
 function renderAuth() {
