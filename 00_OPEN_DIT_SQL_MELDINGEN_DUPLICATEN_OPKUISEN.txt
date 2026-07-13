@@ -1,0 +1,126 @@
+-- PROFO Aankoopbeheer - dubbele interne meldingen opruimen en voorkomen
+-- Uitvoeren in de Supabase SQL editor.
+
+begin;
+
+with dubbele_meldingen as (
+  select
+    melding.id,
+    row_number() over (
+      partition by
+        melding.gebruiker_id,
+        coalesce(melding.bestelling_id, 0),
+        melding.type,
+        melding.titel,
+        melding.boodschap,
+        melding.actie_url,
+        melding.gelezen_op is null
+      order by melding.created_at desc, melding.id desc
+    ) as volgnummer
+  from public.aankoop_meldingen melding
+)
+delete from public.aankoop_meldingen melding
+using dubbele_meldingen dubbel
+where melding.id = dubbel.id
+  and dubbel.volgnummer > 1;
+
+create unique index if not exists aankoop_meldingen_unieke_ongelezen_melding_idx
+  on public.aankoop_meldingen (
+    gebruiker_id,
+    (coalesce(bestelling_id, 0)),
+    type,
+    md5(titel),
+    md5(boodschap),
+    actie_url
+  )
+  where gelezen_op is null;
+
+create or replace function public.aankoop_melding_toevoegen(
+  p_gebruiker_id bigint,
+  p_bestelling_id bigint,
+  p_type text,
+  p_titel text,
+  p_boodschap text,
+  p_actie_url text default '#bestellingen'
+)
+returns bigint
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_huidige_gebruiker_id bigint;
+  v_melding_id bigint;
+  v_type text;
+  v_titel text;
+  v_boodschap text;
+  v_actie_url text;
+begin
+  v_huidige_gebruiker_id := public.current_gebruiker_id();
+
+  if v_huidige_gebruiker_id is null then
+    raise exception 'Geen actieve PROFO-gebruiker gevonden voor deze melding.';
+  end if;
+
+  if not exists (
+    select 1
+    from public.gebruikers gebruiker
+    where gebruiker.id = p_gebruiker_id
+      and coalesce(gebruiker.actief, true) = true
+  ) then
+    return null;
+  end if;
+
+  v_type := left(coalesce(nullif(trim(p_type), ''), 'algemeen'), 80);
+  v_titel := left(coalesce(nullif(trim(p_titel), ''), 'Melding Aankoopbeheer'), 180);
+  v_boodschap := left(coalesce(nullif(trim(p_boodschap), ''), 'Er is een wijziging in Aankoopbeheer.'), 1000);
+  v_actie_url := coalesce(nullif(trim(p_actie_url), ''), '#bestellingen');
+
+  select melding.id
+    into v_melding_id
+  from public.aankoop_meldingen melding
+  where melding.gebruiker_id = p_gebruiker_id
+    and coalesce(melding.bestelling_id, 0) = coalesce(p_bestelling_id, 0)
+    and melding.type = v_type
+    and melding.titel = v_titel
+    and melding.boodschap = v_boodschap
+    and melding.actie_url = v_actie_url
+    and melding.gelezen_op is null
+  order by melding.created_at desc, melding.id desc
+  limit 1;
+
+  if v_melding_id is not null then
+    return v_melding_id;
+  end if;
+
+  insert into public.aankoop_meldingen (
+    gebruiker_id,
+    bestelling_id,
+    type,
+    titel,
+    boodschap,
+    actie_url
+  )
+  values (
+    p_gebruiker_id,
+    p_bestelling_id,
+    v_type,
+    v_titel,
+    v_boodschap,
+    v_actie_url
+  )
+  returning id into v_melding_id;
+
+  return v_melding_id;
+end;
+$$;
+
+grant execute on function public.aankoop_melding_toevoegen(bigint, bigint, text, text, text, text)
+  to authenticated;
+
+commit;
+
+select
+  'Dubbele meldingen zijn opgeruimd en nieuwe dubbele ongelezen meldingen worden voorkomen.' as resultaat,
+  count(*) filter (where gelezen_op is null) as ongelezen_meldingen
+from public.aankoop_meldingen;

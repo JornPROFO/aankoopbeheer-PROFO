@@ -47,6 +47,10 @@ const incompleteProductNamePattern = /(nog te bepalen|ander product)/i;
 const ehboCategory = 'Veiligheid/EHBO';
 const ehboDefaultImage = '/assets/ehbo-koffer-a-aanvulling.svg';
 const defaultDocumentTitle = 'PROFO Aankoopbeheer';
+const passiveRefreshMs = 15000;
+const passiveRefreshViews = new Set(['start', 'bestellingen', 'analyse', 'beheer']);
+let passiveRefreshTimer = null;
+let passiveRefreshRunning = false;
 
 const productCategories = [
   'Kantoorbenodigdheden',
@@ -140,6 +144,16 @@ onAuthChange(async (session, event) => {
   }
 
   await bootstrapData();
+});
+
+window.addEventListener('focus', () => {
+  refreshAankoopDataSilently();
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    refreshAankoopDataSilently();
+  }
 });
 
 window.addEventListener('hashchange', () => {
@@ -239,6 +253,7 @@ app.addEventListener('click', async (event) => {
 
   if (target.matches('[data-sign-out]')) {
     await signOut();
+    stopPassiveRefresh();
     state.session = null;
     state.appUser = null;
     render();
@@ -566,12 +581,69 @@ async function bootstrapData() {
     state.data = await loadAankoopData({ includeInactiveProducts: admin });
     state.error = '';
     syncAppBadge();
+    startPassiveRefresh();
   } catch (error) {
     state.setupError = error.message;
   } finally {
     state.loading = false;
     render();
   }
+}
+
+function startPassiveRefresh() {
+  if (passiveRefreshTimer) {
+    return;
+  }
+
+  passiveRefreshTimer = window.setInterval(() => {
+    refreshAankoopDataSilently();
+  }, passiveRefreshMs);
+}
+
+function stopPassiveRefresh() {
+  if (!passiveRefreshTimer) {
+    return;
+  }
+
+  window.clearInterval(passiveRefreshTimer);
+  passiveRefreshTimer = null;
+}
+
+async function refreshAankoopDataSilently() {
+  if (!state.session || !state.appUser || state.loading || passiveRefreshRunning || document.hidden) {
+    return;
+  }
+
+  passiveRefreshRunning = true;
+
+  try {
+    const beforeSignature = getPassiveRefreshSignature();
+    const admin = isAdminUser(state.appUser, state.session.user.email);
+    state.data = await loadAankoopData({ includeInactiveProducts: admin });
+    const afterSignature = getPassiveRefreshSignature();
+    syncAppBadge();
+
+    if (beforeSignature !== afterSignature && passiveRefreshViews.has(state.view)) {
+      render();
+    }
+  } catch {
+    // Een tijdelijke netwerk- of RLS-fout mag de openstaande app niet blokkeren.
+  } finally {
+    passiveRefreshRunning = false;
+  }
+}
+
+function getPassiveRefreshSignature() {
+  const unreadIds = getUnreadNotifications()
+    .map((notification) => notification.id)
+    .sort((a, b) => Number(a) - Number(b))
+    .join(',');
+  const orderState = state.data.orders
+    .map((order) => `${order.id}:${getNormalizedStatus(order.status)}`)
+    .sort()
+    .join(',');
+
+  return `${unreadIds}|${orderState}`;
 }
 
 function render() {
@@ -2901,10 +2973,18 @@ function uniqueActiveUsers(users) {
       return;
     }
 
-    unique.set(String(user.id), user);
+    const key = getUserDeduplicationKey(user);
+    if (!unique.has(key) || String(user.id) === String(state.appUser?.id)) {
+      unique.set(key, user);
+    }
   });
 
   return [...unique.values()];
+}
+
+function getUserDeduplicationKey(user) {
+  const email = String(user?.email ?? '').trim().toLowerCase();
+  return email || `id:${user?.id ?? ''}`;
 }
 
 function copyOrderToCart(orderId) {
