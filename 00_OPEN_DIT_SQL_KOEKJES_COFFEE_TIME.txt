@@ -1,0 +1,77 @@
+-- Vervangt Lotus Biscoff speculoos door Koekjes Elite Special Coffee Time mix.
+-- Bron: https://discountoffice.be/p/koekmix-coffee-time-assorti/
+-- Prijs gebruikt: reguliere stukprijs voor 1 doos, 18,84 euro excl. btw / 19,97 euro incl. 6% btw.
+
+update public.aankoop_producten
+set
+  naam = 'Koekjes Elite Special Coffee Time mix - 120 stuks',
+  categorie = 'Koffie en vergaderingen',
+  leverancier = 'DiscountOffice.be',
+  leverancier_url = '{"url":"https://discountoffice.be/p/koekmix-coffee-time-assorti/","match_status":"Vervangt Lotus Biscoff speculoos door een gevarieerde kantoorverpakking met individueel verpakte koekjes.","prijsbron":"DiscountOffice.be","prijsdatum":"2026-07-13","prijssoort":"reguliere stukprijs incl. btw, geen volumekorting"}',
+  omschrijving = 'Gevarieerde mix van individueel verpakte koekjes voor bij koffie, thee, overlegmomenten en bezoekers. De doos bevat 120 stuks in vier soorten: Bastogne, Cafe Noir, koffiewafeltjes en Coconut Trio.',
+  eenheid = 'doos van 120 stuks',
+  prijs_excl_btw = 18.84,
+  btw_percentage = 6.00,
+  minimum_bestelhoeveelheid = 1,
+  image_url = 'https://static.discountoffice.cloud/discount-website/productImages/0b/a/Q890318-6.jpg',
+  actief = true,
+  sort_order = 335,
+  updated_at = now()
+where lower(naam) in (
+  lower('Lotus Biscoff speculoos - 300 stuks'),
+  lower('Koekjes voor koffie of meetings - product nog te bepalen'),
+  lower('Koekjes Elite Special Coffee Time mix - 120 stuks')
+)
+or lower(coalesce(leverancier_url, '')) like '%lotus-biscoff%'
+or lower(coalesce(leverancier_url, '')) like '%86618%';
+
+insert into public.aankoop_producten (
+  naam,
+  categorie,
+  leverancier,
+  leverancier_url,
+  omschrijving,
+  eenheid,
+  prijs_excl_btw,
+  btw_percentage,
+  minimum_bestelhoeveelheid,
+  image_url,
+  actief,
+  sort_order,
+  created_at,
+  updated_at
+)
+select
+  'Koekjes Elite Special Coffee Time mix - 120 stuks',
+  'Koffie en vergaderingen',
+  'DiscountOffice.be',
+  '{"url":"https://discountoffice.be/p/koekmix-coffee-time-assorti/","match_status":"Vervangt Lotus Biscoff speculoos door een gevarieerde kantoorverpakking met individueel verpakte koekjes.","prijsbron":"DiscountOffice.be","prijsdatum":"2026-07-13","prijssoort":"reguliere stukprijs incl. btw, geen volumekorting"}',
+  'Gevarieerde mix van individueel verpakte koekjes voor bij koffie, thee, overlegmomenten en bezoekers. De doos bevat 120 stuks in vier soorten: Bastogne, Cafe Noir, koffiewafeltjes en Coconut Trio.',
+  'doos van 120 stuks',
+  18.84,
+  6.00,
+  1,
+  'https://static.discountoffice.cloud/discount-website/productImages/0b/a/Q890318-6.jpg',
+  true,
+  335,
+  now(),
+  now()
+where not exists (
+  select 1
+  from public.aankoop_producten
+  where lower(naam) = lower('Koekjes Elite Special Coffee Time mix - 120 stuks')
+);
+
+select
+  naam,
+  categorie,
+  leverancier,
+  prijs_excl_btw,
+  btw_percentage,
+  round((prijs_excl_btw * (1 + btw_percentage / 100.0))::numeric, 2) as prijs_incl_btw,
+  actief
+from public.aankoop_producten
+where lower(naam) like '%coffee time%'
+   or lower(naam) like '%biscoff%'
+   or lower(naam) like '%speculoos%'
+order by sort_order, naam;
