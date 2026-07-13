@@ -130,6 +130,7 @@ const state = {
   inkCartridgeDraft: readInkCartridgeDraft(),
   analysisFilters: readAnalysisFilters(),
   orderFilters: readOrderFilters(),
+  catalogSearch: '',
   previewProductId: '',
   mailWarning: '',
   installPrompt: null,
@@ -232,6 +233,7 @@ app.addEventListener('input', handleAnalysisFilterChange);
 app.addEventListener('change', handleAnalysisFilterChange);
 app.addEventListener('input', handleOrderFilterChange);
 app.addEventListener('change', handleOrderFilterChange);
+app.addEventListener('input', handleCatalogSearchChange);
 app.addEventListener('input', handleAuthFieldChange);
 app.addEventListener('change', handleAuthFieldChange);
 
@@ -520,6 +522,25 @@ function handleOrderFilterChange(event) {
   state.orderFilters = readOrderFiltersFromForm(form);
   persistOrderFilters();
   render();
+}
+
+function handleCatalogSearchChange(event) {
+  if (!event.target.matches('[data-catalog-search]')) {
+    return;
+  }
+
+  state.catalogSearch = String(event.target.value ?? '');
+  render();
+
+  window.requestAnimationFrame(() => {
+    const field = app.querySelector('[data-catalog-search]');
+    if (!field) {
+      return;
+    }
+
+    field.focus();
+    field.setSelectionRange(field.value.length, field.value.length);
+  });
 }
 
 async function init() {
@@ -1096,10 +1117,6 @@ function renderStart(admin, approver) {
   const ownOrders = getVisibleOrders(admin, approver);
   const recentOrders = ownOrders.slice(0, 3);
   const cartItems = getCartItems();
-  const urgentOrders = ownOrders.filter((order) => {
-    const meta = getOrderMeta(order);
-    return ['dringend', 'hoog'].includes(meta.prioriteit) && !['Geleverd', 'Afgesloten', 'Geweigerd'].includes(getNormalizedStatus(order.status));
-  });
 
   return `
     <section class="page-heading">
@@ -1133,7 +1150,7 @@ function renderStart(admin, approver) {
       <a class="action-card" href="#bestellingen">
         <span>Opvolging</span>
         <strong>${approver && !admin ? 'Goed te keuren' : 'Mijn bestellingen'}</strong>
-        <small>${ownOrders.length} bestelling(en), waarvan ${urgentOrders.length} met hoge prioriteit.</small>
+        <small>${ownOrders.length} bestelling(en) zichtbaar voor opvolging.</small>
       </a>
     </section>
     <section class="dashboard-grid">
@@ -1173,8 +1190,9 @@ function renderCompactOrder(order) {
 }
 
 function renderNotificationsPanel() {
-  const notifications = getVisibleNotifications().slice(0, 6);
-  const unreadCount = notifications.filter((notification) => !notification.gelezen_op).length;
+  const unreadNotifications = getUnreadNotifications();
+  const notifications = unreadNotifications.slice(0, 6);
+  const unreadCount = unreadNotifications.length;
 
   return `
     <div class="panel notification-panel">
@@ -1274,7 +1292,8 @@ function renderFrequentProducts() {
 }
 
 function renderOrderWorkspace() {
-  const products = getSortedOrderableProducts();
+  const allProducts = getSortedOrderableProducts();
+  const products = filterCatalogProducts(allProducts);
   const cartItems = getCartItems();
 
   return `
@@ -1292,7 +1311,7 @@ function renderOrderWorkspace() {
     ${state.mailWarning ? `<div class="warning-panel">${escapeHtml(state.mailWarning)}</div>` : ''}
     <section class="order-layout">
       <div class="catalog-panel">
-        ${renderProductCatalog(products)}
+        ${renderProductCatalog(products, { totalCount: allProducts.length })}
       </div>
       <aside class="cart-panel">
         <div class="panel-header">
@@ -1306,7 +1325,8 @@ function renderOrderWorkspace() {
 }
 
 function renderEhboWorkspace() {
-  const products = getSortedOrderableProducts().filter(isEhboProduct);
+  const allProducts = getSortedOrderableProducts().filter(isEhboProduct);
+  const products = filterCatalogProducts(allProducts);
   const cartItems = getCartItems();
 
   return `
@@ -1326,6 +1346,7 @@ function renderEhboWorkspace() {
       <div class="catalog-panel">
         ${renderProductCatalog(products, {
           title: 'Aanvulartikelen EHBO-koffer A',
+          totalCount: allProducts.length,
           emptyText: 'Er staan nog geen EHBO-artikelen klaar voor bestelling.',
         })}
       </div>
@@ -1564,14 +1585,23 @@ function renderInkReview(inkItems, totals) {
 
 function renderProductCatalog(products, options = {}) {
   const title = options.title || 'Producten';
-  const emptyText = options.emptyText || 'Er staan nog geen bestelklare producten in de catalogus.';
+  const totalCount = Number(options.totalCount ?? products.length);
+  const searchTerm = String(state.catalogSearch ?? '');
+  const hasSearch = searchTerm.trim().length > 0;
+  const emptyText = hasSearch
+    ? 'Geen producten gevonden voor deze zoekopdracht.'
+    : options.emptyText || 'Er staan nog geen bestelklare producten in de catalogus.';
 
   return `
     <section class="category-section">
       <div class="catalog-toolbar">
         <h3>${escapeHtml(title)}</h3>
-        <span>${products.length} artikel${products.length === 1 ? '' : 'en'}</span>
+        <span>${products.length}${hasSearch ? ` van ${totalCount}` : ''} artikel${products.length === 1 ? '' : 'en'}</span>
       </div>
+      <label class="catalog-search">
+        <span>Zoeken in producten</span>
+        <input data-catalog-search type="search" value="${escapeHtml(searchTerm)}" placeholder="Zoek op product, leverancier of categorie" autocomplete="off" />
+      </label>
       ${
         products.length
           ? `<div class="product-grid">${products.map(renderProductCard).join('')}</div>`
@@ -1662,8 +1692,6 @@ function renderCart(cartItems) {
   const selectedLocationId = state.orderDraft.locatie_id ?? '';
   const selectedBestellerId = state.orderDraft.besteller_id || currentUserId;
   const selectedCategory = getDefaultOrderCategory(cartItems);
-  const selectedPriority = state.orderDraft.prioriteit || 'normaal';
-  const desiredDate = state.orderDraft.gewenst_tegen || '';
   const opmerkingen = state.orderDraft.opmerkingen ?? '';
   const andereProducten = state.orderDraft.andere_producten ?? '';
   const submitLabel = state.orderReview ? 'Bestelling indienen' : 'Bestelling controleren';
@@ -1717,31 +1745,14 @@ function renderCart(cartItems) {
             .join('')}
         </select>
       </label>
-      <div class="form-grid two">
-        <div class="field auto-category-summary">
-          <span>Categorie</span>
-          <strong>${escapeHtml(selectedCategory)}</strong>
-          <small>Automatisch op basis van de gekozen producten.</small>
-        </div>
-        <label class="field">
-          <span>Gewenst tegen</span>
-          <input name="gewenst_tegen" type="date" value="${escapeHtml(desiredDate)}" />
-        </label>
+      <div class="field auto-category-summary">
+        <span>Categorie</span>
+        <strong>${escapeHtml(selectedCategory)}</strong>
+        <small>Automatisch op basis van de gekozen producten.</small>
       </div>
       <label class="field">
-        <span>Prioriteit</span>
-        <select name="prioriteit" required>
-          ${priorityOptions
-            .map(
-              (priority) =>
-                `<option value="${escapeHtml(priority.value)}" ${priority.value === selectedPriority ? 'selected' : ''}>${escapeHtml(priority.label)} - ${escapeHtml(priority.description)}</option>`,
-            )
-            .join('')}
-        </select>
-      </label>
-      <label class="field">
         <span>Opmerking voor verwerking</span>
-        <textarea name="opmerkingen" placeholder="Bijvoorbeeld dringendheid, voorraad bijna op, of levering na bepaalde datum.">${escapeHtml(opmerkingen)}</textarea>
+        <textarea name="opmerkingen" placeholder="Bijvoorbeeld praktische info voor aankoopbeheer of een korte toelichting bij het gevraagde materiaal.">${escapeHtml(opmerkingen)}</textarea>
       </label>
       <label class="field">
         <span>Andere producten</span>
@@ -1762,8 +1773,6 @@ function renderOrderReview(cartItems, totals) {
   const besteller = state.data.users.find((item) => String(item.id) === String(state.orderDraft.besteller_id || state.appUser?.id));
   const andereProducten = String(state.orderDraft.andere_producten ?? '').trim();
   const selectedCategory = getDefaultOrderCategory(cartItems);
-  const selectedPriority = state.orderDraft.prioriteit || 'normaal';
-  const desiredDate = state.orderDraft.gewenst_tegen || '';
   const opmerkingen = String(state.orderDraft.opmerkingen ?? '').trim();
 
   return `
@@ -1776,8 +1785,6 @@ function renderOrderReview(cartItems, totals) {
         <div><dt>Locatie</dt><dd>${escapeHtml(location ? getLocationLabel(location) : 'Niet gekozen')}</dd></div>
         <div><dt>Besteller</dt><dd>${escapeHtml(besteller ? getUserLabel(besteller) : 'Niet gekozen')}</dd></div>
         <div><dt>Categorie</dt><dd>${escapeHtml(selectedCategory)}</dd></div>
-        <div><dt>Prioriteit</dt><dd>${escapeHtml(getPriorityLabel(selectedPriority))}</dd></div>
-        ${desiredDate ? `<div><dt>Gewenst tegen</dt><dd>${escapeHtml(formatDateLabel(desiredDate))}</dd></div>` : ''}
       </dl>
       <div class="review-lines">
         ${cartItems
@@ -2711,8 +2718,6 @@ async function handleOrder(form) {
   const opmerkingen = String(formData.get('opmerkingen') ?? '').trim();
   const andereProducten = String(formData.get('andere_producten') ?? '').trim();
   const categorie = getDefaultOrderCategory(cartItems);
-  const prioriteit = String(formData.get('prioriteit') ?? 'normaal').trim() || 'normaal';
-  const gewenstTegen = String(formData.get('gewenst_tegen') ?? '').trim();
   const hasOtherProductRequest = cartItems.some(({ product }) => isOtherProductRequest(product));
   const hasPriceToConfirm = cartItems.some(({ product }) => isProductPriceToConfirm(product));
 
@@ -2734,8 +2739,6 @@ async function handleOrder(form) {
     status: 'Ter goedkeuring',
     opmerkingen: [
       `Categorie: ${categorie}`,
-      `Prioriteit: ${prioriteit}`,
-      gewenstTegen ? `Gewenst tegen: ${gewenstTegen}` : '',
       hasPriceToConfirm ? 'Prijsafspraak: een of meerdere EHBO-artikelen hebben nog geen vaste catalogusprijs. Aankoop bevestigt de effectieve prijs bij verwerking.' : '',
       opmerkingen ? `Toelichting:\n${opmerkingen}` : '',
       andereProducten ? `Andere producten gevraagd:\n${andereProducten}` : '',
@@ -3220,13 +3223,10 @@ function copyOrderToCart(orderId) {
     return;
   }
 
-  const meta = getOrderMeta(order);
   state.cart = nextCart;
   state.orderDraft = {
     locatie_id: String(order.locatie_id ?? ''),
     besteller_id: String(state.appUser?.id ?? order.besteller_id ?? ''),
-    prioriteit: meta.prioriteit || 'normaal',
-    gewenst_tegen: '',
     opmerkingen: getOrderFreeText(order),
     andere_producten: '',
   };
@@ -3369,6 +3369,28 @@ function getSortedOrderableProducts() {
 
       return String(a.naam || '').localeCompare(String(b.naam || ''), 'nl-BE');
     });
+}
+
+function filterCatalogProducts(products) {
+  const query = normalizeCatalogSearchText(state.catalogSearch);
+
+  if (!query) {
+    return products;
+  }
+
+  return products.filter((product) => normalizeCatalogSearchText(getProductSearchText(product)).includes(query));
+}
+
+function getProductSearchText(product) {
+  return [product.naam, product.omschrijving, product.categorie, product.leverancier, product.eenheid, product.leverancier_url].filter(Boolean).join(' ');
+}
+
+function normalizeCatalogSearchText(value) {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
 }
 
 function getDefaultOrderCategory(cartItems) {
@@ -4244,8 +4266,6 @@ function readOrderDraftFromForm(form) {
   return {
     locatie_id: String(formData.get('locatie_id') ?? ''),
     besteller_id: String(formData.get('besteller_id') ?? ''),
-    prioriteit: String(formData.get('prioriteit') ?? ''),
-    gewenst_tegen: String(formData.get('gewenst_tegen') ?? ''),
     opmerkingen: String(formData.get('opmerkingen') ?? ''),
     andere_producten: String(formData.get('andere_producten') ?? ''),
   };

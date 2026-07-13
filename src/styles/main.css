@@ -723,6 +723,37 @@ h4 {
   margin-bottom: 0;
 }
 
+.catalog-search {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.catalog-search span {
+  color: var(--profo-red-dark);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.catalog-search input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.72rem 0.85rem;
+  border: 1px solid rgba(137, 24, 17, 0.2);
+  border-radius: 8px;
+  color: var(--text);
+  background: #ffffff;
+  font: inherit;
+}
+
+.catalog-search input:focus {
+  border-color: var(--profo-red);
+  outline: 3px solid rgba(182, 25, 23, 0.12);
+}
+
 .product-grid {
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   align-items: stretch;
