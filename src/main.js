@@ -3645,7 +3645,15 @@ function getVisibleOrders(admin, approver = false) {
 }
 
 function getVisibleNotifications() {
-  return [...(state.data.notifications ?? [])].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  const currentUserId = String(state.appUser?.id ?? '');
+
+  if (!currentUserId) {
+    return [];
+  }
+
+  return [...(state.data.notifications ?? [])]
+    .filter((notification) => String(notification.gebruiker_id ?? '') === currentUserId)
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 }
 
 function getUnreadNotifications() {
