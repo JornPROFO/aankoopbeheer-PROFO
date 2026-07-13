@@ -1455,7 +1455,7 @@ function renderCart(cartItems) {
   const currentUserId = state.appUser?.id ?? '';
   const selectedLocationId = state.orderDraft.locatie_id ?? '';
   const selectedBestellerId = state.orderDraft.besteller_id || currentUserId;
-  const selectedCategory = state.orderDraft.categorie || getDefaultOrderCategory(cartItems);
+  const selectedCategory = getDefaultOrderCategory(cartItems);
   const selectedPriority = state.orderDraft.prioriteit || 'normaal';
   const desiredDate = state.orderDraft.gewenst_tegen || '';
   const opmerkingen = state.orderDraft.opmerkingen ?? '';
@@ -1512,14 +1512,11 @@ function renderCart(cartItems) {
         </select>
       </label>
       <div class="form-grid two">
-        <label class="field">
+        <div class="field auto-category-summary">
           <span>Categorie</span>
-          <select name="categorie" required>
-            ${productCategories
-              .map((category) => `<option value="${escapeHtml(category)}" ${category === selectedCategory ? 'selected' : ''}>${escapeHtml(category)}</option>`)
-              .join('')}
-          </select>
-        </label>
+          <strong>${escapeHtml(selectedCategory)}</strong>
+          <small>Automatisch op basis van de gekozen producten.</small>
+        </div>
         <label class="field">
           <span>Gewenst tegen</span>
           <input name="gewenst_tegen" type="date" value="${escapeHtml(desiredDate)}" />
@@ -1558,7 +1555,7 @@ function renderOrderReview(cartItems, totals) {
   const location = state.data.locations.find((item) => String(item.id) === String(state.orderDraft.locatie_id));
   const besteller = state.data.users.find((item) => String(item.id) === String(state.orderDraft.besteller_id || state.appUser?.id));
   const andereProducten = String(state.orderDraft.andere_producten ?? '').trim();
-  const selectedCategory = state.orderDraft.categorie || getDefaultOrderCategory(cartItems);
+  const selectedCategory = getDefaultOrderCategory(cartItems);
   const selectedPriority = state.orderDraft.prioriteit || 'normaal';
   const desiredDate = state.orderDraft.gewenst_tegen || '';
   const opmerkingen = String(state.orderDraft.opmerkingen ?? '').trim();
@@ -2507,7 +2504,7 @@ async function handleOrder(form) {
   const totals = calculateTotals(cartItems);
   const opmerkingen = String(formData.get('opmerkingen') ?? '').trim();
   const andereProducten = String(formData.get('andere_producten') ?? '').trim();
-  const categorie = String(formData.get('categorie') ?? 'Huishoudproducten').trim() || 'Huishoudproducten';
+  const categorie = getDefaultOrderCategory(cartItems);
   const prioriteit = String(formData.get('prioriteit') ?? 'normaal').trim() || 'normaal';
   const gewenstTegen = String(formData.get('gewenst_tegen') ?? '').trim();
   const hasOtherProductRequest = cartItems.some(({ product }) => isOtherProductRequest(product));
@@ -3019,7 +3016,6 @@ function copyOrderToCart(orderId) {
   state.orderDraft = {
     locatie_id: String(order.locatie_id ?? ''),
     besteller_id: String(state.appUser?.id ?? order.besteller_id ?? ''),
-    categorie: meta.categorie || 'Huishoudproducten',
     prioriteit: meta.prioriteit || 'normaal',
     gewenst_tegen: '',
     opmerkingen: getOrderFreeText(order),
@@ -3046,13 +3042,6 @@ function addToCart(productId, step = 1) {
 
   const current = Number(state.cart[productId] || 0);
   state.cart[productId] = current + step;
-  if (state.view === 'ehbo' && (!state.orderDraft.categorie || state.orderDraft.categorie === 'Huishoudproducten')) {
-    state.orderDraft = {
-      ...state.orderDraft,
-      categorie: ehboCategory,
-    };
-    persistOrderDraft();
-  }
   state.orderReview = false;
   state.error = '';
   persistCart();
@@ -3174,11 +3163,23 @@ function getSortedOrderableProducts() {
 }
 
 function getDefaultOrderCategory(cartItems) {
-  if (cartItems.length && cartItems.every(({ product }) => isEhboProduct(product))) {
-    return ehboCategory;
+  const categories = [
+    ...new Set(
+      cartItems
+        .map(({ product }) => String(product?.categorie ?? '').trim())
+        .filter(Boolean),
+    ),
+  ];
+
+  if (!categories.length) {
+    return 'Huishoudproducten';
   }
 
-  return 'Huishoudproducten';
+  if (categories.length === 1) {
+    return categories[0];
+  }
+
+  return 'Gemengde bestelling';
 }
 
 function getInkItems() {
@@ -4026,7 +4027,6 @@ function readOrderDraftFromForm(form) {
   return {
     locatie_id: String(formData.get('locatie_id') ?? ''),
     besteller_id: String(formData.get('besteller_id') ?? ''),
-    categorie: String(formData.get('categorie') ?? ''),
     prioriteit: String(formData.get('prioriteit') ?? ''),
     gewenst_tegen: String(formData.get('gewenst_tegen') ?? ''),
     opmerkingen: String(formData.get('opmerkingen') ?? ''),

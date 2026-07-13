@@ -1,0 +1,135 @@
+-- PROFO Aankoopbeheer - producten toevoegen: AA/AAA-batterijen en A4-lamineerhoezen.
+-- Voer dit bestand volledig uit in de Supabase SQL Editor.
+-- De kolom prijs_excl_btw wordt in deze app historisch gebruikt als bestelprijs inclusief btw.
+--
+-- Bronnen gecontroleerd op 13/07/2026:
+-- - 123schoon zoekresultaten voor batterijen: Q-Nomic AA en AAA, 24 stuks, reguliere prijs 9,95 euro incl. btw.
+-- - 123inkt lamineerhoezen standaard A4: 123inkt huismerk A4 glanzend 2x80 micron, 100 stuks, reguliere prijs 9,95 euro incl. btw.
+-- Tijdelijke acties of combideals worden niet als permanente bestelprijs gebruikt.
+
+with bron (
+  naam,
+  categorie,
+  leverancier,
+  leverancier_url,
+  omschrijving,
+  eenheid,
+  prijs_excl_btw,
+  btw_percentage,
+  minimum_bestelhoeveelheid,
+  image_url,
+  actief,
+  sort_order
+) as (
+  values
+    (
+      'Q-Nomic Power AA / MN1500 / LR6 Alkaline Batterij - 24 stuks'::text,
+      'Kantoorbenodigdheden'::text,
+      '123schoon.nl'::text,
+      '{"artikelnummer":"AQN00010","url":"https://www.123schoon.nl/Q-Nomic-Power-AA-MN1500-LR6-Alkaline-Batterij-24-stuks-i19692.html","match_status":"Budgetvriendelijke AA-alkalinebatterijen geselecteerd.","prijsbron":"123schoon.nl","prijsdatum":"2026-07-13","prijssoort":"reguliere prijs incl. btw"}'::text,
+      'Budgetvriendelijke AA-alkalinebatterijen voor dagelijks gebruik in bijvoorbeeld toetsenborden, muizen, afstandsbedieningen, klokken en kleine toestellen. Verpakking met 24 stuks.'::text,
+      'pak van 24 stuks'::text,
+      9.95::numeric(12, 2),
+      21::numeric(5, 2),
+      1::integer,
+      'https://www.123schoon.nl/image/Q-Nomic_Power_AA__MN1500__LR6_Alkaline_Batterij_%7C_24_stuks_AQN00010_m2_big.jpg'::text,
+      true::boolean,
+      360::integer
+    ),
+    (
+      'Q-Nomic Power AAA / MN2400 / LR03 Alkaline Batterij - 24 stuks'::text,
+      'Kantoorbenodigdheden'::text,
+      '123schoon.nl'::text,
+      '{"artikelnummer":"AQN00012","url":"https://www.123schoon.nl/Q-Nomic-Power-AAA-MN2400-LR03-Alkaline-Batterij-24-stuks-i19694.html","match_status":"Budgetvriendelijke AAA-alkalinebatterijen geselecteerd.","prijsbron":"123schoon.nl","prijsdatum":"2026-07-13","prijssoort":"reguliere prijs incl. btw"}'::text,
+      'Budgetvriendelijke AAA-alkalinebatterijen voor dagelijks gebruik in kleine toestellen zoals afstandsbedieningen, draadloze muizen, toetsenborden en klokken. Verpakking met 24 stuks.'::text,
+      'pak van 24 stuks'::text,
+      9.95::numeric(12, 2),
+      21::numeric(5, 2),
+      1::integer,
+      'https://www.123schoon.nl/image/Q-Nomic_Power_AAA__MN2400__LR03_Alkaline_Batterij_24_stuks_AQN00012_m2_big.jpg'::text,
+      true::boolean,
+      361::integer
+    ),
+    (
+      '123inkt document lamineerhoes A4 glanzend 2x80 micron - 100 stuks'::text,
+      'Kantoorbenodigdheden'::text,
+      '123inkt.be'::text,
+      '{"artikelnummer":"300256","url":"https://www.123inkt.be/123inkt-document-lamineerhoes-A4-glanzend-2x80-micron-100-stuks-3740400C-3740489C-5306114C-74780000C-IB585036C-i44597.html","match_status":"Meest budgetvriendelijke A4-lamineerhoes uit het 123inkt-huismerk geselecteerd.","prijsbron":"123inkt.be","prijsdatum":"2026-07-13","prijssoort":"reguliere prijs incl. btw"}'::text,
+      'Glanzende A4-lamineerhoezen van het 123inkt-huismerk. De standaarddikte van 2x80 micron is geschikt voor dagelijks lamineren van documenten, affiches en instructiebladen. Verpakking met 100 stuks.'::text,
+      'pak van 100 stuks'::text,
+      9.95::numeric(12, 2),
+      21::numeric(5, 2),
+      1::integer,
+      'https://www.123inkt.be/image/123inkt_document_lamineerhoes_A4_glanzend_2x80_micron_100_stuks_3740400C_3740489C_5306114C_74780000C_IB585036C_300256_m1_big.jpg'::text,
+      true::boolean,
+      362::integer
+    )
+),
+bijgewerkt as (
+  update public.aankoop_producten product
+  set
+    naam = bron.naam,
+    categorie = bron.categorie,
+    leverancier = bron.leverancier,
+    leverancier_url = bron.leverancier_url,
+    omschrijving = bron.omschrijving,
+    eenheid = bron.eenheid,
+    prijs_excl_btw = bron.prijs_excl_btw,
+    btw_percentage = bron.btw_percentage,
+    minimum_bestelhoeveelheid = bron.minimum_bestelhoeveelheid,
+    image_url = bron.image_url,
+    actief = bron.actief,
+    sort_order = bron.sort_order,
+    updated_at = now()
+  from bron
+  where lower(product.naam) = lower(bron.naam)
+  returning product.naam
+)
+insert into public.aankoop_producten (
+  naam,
+  categorie,
+  leverancier,
+  leverancier_url,
+  omschrijving,
+  eenheid,
+  prijs_excl_btw,
+  btw_percentage,
+  minimum_bestelhoeveelheid,
+  image_url,
+  actief,
+  sort_order
+)
+select
+  bron.naam,
+  bron.categorie,
+  bron.leverancier,
+  bron.leverancier_url,
+  bron.omschrijving,
+  bron.eenheid,
+  bron.prijs_excl_btw,
+  bron.btw_percentage,
+  bron.minimum_bestelhoeveelheid,
+  bron.image_url,
+  bron.actief,
+  bron.sort_order
+from bron
+where not exists (
+  select 1
+  from public.aankoop_producten product
+  where lower(product.naam) = lower(bron.naam)
+);
+
+select
+  naam,
+  categorie,
+  leverancier,
+  prijs_excl_btw,
+  btw_percentage,
+  actief
+from public.aankoop_producten
+where lower(naam) in (
+  lower('Q-Nomic Power AA / MN1500 / LR6 Alkaline Batterij - 24 stuks'),
+  lower('Q-Nomic Power AAA / MN2400 / LR03 Alkaline Batterij - 24 stuks'),
+  lower('123inkt document lamineerhoes A4 glanzend 2x80 micron - 100 stuks')
+)
+order by sort_order, naam;
