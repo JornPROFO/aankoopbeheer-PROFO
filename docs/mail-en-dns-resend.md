@@ -24,18 +24,14 @@ resend._domainkey.profo.be
 
 Dat verklaart waarom een Resend DNS-check voor `profo.be` of een afzender op `@profo.be` kan blijven falen. De exacte hostnamen en waarden moeten altijd overgenomen worden uit het Resend-dashboard, omdat Resend die per domein genereert.
 
+Op 15 juli 2026 is `meldingen.profo.be` in Resend geverifieerd voor verzenden. De app gebruikt daarom dit subdomein als verzenddomein. Inkomende mail via Resend is bewust uitgeschakeld, omdat Aankoopbeheer Resend alleen gebruikt voor transactionele uitgaande meldingen.
+
 ## Aanbevolen aanpak
 
-Gebruik bij voorkeur een apart subdomein voor transactionele mails, bijvoorbeeld:
+Gebruik een apart subdomein voor transactionele mails:
 
 ```text
-mail.profo.be
-```
-
-of:
-
-```text
-aankoopbeheer.profo.be
+meldingen.profo.be
 ```
 
 Dat is beheerbaarder dan rechtstreeks op het hoofddomein `profo.be` werken, omdat het hoofddomein al gebruikt wordt voor Microsoft 365. Resend zelf raadt aan om een subdomein te gebruiken voor verzenddoeleinden, zodat reputatie en doel duidelijk gescheiden blijven.
@@ -64,10 +60,10 @@ MAIL_FROM
 AANKOOPBEHEER_MAIL_TO
 ```
 
-Voorbeeld van `MAIL_FROM` zodra het subdomein in Resend verified is:
+`MAIL_FROM` voor Aankoopbeheer:
 
 ```text
-PROFO Aankoopbeheer <aankoopbeheer@mail.profo.be>
+PROFO Aankoopbeheer <aankoopbeheer@meldingen.profo.be>
 ```
 
 Gebruik geen afzender op een domein dat in Resend nog niet verified is.
