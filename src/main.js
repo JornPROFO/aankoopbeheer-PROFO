@@ -16,6 +16,7 @@ import {
   disableProduct,
   disablePrinter,
   getActiveUserByEmail,
+  invokeOrderMail,
   loadAankoopData,
   markNotificationRead,
   savePushSubscription,
@@ -3154,6 +3155,8 @@ async function notifyOrderSubmitted(order) {
   if (!sent) {
     state.mailWarning = 'De bestelling is bewaard. Voer nog de SQL voor interne meldingen uit zodat collega\'s automatisch een melding in de app krijgen.';
   }
+
+  await sendOrderMail(order, 'De bestelling is bewaard en de interne melding/pushmelding is verwerkt.');
 }
 
 async function notifyOrderStatusChanged(order, status) {
@@ -3175,6 +3178,23 @@ async function notifyOrderStatusChanged(order, status) {
 
   if (!sent) {
     state.mailWarning = 'De status is aangepast. Voer nog de SQL voor interne meldingen uit zodat de betrokken collega dit ook in de app ziet.';
+  }
+
+  await sendOrderMail(order, 'De status is aangepast en de interne melding/pushmelding is verwerkt.');
+}
+
+async function sendOrderMail(order, fallbackContext) {
+  if (!order?.id) {
+    return false;
+  }
+
+  try {
+    await invokeOrderMail(order.id);
+    return true;
+  } catch (error) {
+    const detail = error?.message ? ` Technische melding: ${error.message}` : '';
+    state.mailWarning = `${fallbackContext} De e-mailmelding kon niet worden verzonden.${detail}`;
+    return false;
   }
 }
 
