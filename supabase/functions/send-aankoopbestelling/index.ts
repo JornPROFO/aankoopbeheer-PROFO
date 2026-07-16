@@ -146,17 +146,12 @@ async function buildMailPlan(
   }
 
   return {
-    status: 'Statusmelding verzonden naar aankoopbeheer en besteller',
+    status: 'Statusmelding verzonden naar besteller',
     messages: [
       {
-        to: beheerderMail,
-        subject: `PROFO-bestelling te verwerken - ${order.locatie_naam} - bestelling ${order.id}`,
-        text: buildManagerMailBody(order),
-      },
-      {
         to: String(order.besteller_email || ''),
-        subject: `Update PROFO-bestelling ${order.id} - ${order.locatie_naam}`,
-        text: buildRequesterMailBody(order, lines, 'De status van je bestelling werd aangepast.'),
+        subject: `PROFO-bestelling ${order.id} - ${getStatusMailSubject(status)}`,
+        text: buildRequesterMailBody(order, lines, getStatusMailIntro(status)),
       },
     ],
   };
@@ -288,6 +283,58 @@ function buildRequesterMailBody(order: Record<string, unknown>, lines: Record<st
     'Met vriendelijke groet,',
     'PROFO Aankoopbeheer',
   ].join('\n');
+}
+
+function getStatusMailSubject(status: string) {
+  const normalizedStatus = normalizeStatus(status);
+
+  if (normalizedStatus === 'In behandeling') {
+    return 'in behandeling';
+  }
+
+  if (normalizedStatus === 'Besteld') {
+    return 'besteld bij de leverancier';
+  }
+
+  if (normalizedStatus === 'Gedeeltelijk geleverd') {
+    return 'gedeeltelijk geleverd';
+  }
+
+  if (normalizedStatus === 'Geleverd') {
+    return 'geleverd';
+  }
+
+  if (normalizedStatus === 'Afgesloten') {
+    return 'afgesloten';
+  }
+
+  return `status ${normalizedStatus.toLowerCase()}`;
+}
+
+function getStatusMailIntro(status: string) {
+  const normalizedStatus = normalizeStatus(status);
+
+  if (normalizedStatus === 'In behandeling') {
+    return 'Je bestelling is in behandeling bij aankoopbeheer.';
+  }
+
+  if (normalizedStatus === 'Besteld') {
+    return 'Je bestelling werd ingevoerd bij de leverancier.';
+  }
+
+  if (normalizedStatus === 'Gedeeltelijk geleverd') {
+    return 'Je bestelling werd gedeeltelijk geleverd. De verdere opvolging blijft zichtbaar in Aankoopbeheer.';
+  }
+
+  if (normalizedStatus === 'Geleverd') {
+    return 'Je bestelling werd als geleverd geregistreerd.';
+  }
+
+  if (normalizedStatus === 'Afgesloten') {
+    return 'Je bestelling werd afgesloten in Aankoopbeheer.';
+  }
+
+  return 'De status van je bestelling werd aangepast.';
 }
 
 async function sendMail(options: {
