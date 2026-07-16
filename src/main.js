@@ -86,7 +86,7 @@ const orderStatuses = [
   { value: 'Afgesloten', label: 'Afgesloten', description: 'Administratief afgewerkt.' },
 ];
 
-const externalEntryStatuses = new Set(['Goedgekeurd', 'In behandeling']);
+const externalEntryStatuses = new Set(['Goedgekeurd', 'In behandeling', 'Besteld']);
 const defaultOrderFilterStatuses = ['Ter goedkeuring', 'Goedgekeurd', 'In behandeling', 'Besteld', 'Gedeeltelijk geleverd', 'Geleverd', 'Afgesloten'];
 
 const legacyStatusMap = {
@@ -1879,14 +1879,14 @@ function renderExternalEntryPanel() {
       <div class="panel-header">
         <div>
           <h3>Invoerlijst externe sites</h3>
-          <span>${rows.length} bestelregel${rows.length === 1 ? '' : 's'} uit ${orderCount} bestelling${orderCount === 1 ? '' : 'en'} klaar voor invoer</span>
+          <span>${rows.length} bestelregel${rows.length === 1 ? '' : 's'} uit ${orderCount} bestelling${orderCount === 1 ? '' : 'en'} klaar voor invoer of controle</span>
         </div>
         <button class="primary-button" type="button" data-print-external-entry ${rows.length ? '' : 'disabled'}>
           PDF / print
         </button>
       </div>
       <p class="panel-intro">
-        Deze lijst bundelt goedgekeurde en lopende bestellingen per leverancier. Na invoer op de externe website zet beheer de betrokken bestelling op Besteld.
+        Deze lijst bundelt goedgekeurde, lopende en reeds ingevoerde bestellingen per leverancier. Zo kan beheer de externe invoer voorbereiden en achteraf nog controleren wat werd besteld.
       </p>
     </section>
   `;
@@ -3999,7 +3999,7 @@ function renderExternalEntryPrintHtml(rows) {
       <body>
         <h1>Invoerlijst externe bestelplatformen</h1>
         <p class="meta">Gemaakt op ${escapeHtml(generatedAt)} - ${rows.length} bestelregel${rows.length === 1 ? '' : 's'} uit ${orderCount} bestelling${orderCount === 1 ? '' : 'en'}.</p>
-        <p>Gebruik deze lijst om de bestellingen in te voeren op de externe leverancierssites. Zet de betrokken bestelling daarna in Aankoopbeheer op <strong>Besteld</strong>.</p>
+        <p>Gebruik deze lijst om bestellingen in te voeren op de externe leverancierssites of om achteraf te controleren wat werd besteld. Zet de betrokken bestelling na invoer in Aankoopbeheer op <strong>Besteld</strong>.</p>
         ${groups
           .map(
             (group) => `
