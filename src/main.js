@@ -40,6 +40,7 @@ import {
 
 const app = document.querySelector('#app');
 const cartStorageKey = 'profo-aankoopbeheer-cart';
+const inkCartKeyPrefix = 'ink:';
 const orderDraftStorageKey = 'profo-aankoopbeheer-order-draft';
 const productDraftStorageKey = 'profo-aankoopbeheer-product-draft';
 const inkDraftStorageKey = 'profo-aankoopbeheer-ink-draft';
@@ -294,7 +295,7 @@ app.addEventListener('click', async (event) => {
   }
 
   if (target.matches('[data-cart-action]')) {
-    updateCart(target.dataset.productId, target.dataset.cartAction);
+    updateCart(target.dataset.cartKey || target.dataset.productId, target.dataset.cartAction);
   }
 
   if (target.matches('[data-clear-cart]')) {
@@ -1378,7 +1379,7 @@ function renderInkWorkspace() {
   const activePrinterCartridges = selectedPrinter ? getCartridgesForPrinter(selectedPrinter.id) : [];
   const inkItems = getInkItems();
   const totals = calculateInkTotals(inkItems);
-  const submitLabel = state.inkReview ? 'Inktbestelling definitief doorsturen' : 'Inktbestelling controleren';
+  const submitLabel = 'Toevoegen aan winkelmand';
 
   return `
     <section class="page-heading">
@@ -1537,10 +1538,8 @@ function renderInkCart(inkItems, totals, submitLabel) {
       <div><span>Waarvan btw</span><strong>${formatCurrency(totals.vat)}</strong></div>
       <div class="grand-total"><span>Totaal te betalen</span><strong>${formatCurrency(totals.incl)}</strong></div>
     </div>
-    ${state.inkReview ? renderInkReview(inkItems, totals) : ''}
     <div class="form-actions">
       <button class="primary-button" type="submit">${submitLabel}</button>
-      ${state.inkReview ? '<button class="ghost-button" type="button" data-edit-ink-review>Aanpassen</button>' : ''}
       <button class="ghost-button" type="button" data-clear-ink>Leegmaken</button>
     </div>
   `;
@@ -1733,18 +1732,19 @@ function renderCart(cartItems) {
       <div class="cart-lines">
         ${cartItems
           .map(
-            ({ product, quantity }) => `
+            ({ key, product, quantity }) => `
               <article class="cart-line">
                 <div>
                   <strong>${escapeHtml(product.naam)}</strong>
                   <span>${escapeHtml(product.eenheid || 'stuks')} - ${escapeHtml(getProductPriceLabel(product))}</span>
+                  ${product.printer_label ? `<span>${escapeHtml(product.printer_label)}</span>` : ''}
                 </div>
                 <div class="quantity-control" aria-label="Aantal">
-                  <button type="button" data-cart-action="decrease" data-product-id="${escapeHtml(product.id)}">-</button>
+                  <button type="button" data-cart-action="decrease" data-cart-key="${escapeHtml(key)}">-</button>
                   <output>${quantity}</output>
-                  <button type="button" data-cart-action="increase" data-product-id="${escapeHtml(product.id)}">+</button>
+                  <button type="button" data-cart-action="increase" data-cart-key="${escapeHtml(key)}">+</button>
                 </div>
-                <button class="text-button" type="button" data-cart-action="remove" data-product-id="${escapeHtml(product.id)}">Verwijderen</button>
+                <button class="text-button" type="button" data-cart-action="remove" data-cart-key="${escapeHtml(key)}">Verwijderen</button>
               </article>
             `,
           )
@@ -2790,7 +2790,7 @@ async function handleOrder(form) {
   const linePayloads = cartItems.map(({ product, quantity }) => {
     const line = calculateLine(product, quantity);
     return {
-      product_id: product.id,
+      product_id: product.source_type === 'ink' ? null : product.id,
       product_naam: product.naam,
       product_omschrijving: product.omschrijving,
       aantal: quantity,
@@ -2861,70 +2861,31 @@ async function handleInkOrder(form) {
     return;
   }
 
-  if (form.dataset.inkReview !== 'true') {
-    state.error = '';
-    state.inkReview = true;
-    render();
-    return;
-  }
-
-  const totals = calculateInkTotals(inkItems);
-  const opmerkingen = String(formData.get('opmerkingen') ?? '').trim();
-  const orderPayload = {
-    locatie_id: location.id,
-    locatie_naam: getLocationLabel(location),
-    besteller_id: besteller.id,
-    besteller_naam: getUserLabel(besteller),
-    besteller_email: besteller.email,
-    aangemaakt_door_id: state.appUser.id,
-    aangemaakt_door_email: state.session.user.email,
-    status: 'Ter goedkeuring',
-    opmerkingen: [
-      'Inktbestelling',
-      'Categorie: IT-materiaal',
-      'Prioriteit: normaal',
-      `Printer: ${getPrinterLabel(printer)}`,
-      opmerkingen ? `Opmerking: ${opmerkingen}` : '',
-    ]
-      .filter(Boolean)
-      .join('\n'),
-    totaal_excl_btw: totals.excl,
-    totaal_btw: totals.vat,
-    totaal_incl_btw: totals.incl,
-    mail_status: 'Interne melding in Aankoopbeheer',
-  };
-
-  const linePayloads = inkItems.map(({ cartridge, quantity }) => {
-    const line = calculateInkLine(cartridge, quantity);
-    return {
-      product_id: null,
-      product_naam: `${getInkColorLabel(cartridge.kleur)} - ${cartridge.naam}`,
-      product_omschrijving: `Inkt/toner voor ${getPrinterLabel(printer)}${cartridge.artikelnummer ? ` - art. ${cartridge.artikelnummer}` : ''}`,
-      aantal: quantity,
-      eenheid: cartridge.eenheid || 'stuk',
-      eenheidsprijs_excl_btw: line.unitExcl,
-      btw_percentage: roundMoney(cartridge.btw_percentage ?? 21),
-      lijn_totaal_excl_btw: line.excl,
-      lijn_totaal_btw: line.vat,
-      lijn_totaal_incl_btw: line.incl,
-    };
+  inkItems.forEach(({ cartridge, quantity }) => {
+    const key = getInkCartKey(cartridge.id);
+    state.cart[key] = Number(state.cart[key] || 0) + Number(quantity || 0);
   });
 
-  try {
-    const order = await createOrder(orderPayload, linePayloads);
-    state.mailWarning = '';
-    await notifyOrderSubmitted(order);
+  state.orderDraft = {
+    ...state.orderDraft,
+    locatie_id: String(location.id),
+    besteller_id: String(besteller.id),
+    opmerkingen: mergeOrderNotes(
+      state.orderDraft.opmerkingen,
+      `Inkt/toner voor ${getPrinterLabel(printer)}${String(formData.get('opmerkingen') ?? '').trim() ? `: ${String(formData.get('opmerkingen') ?? '').trim()}` : ''}`,
+    ),
+  };
 
-    clearInkDraft();
-    state.inkReview = false;
-    state.notice = 'De inktbestelling is doorgestuurd en staat klaar voor goedkeuring.';
-    state.view = 'bestellingen';
-    window.location.hash = '#bestellingen';
-    await bootstrapData();
-  } catch (error) {
-    state.error = error.message;
-    render();
-  }
+  clearInkDraft();
+  state.inkReview = false;
+  state.orderReview = false;
+  state.error = '';
+  state.notice = 'De inkt of toner is toegevoegd aan de gewone winkelmand. Controleer en dien de volledige bestelling in via Nieuwe bestelling.';
+  persistCart();
+  persistOrderDraft();
+  state.view = 'bestellen';
+  window.location.hash = '#bestellen';
+  render();
 }
 
 async function handleProductSave(form) {
@@ -3363,11 +3324,12 @@ function addToCart(productId, step = 1) {
   render();
 }
 
-function updateCart(productId, action) {
-  const product = state.data.products.find((item) => String(item.id) === String(productId));
+function updateCart(cartKey, action) {
+  const cartItem = getCartItemByKey(cartKey);
+  const product = cartItem?.product;
 
   if (!isProductOrderable(product)) {
-    delete state.cart[productId];
+    delete state.cart[cartKey];
     state.orderReview = false;
     state.error = 'Een product dat niet meer bestelbaar is, werd uit je winkelmand gehaald.';
     persistCart();
@@ -3376,18 +3338,18 @@ function updateCart(productId, action) {
   }
 
   const step = Number(product?.minimum_bestelhoeveelheid || 1);
-  const current = Number(state.cart[productId] || 0);
+  const current = Number(state.cart[cartKey] || 0);
 
   if (action === 'increase') {
-    state.cart[productId] = current + step;
+    state.cart[cartKey] = current + step;
   }
 
   if (action === 'decrease') {
-    state.cart[productId] = Math.max(0, current - step);
+    state.cart[cartKey] = Math.max(0, current - step);
   }
 
-  if (action === 'remove' || state.cart[productId] === 0) {
-    delete state.cart[productId];
+  if (action === 'remove' || state.cart[cartKey] === 0) {
+    delete state.cart[cartKey];
   }
 
   state.orderReview = false;
@@ -3457,11 +3419,30 @@ function toggleInkSelection(cartridgeId, checked) {
 
 function getCartItems() {
   return Object.entries(state.cart)
-    .map(([productId, quantity]) => ({
-      product: state.data.products.find((product) => String(product.id) === String(productId)),
+    .map(([cartKey, quantity]) => ({
+      ...getCartItemByKey(cartKey),
       quantity: Number(quantity),
     }))
     .filter((item) => item.product && item.quantity > 0 && isProductOrderable(item.product));
+}
+
+function getCartItemByKey(cartKey) {
+  const key = String(cartKey ?? '');
+
+  if (isInkCartKey(key)) {
+    const cartridgeId = key.slice(inkCartKeyPrefix.length);
+    const cartridge = state.data.cartridges.find((item) => String(item.id) === String(cartridgeId));
+
+    return {
+      key,
+      product: cartridge ? cartridgeToCartProduct(cartridge) : null,
+    };
+  }
+
+  return {
+    key,
+    product: state.data.products.find((product) => String(product.id) === key),
+  };
 }
 
 function getSortedOrderableProducts() {
@@ -3532,6 +3513,57 @@ function getInkItems() {
         isCartridgeOrderable(item.cartridge) &&
         String(item.cartridge.printer_id) === String(state.inkDraft.printer_id),
     );
+}
+
+function getInkCartKey(cartridgeId) {
+  return `${inkCartKeyPrefix}${cartridgeId}`;
+}
+
+function isInkCartKey(cartKey) {
+  return String(cartKey ?? '').startsWith(inkCartKeyPrefix);
+}
+
+function cartridgeToCartProduct(cartridge) {
+  const printer = getPrinterById(cartridge.printer_id);
+  const printerLabel = printer ? getPrinterLabel(printer) : 'printer niet gevonden';
+  const supplierUrl = normalizeHttpUrl(cartridge.leverancier_url);
+  const articleText = cartridge.artikelnummer ? ` - art. ${cartridge.artikelnummer}` : '';
+  const linkText = supplierUrl ? ` - link: ${supplierUrl}` : '';
+
+  return {
+    id: getInkCartKey(cartridge.id),
+    source_type: 'ink',
+    actief: cartridge.actief !== false,
+    naam: `${getInkColorLabel(cartridge.kleur)} - ${cartridge.naam}`,
+    categorie: 'IT-materiaal',
+    leverancier: cartridge.leverancier || '123inkt',
+    leverancier_url: stringifySupplierReference(cartridge.artikelnummer || '', supplierUrl),
+    omschrijving: `Inkt/toner voor ${printerLabel}${articleText}${linkText}`,
+    eenheid: cartridge.eenheid || 'stuk',
+    prijs_excl_btw: cartridge.prijs_incl_btw,
+    btw_percentage: cartridge.btw_percentage ?? 21,
+    minimum_bestelhoeveelheid: 1,
+    printer_label: `Printer: ${printerLabel}`,
+  };
+}
+
+function mergeOrderNotes(existingValue, addition) {
+  const existing = String(existingValue ?? '').trim();
+  const next = String(addition ?? '').trim();
+
+  if (!next) {
+    return existing;
+  }
+
+  if (!existing) {
+    return next;
+  }
+
+  if (existing.includes(next)) {
+    return existing;
+  }
+
+  return `${existing}\n${next}`;
 }
 
 function calculateLine(product, quantity) {
@@ -3850,7 +3882,7 @@ function getExternalSupplierInfo(order, line, product) {
   if (/inktbestelling|inkt|toner|cartridge/i.test(rawText)) {
     return {
       name: product?.leverancier || '123inkt',
-      url: productUrl || 'https://www.123inkt.be/',
+      url: productUrl || extractFirstUrl(rawText) || 'https://www.123inkt.be/',
     };
   }
 
@@ -3878,6 +3910,11 @@ function getExternalArticleNumber(line, product) {
   const reference = product ? parseSupplierReference(product.leverancier_url) : { artikelnummer: '' };
   const lineMatch = String(line?.product_omschrijving || '').match(/\bart\.\s*([a-z0-9-]+)/i);
   return reference.artikelnummer || lineMatch?.[1] || '';
+}
+
+function extractFirstUrl(value) {
+  const match = String(value ?? '').match(/https?:\/\/[^\s)]+/i);
+  return match?.[0] || '';
 }
 
 function groupExternalEntryRows(rows) {
