@@ -54,6 +54,7 @@ const ehboCategory = 'Veiligheid/EHBO';
 const ehboDefaultImage = '/assets/ehbo-koffer-a-aanvulling.svg';
 const defaultDocumentTitle = 'PROFO Aankoopbeheer';
 const supplierDeliveryMetaLabel = 'Leveringen leveranciers';
+const appPublicUrl = 'https://aankoopbeheer-profo.vercel.app/';
 const passiveRefreshMs = 15000;
 const passiveRefreshViews = new Set(['start', 'bestellingen', 'analyse', 'beheer']);
 const pushPublicKey = import.meta.env.VITE_PUSH_PUBLIC_KEY ?? '';
@@ -1069,6 +1070,7 @@ function renderShell() {
         ${navLink('ehbo', 'EHBO')}
         ${navLink('inkt', 'Inkt')}
         ${navLink('bestellingen', 'Bestellingen')}
+        ${navLink('handleiding', 'Handleiding')}
         ${admin ? navLink('analyse', 'Analyse') : ''}
         ${admin ? navLink('beheer', 'Beheer') : ''}
       </nav>
@@ -1104,6 +1106,10 @@ function renderCurrentView(admin, approver) {
 
   if (state.view === 'bestellingen') {
     return renderOrders(admin, approver);
+  }
+
+  if (state.view === 'handleiding') {
+    return renderUserGuide();
   }
 
   if (state.view === 'inkt') {
@@ -1181,6 +1187,90 @@ function renderStart(admin, approver) {
         </div>
         ${renderFrequentProducts()}
       </div>
+    </section>
+  `;
+}
+
+function renderUserGuide() {
+  return `
+    <section class="page-heading">
+      <div>
+        <p class="eyebrow">Handleiding</p>
+        <h2>PROFO Aankoopbeheer gebruiken</h2>
+      </div>
+      <p class="page-intro">
+        Deze korte handleiding helpt je om de app te openen, te installeren en een bestelling correct door te sturen.
+      </p>
+    </section>
+    <section class="guide-layout">
+      <article class="panel guide-card">
+        <h3>1. De app openen</h3>
+        <p>Open de app via <a href="${appPublicUrl}" target="_blank" rel="noreferrer">${appPublicUrl}</a>. Gebruik bij voorkeur Chrome of Edge op laptop en Chrome of Safari op smartphone.</p>
+      </article>
+      <article class="panel guide-card">
+        <h3>2. Account aanmaken</h3>
+        <ol>
+          <li>Kies op het aanmeldscherm voor <strong>Registreren</strong>.</li>
+          <li>Vul je volledige PROFO-mailadres in. Alleen je naam is niet voldoende.</li>
+          <li>Kies een wachtwoord en bewaar dit zorgvuldig.</li>
+          <li>Meld daarna aan via <strong>Inloggen</strong>.</li>
+        </ol>
+        <p>Lukt aanmelden niet of krijg je geen toegang, contacteer aankoopbeheer. Je account moet gekoppeld zijn aan een actieve PROFO-gebruiker.</p>
+      </article>
+      <article class="panel guide-card">
+        <h3>3. Installeren op laptop</h3>
+        <ol>
+          <li>Open de app in Chrome of Edge.</li>
+          <li>Klik op <strong>Installeren</strong> wanneer de knop zichtbaar is.</li>
+          <li>Zie je geen knop, open dan het browsermenu en kies <strong>App installeren</strong> of <strong>Deze site installeren als app</strong>.</li>
+        </ol>
+        <p>Na installatie opent Aankoopbeheer als een gewone app, maar je blijft aanmelden met je PROFO-account.</p>
+      </article>
+      <article class="panel guide-card">
+        <h3>4. Installeren op smartphone</h3>
+        <p><strong>Android:</strong> open de app in Chrome, kies het menu en daarna <strong>App installeren</strong> of <strong>Toevoegen aan startscherm</strong>.</p>
+        <p><strong>iPhone of iPad:</strong> open de app in Safari, tik op de deelknop en kies <strong>Zet op beginscherm</strong>.</p>
+        <p>Op iPhone werken sommige meldingen alleen goed wanneer de app op het beginscherm staat.</p>
+      </article>
+      <article class="panel guide-card">
+        <h3>5. Een bestelling plaatsen</h3>
+        <ol>
+          <li>Kies <strong>Nieuwe bestelling</strong> voor algemene producten of <strong>EHBO</strong> voor EHBO-materiaal.</li>
+          <li>Zoek het product en klik op <strong>In winkelmand</strong>.</li>
+          <li>Controleer je winkelmand, kies de locatie en controleer de besteller.</li>
+          <li>Klik op <strong>Bestelling controleren</strong>.</li>
+          <li>Controleer de samenvatting en stuur de bestelling door.</li>
+        </ol>
+        <p>De productcategorie wordt automatisch meegenomen. Je hoeft die dus niet zelf te kiezen.</p>
+      </article>
+      <article class="panel guide-card">
+        <h3>6. Inkt of toner bestellen</h3>
+        <ol>
+          <li>Kies <strong>Inkt</strong>.</li>
+          <li>Kies de locatie en daarna de juiste printer.</li>
+          <li>Selecteer de nodige kleur of toner.</li>
+          <li>Klik op <strong>Toevoegen aan winkelmand</strong>.</li>
+          <li>Rond de bestelling af via <strong>Nieuwe bestelling</strong>, samen met eventuele andere producten.</li>
+        </ol>
+      </article>
+      <article class="panel guide-card">
+        <h3>7. Bestellingen opvolgen</h3>
+        <p>Via <strong>Bestellingen</strong> zie je je eigen bestellingen en hun status. Een bestelling kan onder meer ter goedkeuring staan, goedgekeurd zijn, in behandeling zijn, besteld zijn of geleverd zijn.</p>
+        <p>Gelezen meldingen verdwijnen uit de meldingenlijst op het startscherm.</p>
+      </article>
+      <article class="panel guide-card">
+        <h3>8. Meldingen inschakelen</h3>
+        <p>Op het startscherm kan je pushmeldingen inschakelen. Dan krijg je een korte melding wanneer er iets wijzigt aan een bestelling waarvoor jij betrokken bent.</p>
+        <p>Pushmeldingen zijn aanvullend. De betrouwbare opvolging blijft altijd zichtbaar in de app zelf.</p>
+      </article>
+      <article class="panel guide-card">
+        <h3>9. Wachtwoord vergeten</h3>
+        <p>Kies op het aanmeldscherm voor <strong>Wachtwoord vergeten</strong> en vul je PROFO-mailadres in. Volg daarna de instructies om een nieuw wachtwoord in te stellen.</p>
+      </article>
+      <article class="panel guide-card">
+        <h3>10. Praktische afspraak</h3>
+        <p>Plaats alleen bestellingen die nodig zijn voor de werking van je locatie of team. Twijfel je of een product in de app hoort, geef dit door aan aankoopbeheer zodat het artikel correct kan worden toegevoegd.</p>
+      </article>
     </section>
   `;
 }
@@ -4838,5 +4928,5 @@ function persistAnalysisFilters() {
 
 function getRoute() {
   const route = window.location.hash.replace('#', '');
-  return ['start', 'bestellen', 'ehbo', 'inkt', 'bestellingen', 'analyse', 'beheer'].includes(route) ? route : 'start';
+  return ['start', 'bestellen', 'ehbo', 'inkt', 'bestellingen', 'handleiding', 'analyse', 'beheer'].includes(route) ? route : 'start';
 }

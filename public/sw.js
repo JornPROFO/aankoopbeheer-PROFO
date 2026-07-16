@@ -1,4 +1,4 @@
-const CACHE_NAME = 'profo-aankoopbeheer-v20260716-mailflow';
+const CACHE_NAME = 'profo-aankoopbeheer-v20260716-handleiding';
 const CORE_ASSETS = [
   '/',
   '/manifest.webmanifest',
