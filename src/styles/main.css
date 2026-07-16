@@ -1256,6 +1256,7 @@ h4 {
 .status-in-behandeling,
 .status-goedgekeurd,
 .status-besteld,
+.status-gedeeltelijk-geleverd,
 .status-geleverd,
 .status-afgesloten {
   color: #24513a;
@@ -1326,6 +1327,78 @@ h4 {
   border-radius: 8px;
   background: var(--page);
   color: var(--muted);
+}
+
+.supplier-delivery-panel {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.85rem;
+  border: 1px solid rgba(137, 24, 17, 0.14);
+  border-radius: 8px;
+  background: #fffafa;
+}
+
+.supplier-delivery-header,
+.supplier-delivery-row,
+.supplier-delivery-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.supplier-delivery-header,
+.supplier-delivery-row {
+  justify-content: space-between;
+}
+
+.supplier-delivery-header span,
+.supplier-delivery-row span {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.supplier-delivery-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.supplier-delivery-row {
+  min-width: 0;
+  padding: 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.supplier-delivery-row > div:first-child {
+  display: grid;
+  min-width: 0;
+}
+
+.supplier-delivery-row.is-delivered {
+  border-color: rgba(31, 111, 67, 0.22);
+  background: #f4fbf6;
+}
+
+.supplier-delivery-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.supplier-delivery-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 0.6rem;
+  border-radius: 999px;
+  color: var(--profo-red-dark);
+  background: var(--profo-pink);
+  font-weight: 700;
+}
+
+.supplier-delivery-row.is-delivered .supplier-delivery-status {
+  color: #24513a;
+  background: #eef7f1;
 }
 
 .admin-product-row {

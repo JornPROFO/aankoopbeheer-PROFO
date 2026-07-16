@@ -254,6 +254,7 @@ function buildManagerMailBody(order: Record<string, unknown>) {
 }
 
 function buildRequesterMailBody(order: Record<string, unknown>, lines: Record<string, unknown>[], intro: string) {
+  const orderNote = getVisibleOrderNote(order.opmerkingen);
   const rows = lines
     .map((line) => {
       return [
@@ -278,11 +279,19 @@ function buildRequesterMailBody(order: Record<string, unknown>, lines: Record<st
     '',
     `Totaal incl. btw: ${formatCurrency(order.totaal_incl_btw)}`,
     '',
-    order.opmerkingen ? `Opmerking: ${order.opmerkingen}` : 'Opmerking: geen',
+    orderNote ? `Opmerking: ${orderNote}` : 'Opmerking: geen',
     '',
     'Met vriendelijke groet,',
     'PROFO Aankoopbeheer',
   ].join('\n');
+}
+
+function getVisibleOrderNote(value: unknown) {
+  return String(value ?? '')
+    .split('\n')
+    .filter((line) => !/^(Categorie|Prioriteit|Gewenst tegen|Leveringen leveranciers):/i.test(line.trim()))
+    .join('\n')
+    .trim();
 }
 
 function getStatusMailSubject(status: string) {

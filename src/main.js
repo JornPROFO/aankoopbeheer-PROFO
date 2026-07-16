@@ -24,6 +24,7 @@ import {
   saveInkCartridge,
   saveProduct,
   savePrinter,
+  updateOrderDeliveryStatus,
   updateOrderStatus,
 } from './services/aankoopService.js';
 import {
@@ -52,6 +53,7 @@ const incompleteProductNamePattern = /(nog te bepalen|ander product)/i;
 const ehboCategory = 'Veiligheid/EHBO';
 const ehboDefaultImage = '/assets/ehbo-koffer-a-aanvulling.svg';
 const defaultDocumentTitle = 'PROFO Aankoopbeheer';
+const supplierDeliveryMetaLabel = 'Leveringen leveranciers';
 const passiveRefreshMs = 15000;
 const passiveRefreshViews = new Set(['start', 'bestellingen', 'analyse', 'beheer']);
 const pushPublicKey = import.meta.env.VITE_PUSH_PUBLIC_KEY ?? '';
@@ -338,6 +340,10 @@ app.addEventListener('click', async (event) => {
 
   if (target.matches('[data-status]')) {
     await handleStatusChange(target.dataset.orderId, target.dataset.status);
+  }
+
+  if (target.matches('[data-supplier-delivery]')) {
+    await handleSupplierDeliveryChange(target.dataset.orderId, target.dataset.supplierKey, target.dataset.deliveryStatus);
   }
 
   if (target.matches('[data-resend-order-mail]')) {
@@ -1932,6 +1938,7 @@ function renderOrderCard(order, admin, approver) {
           )
           .join('')}
       </div>
+      ${admin ? renderSupplierDeliveryPanel(order) : ''}
       ${freeText ? `<p class="order-note">${escapeHtml(freeText)}</p>` : ''}
       <div class="record-actions">
         <button class="ghost-button" type="button" data-copy-order="${escapeHtml(order.id)}">Opnieuw gebruiken</button>
@@ -1947,6 +1954,67 @@ function renderOrderCard(order, admin, approver) {
           : ''
       }
     </article>
+  `;
+}
+
+function renderSupplierDeliveryPanel(order) {
+  const normalizedStatus = getNormalizedStatus(order.status);
+  const followUpStatuses = new Set(['Besteld', 'Gedeeltelijk geleverd', 'Geleverd']);
+  const groups = getOrderSupplierGroups(order);
+
+  if (!followUpStatuses.has(normalizedStatus) || !groups.length) {
+    return '';
+  }
+
+  return `
+    <section class="supplier-delivery-panel" aria-label="Levering per leverancier">
+      <div class="supplier-delivery-header">
+        <strong>Levering per leverancier</strong>
+        <span>${groups.length} leverancier${groups.length === 1 ? '' : 's'}</span>
+      </div>
+      <div class="supplier-delivery-list">
+        ${groups
+          .map((group) => {
+            const state = getSupplierDeliveryState(order, group);
+            const delivered = state === 'geleverd';
+
+            return `
+              <article class="supplier-delivery-row ${delivered ? 'is-delivered' : ''}">
+                <div>
+                  <strong>${escapeHtml(group.supplierName)}</strong>
+                  <span>${group.lines.length} bestelregel${group.lines.length === 1 ? '' : 's'} - ${formatCurrency(group.totalIncl)}</span>
+                </div>
+                <div class="supplier-delivery-actions">
+                  <span class="supplier-delivery-status">${delivered ? 'Geleverd' : 'Nog niet geleverd'}</span>
+                  <button
+                    class="ghost-button"
+                    type="button"
+                    data-order-id="${escapeHtml(order.id)}"
+                    data-supplier-key="${escapeHtml(group.supplierKey)}"
+                    data-delivery-status="open"
+                    data-supplier-delivery
+                    ${delivered ? '' : 'disabled'}
+                  >
+                    Nog niet geleverd
+                  </button>
+                  <button
+                    class="ghost-button"
+                    type="button"
+                    data-order-id="${escapeHtml(order.id)}"
+                    data-supplier-key="${escapeHtml(group.supplierKey)}"
+                    data-delivery-status="geleverd"
+                    data-supplier-delivery
+                    ${delivered ? 'disabled' : ''}
+                  >
+                    Geleverd
+                  </button>
+                </div>
+              </article>
+            `;
+          })
+          .join('')}
+      </div>
+    </section>
   `;
 }
 
@@ -3085,6 +3153,77 @@ async function handleStatusChange(orderId, status) {
   }
 }
 
+async function handleSupplierDeliveryChange(orderId, supplierKey, deliveryStatus) {
+  try {
+    const order = state.data.orders.find((item) => String(item.id) === String(orderId));
+
+    if (!order) {
+      state.error = 'Deze bestelling kon niet meer gevonden worden. Vernieuw de gegevens en probeer opnieuw.';
+      render();
+      return;
+    }
+
+    const groups = getOrderSupplierGroups(order);
+    const group = groups.find((item) => item.supplierKey === supplierKey);
+
+    if (!group) {
+      state.error = 'Deze leverancier kon niet meer gevonden worden in de bestelling.';
+      render();
+      return;
+    }
+
+    const deliveryMeta = getOrderDeliveryMeta(order);
+
+    if (deliveryStatus === 'geleverd') {
+      deliveryMeta[group.supplierKey] = {
+        name: group.supplierName,
+        status: 'geleverd',
+        updated_at: new Date().toISOString(),
+        actor: getUserLabel(state.appUser),
+      };
+    } else {
+      delete deliveryMeta[group.supplierKey];
+    }
+
+    const nextStatus = getOverallDeliveryStatus(groups, deliveryMeta);
+    const previousStatus = getNormalizedStatus(order.status);
+    const opmerkingen = setOrderMetaValue(
+      order.opmerkingen,
+      supplierDeliveryMetaLabel,
+      Object.keys(deliveryMeta).length ? JSON.stringify(deliveryMeta) : '',
+    );
+
+    const updatedOrder = await updateOrderDeliveryStatus(
+      orderId,
+      { status: nextStatus, opmerkingen },
+      {
+        actorName: getUserLabel(state.appUser),
+        actorEmail: state.session?.user?.email ?? '',
+      },
+    );
+
+    const orderForNotification = mergeUpdatedOrder(order, updatedOrder);
+    state.data.orders = state.data.orders.map((item) => (String(item.id) === String(orderId) ? orderForNotification : item));
+    state.error = '';
+    state.mailWarning = '';
+
+    let mailResult = { ok: true };
+    if (previousStatus !== nextStatus) {
+      render();
+      mailResult = await notifyOrderStatusChanged(orderForNotification, nextStatus);
+    }
+
+    const statusText = getStatusLabel(nextStatus).toLowerCase();
+    state.notice = mailResult.ok
+      ? `${group.supplierName} staat nu op ${deliveryStatus === 'geleverd' ? 'geleverd' : 'nog niet geleverd'}. De bestelling staat op ${statusText}.`
+      : `${group.supplierName} staat nu op ${deliveryStatus === 'geleverd' ? 'geleverd' : 'nog niet geleverd'}. De bestelling staat op ${statusText}, maar de e-mailmelding kon niet worden verstuurd.`;
+    await bootstrapData();
+  } catch (error) {
+    state.error = error.message;
+    render();
+  }
+}
+
 function mergeUpdatedOrder(existingOrder, updatedOrder) {
   if (!updatedOrder) {
     return existingOrder;
@@ -3874,6 +4013,80 @@ function getExternalEntryRows() {
     );
 }
 
+function getOrderSupplierGroups(order) {
+  const productsById = new Map(state.data.products.map((product) => [String(product.id), product]));
+  const groups = new Map();
+
+  (order.regels ?? []).forEach((line) => {
+    const product = line.product_id ? productsById.get(String(line.product_id)) : null;
+    const supplier = getExternalSupplierInfo(order, line, product);
+    const supplierName = supplier.name || 'Leverancier nog te bepalen';
+    const supplierKey = normalizeSupplierKey(supplierName);
+    const current = groups.get(supplierKey) ?? {
+      supplierKey,
+      supplierName,
+      supplierUrl: supplier.url || '',
+      lines: [],
+      totalIncl: 0,
+    };
+
+    if (!current.supplierUrl && supplier.url) {
+      current.supplierUrl = supplier.url;
+    }
+
+    current.lines.push(line);
+    current.totalIncl += Number(line.lijn_totaal_incl_btw || 0);
+    groups.set(supplierKey, current);
+  });
+
+  return [...groups.values()].sort((a, b) => a.supplierName.localeCompare(b.supplierName, 'nl-BE'));
+}
+
+function getSupplierDeliveryState(order, group) {
+  const meta = getOrderDeliveryMeta(order);
+  return meta[group.supplierKey]?.status === 'geleverd' ? 'geleverd' : 'open';
+}
+
+function getOrderDeliveryMeta(order) {
+  const rawValue = getMetaValue(order?.opmerkingen ?? '', supplierDeliveryMetaLabel);
+
+  if (!rawValue) {
+    return {};
+  }
+
+  try {
+    const parsed = JSON.parse(rawValue);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function getOverallDeliveryStatus(groups, deliveryMeta) {
+  if (!groups.length) {
+    return 'Besteld';
+  }
+
+  const deliveredCount = groups.filter((group) => deliveryMeta[group.supplierKey]?.status === 'geleverd').length;
+
+  if (deliveredCount === 0) {
+    return 'Besteld';
+  }
+
+  return deliveredCount === groups.length ? 'Geleverd' : 'Gedeeltelijk geleverd';
+}
+
+function normalizeSupplierKey(value) {
+  const normalized = String(value || 'leverancier')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  return normalized || 'leverancier';
+}
+
 function getExternalSupplierInfo(order, line, product) {
   const reference = product ? parseSupplierReference(product.leverancier_url) : { artikelnummer: '', url: '' };
   const productUrl = normalizeHttpUrl(reference.url || product?.leverancier_url || '');
@@ -4126,9 +4339,22 @@ function getMetaValue(text, label) {
 function getOrderFreeText(order) {
   return String(order?.opmerkingen ?? '')
     .split('\n')
-    .filter((line) => !/^(Categorie|Prioriteit|Gewenst tegen):/i.test(line.trim()))
+    .filter((line) => !new RegExp(`^(Categorie|Prioriteit|Gewenst tegen|${supplierDeliveryMetaLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}):`, 'i').test(line.trim()))
     .join('\n')
     .trim();
+}
+
+function setOrderMetaValue(text, label, value) {
+  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const lines = String(text ?? '')
+    .split('\n')
+    .filter((line) => !new RegExp(`^${escapedLabel}:`, 'i').test(line.trim()));
+
+  if (String(value ?? '').trim()) {
+    lines.unshift(`${label}: ${String(value).trim()}`);
+  }
+
+  return lines.join('\n').trim();
 }
 
 function getNormalizedStatus(status) {

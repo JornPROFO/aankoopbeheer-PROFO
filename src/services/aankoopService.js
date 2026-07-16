@@ -426,6 +426,36 @@ export async function updateOrderStatus(id, status, actor = {}) {
   return data;
 }
 
+export async function updateOrderDeliveryStatus(id, { status, opmerkingen }, actor = {}) {
+  const { data, error } = await supabase
+    .from('aankoop_bestellingen')
+    .update({ status, opmerkingen })
+    .eq('id', id)
+    .select(orderSelect)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  if (!data) {
+    throw new Error('De leveringsstatus kon niet worden aangepast. De bestelling werd niet gevonden of je hebt onvoldoende rechten voor deze wijziging.');
+  }
+
+  try {
+    await supabase.from('aankoop_bestelling_statuslog').insert({
+      bestelling_id: id,
+      status,
+      actor_naam: actor.actorName || '',
+      actor_email: actor.actorEmail || '',
+    });
+  } catch {
+    // De statuswijziging zelf blijft leidend. De logtabel kan via de optionele SQL worden toegevoegd.
+  }
+
+  return data;
+}
+
 export async function updateOrderMailStatus(id, mailStatus) {
   const { error } = await supabase
     .from('aankoop_bestellingen')
