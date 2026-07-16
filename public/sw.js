@@ -1,4 +1,4 @@
-const CACHE_NAME = 'profo-aankoopbeheer-v2';
+const CACHE_NAME = 'profo-aankoopbeheer-v20260716-mailflow';
 const CORE_ASSETS = [
   '/',
   '/manifest.webmanifest',
@@ -45,6 +45,32 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => caches.match('/')),
+    );
+    return;
+  }
+
+  const preferNetwork = url.origin === self.location.origin
+    && (
+      request.destination === 'script'
+      || request.destination === 'style'
+      || request.destination === 'worker'
+      || url.pathname.endsWith('.js')
+      || url.pathname.endsWith('.css')
+      || url.pathname.endsWith('.webmanifest')
+    );
+
+  if (preferNetwork) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          }
+
+          return response;
+        })
+        .catch(() => caches.match(request)),
     );
     return;
   }

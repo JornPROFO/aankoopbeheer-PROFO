@@ -339,6 +339,10 @@ app.addEventListener('click', async (event) => {
     await handleStatusChange(target.dataset.orderId, target.dataset.status);
   }
 
+  if (target.matches('[data-resend-order-mail]')) {
+    await handleOrderMailRetry(target.dataset.resendOrderMail);
+  }
+
   if (target.matches('[data-notification-read]')) {
     await handleNotificationRead(target.dataset.notificationRead);
   }
@@ -1931,6 +1935,7 @@ function renderOrderCard(order, admin, approver) {
       ${freeText ? `<p class="order-note">${escapeHtml(freeText)}</p>` : ''}
       <div class="record-actions">
         <button class="ghost-button" type="button" data-copy-order="${escapeHtml(order.id)}">Opnieuw gebruiken</button>
+        ${admin ? `<button class="ghost-button" type="button" data-resend-order-mail="${escapeHtml(order.id)}">E-mail opnieuw sturen</button>` : ''}
       </div>
       ${
         actionStatuses.length
@@ -3136,6 +3141,32 @@ async function handleNotificationRead(notificationId) {
     await markNotificationRead(notificationId);
     state.notice = 'Melding gemarkeerd als gelezen.';
     state.error = '';
+    await bootstrapData();
+  } catch (error) {
+    state.error = error.message;
+    render();
+  }
+}
+
+async function handleOrderMailRetry(orderId) {
+  const order = state.data.orders.find((item) => String(item.id) === String(orderId));
+
+  if (!order) {
+    state.error = 'Deze bestelling kon niet meer gevonden worden. Vernieuw de gegevens en probeer opnieuw.';
+    render();
+    return;
+  }
+
+  try {
+    state.error = '';
+    state.mailWarning = '';
+    state.notice = `E-mailmelding voor bestelling ${order.id} wordt opnieuw verstuurd.`;
+    render();
+
+    const mailResult = await sendOrderMail(order, 'De e-mailmelding werd manueel opnieuw geprobeerd.');
+    state.notice = mailResult.ok
+      ? `De e-mailmelding voor bestelling ${order.id} is door de mailfunctie aanvaard.`
+      : `De e-mailmelding voor bestelling ${order.id} kon niet worden verstuurd.`;
     await bootstrapData();
   } catch (error) {
     state.error = error.message;
