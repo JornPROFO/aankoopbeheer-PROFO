@@ -74,7 +74,7 @@ Inkt en toner komen dus mee in dezelfde winkelmand. Zo kan aankoopbeheer nadien 
 
 ## 7. Bestellingen opvolgen
 
-Via Bestellingen zie je je eigen bestellingen en hun status.
+Via Bestellingen zie je je eigen bestellingen en hun status. De bevoegde directeur kiest alleen tussen goedkeuren, extra informatie vragen of weigeren. Na goedkeuring bevestigt aankoopbeheer met één knop dat de bestelling bij de leverancier is geplaatst.
 
 Mogelijke statussen zijn onder meer:
 
@@ -97,7 +97,7 @@ Pushmeldingen zijn aanvullend. De betrouwbare opvolging blijft altijd zichtbaar 
 
 ## 9. Bestelling opnieuw gebruiken
 
-Bij recente of bestaande bestellingen kan je Opnieuw gebruiken kiezen. De producten worden dan opnieuw in je winkelmand geplaatst. Controleer altijd nog even of de aantallen en producten kloppen voordat je de bestelling opnieuw doorstuurt.
+Bij recente of bestaande bestellingen kan je onder **Meer** voor **Opnieuw gebruiken** kiezen. De producten worden dan opnieuw in je winkelmand geplaatst. Controleer altijd nog even of de aantallen en producten kloppen voordat je de bestelling opnieuw doorstuurt.
 
 ## 10. Praktische afspraken
 

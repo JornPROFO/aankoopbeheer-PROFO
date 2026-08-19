@@ -2061,21 +2061,23 @@ function renderOrderCard(order, admin, approver) {
           )
           .join('')}
       </div>
-      ${admin ? renderSupplierDeliveryPanel(order) : ''}
       ${freeText ? `<p class="order-note">${escapeHtml(freeText)}</p>` : ''}
-      <div class="record-actions">
-        <button class="ghost-button" type="button" data-copy-order="${escapeHtml(order.id)}">Opnieuw gebruiken</button>
-        ${admin ? `<button class="ghost-button" type="button" data-resend-order-mail="${escapeHtml(order.id)}">E-mail opnieuw sturen</button>` : ''}
-      </div>
       ${
         actionStatuses.length
           ? `<div class="record-actions">
               ${actionStatuses
-                .map((status) => `<button class="ghost-button" type="button" data-order-id="${escapeHtml(order.id)}" data-status="${escapeHtml(status)}">${escapeHtml(status)}</button>`)
+                .map((status) => `<button class="${getOrderActionClass(status)}" type="button" data-order-id="${escapeHtml(order.id)}" data-status="${escapeHtml(status)}">${escapeHtml(getOrderActionLabel(status))}</button>`)
                 .join('')}
             </div>`
           : ''
       }
+      <details class="order-more-actions">
+        <summary>Meer</summary>
+        <div class="record-actions">
+          <button class="ghost-button" type="button" data-copy-order="${escapeHtml(order.id)}">Opnieuw gebruiken</button>
+          ${admin ? `<button class="ghost-button" type="button" data-resend-order-mail="${escapeHtml(order.id)}">E-mail opnieuw sturen</button>` : ''}
+        </div>
+      </details>
     </article>
   `;
 }
@@ -3272,7 +3274,9 @@ async function handleStatusChange(orderId, status) {
 
     const statusNotice = status === 'Goedgekeurd'
       ? 'Bestelling goedgekeurd. Aankoopbeheer krijgt de melding om de bestelling bij de leverancier in te voeren.'
-      : `Status aangepast naar ${status}.`;
+      : status === 'Besteld'
+        ? 'Bestelling is bij de leverancier geplaatst. De besteller is verwittigd dat de bestelling op komst is.'
+        : `Status aangepast naar ${status}.`;
     state.notice = mailResult.ok
       ? `${statusNotice} De e-mailmelding is door de mailfunctie aanvaard.`
       : statusNotice;
@@ -4098,8 +4102,8 @@ function getFilteredOrders(admin, approver = false) {
 function getOrderActionStatuses(order, admin, approver) {
   const status = getNormalizedStatus(order.status);
 
-  if (admin) {
-    return ['Ter goedkeuring', 'Goedgekeurd', 'In behandeling', 'Extra informatie gevraagd', 'Geweigerd', 'Besteld', 'Gedeeltelijk geleverd', 'Geleverd', 'Afgesloten'];
+  if (admin && status === 'Goedgekeurd') {
+    return ['Besteld'];
   }
 
   if (approver && ['Ter goedkeuring', 'Extra informatie gevraagd'].includes(status)) {
@@ -4107,6 +4111,21 @@ function getOrderActionStatuses(order, admin, approver) {
   }
 
   return [];
+}
+
+function getOrderActionLabel(status) {
+  const labels = {
+    Goedgekeurd: 'Goedkeuren',
+    'Extra informatie gevraagd': 'Extra informatie vragen',
+    Geweigerd: 'Weigeren',
+    Besteld: 'Besteld bij leverancier',
+  };
+
+  return labels[status] || status;
+}
+
+function getOrderActionClass(status) {
+  return ['Goedgekeurd', 'Besteld'].includes(status) ? 'primary-button' : 'ghost-button';
 }
 
 function getExternalEntryRows() {

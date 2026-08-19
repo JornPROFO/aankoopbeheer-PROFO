@@ -656,6 +656,23 @@ h4 {
   flex-wrap: wrap;
 }
 
+.order-more-actions {
+  margin-top: 1rem;
+  color: var(--muted);
+}
+
+.order-more-actions summary {
+  width: fit-content;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.order-more-actions .record-actions {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+
 .order-filter-panel {
   margin-bottom: 1rem;
 }
