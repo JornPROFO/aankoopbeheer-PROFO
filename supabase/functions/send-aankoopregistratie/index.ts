@@ -109,7 +109,11 @@ async function getRegionalDirectorRecipients(supabase: ReturnType<typeof createC
 
   return [...new Set(
     (users ?? [])
-      .filter((user) => String(user.rol || '').trim().toLowerCase() === 'regiodirecteur')
+        .filter((user) => {
+          const role = String(user.rol || '').trim().toLowerCase();
+          const email = String(user.email || '').trim().toLowerCase();
+          return role === 'regiodirecteur' || email === 'timothy.vanraemdonck@profo.be';
+        })
       .map((user) => String(user.email || '').trim().toLowerCase())
       .filter(Boolean),
   )];
@@ -131,11 +135,11 @@ function buildRegistrationMailBody(details: {
     `E-mailadres: ${details.email}`,
     details.functionName ? `Functie: ${details.functionName}` : '',
     `Actief profiel gevonden: ${details.hasProfile ? 'ja' : 'nee'}`,
-    `Regiodirecteur gekoppeld: ${details.hasRegionalDirector ? 'ja' : 'nee'}`,
+    `Bevoegde directeur gekoppeld: ${details.hasRegionalDirector ? 'ja' : 'nee'}`,
     '',
     details.hasRegionalDirector
-      ? 'Jorn en de gekoppelde regiodirecteur ontvangen deze melding.'
-      : 'Er is nog geen regiodirecteur gekoppeld. Jorn moet de teamkoppeling controleren voordat deze gebruiker een aanvraag indient.',
+      ? 'Jorn en de gekoppelde directeur ontvangen deze melding.'
+      : 'Er is nog geen bevoegde directeur gekoppeld. Jorn moet de teamkoppeling controleren voordat deze gebruiker een aanvraag indient.',
     '',
     'PROFO Aankoopbeheer',
   ].filter(Boolean).join('\n');

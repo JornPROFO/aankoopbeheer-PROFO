@@ -214,7 +214,11 @@ async function getApprovalRecipients(
   const recipients = [
     ...new Set(
       (users ?? [])
-        .filter((user) => String(user.rol || '').trim().toLowerCase() === 'regiodirecteur')
+        .filter((user) => {
+          const role = String(user.rol || '').trim().toLowerCase();
+          const email = String(user.email || '').trim().toLowerCase();
+          return role === 'regiodirecteur' || email === 'timothy.vanraemdonck@profo.be';
+        })
         .map((user) => String(user.email || '').trim().toLowerCase())
         .filter(Boolean),
     ),

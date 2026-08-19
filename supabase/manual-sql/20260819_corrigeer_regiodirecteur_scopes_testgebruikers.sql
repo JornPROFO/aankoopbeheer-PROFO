@@ -22,12 +22,19 @@ stable
 security definer
 set search_path = public
 as $$
-  select coalesce(public.current_gebruiker_rol(), '') in (
-    'Goedkeurder aankoop',
-    'Regiodirecteur',
-    'Beheerder aankoop',
-    'Superadmin'
-  );
+  select
+    coalesce(public.current_gebruiker_rol(), '') in (
+      'Goedkeurder aankoop',
+      'Regiodirecteur',
+      'Beheerder aankoop',
+      'Superadmin'
+    )
+    or exists (
+      select 1
+      from public.aankoop_goedkeurder_scopes scope
+      where scope.goedkeurder_id = public.current_gebruiker_id()
+        and scope.actief = true
+    );
 $$;
 
 revoke all on function public.current_gebruiker_is_goedkeurder() from public;
@@ -53,6 +60,10 @@ create temporary table aankoop_regio_koppelingen (
 
 insert into aankoop_regio_koppelingen (goedkeurder_email, teamlid_email)
   values
+    ('timothy.vanraemdonck@profo.be', 'sam.bruynooghe@profo.be'),
+    ('timothy.vanraemdonck@profo.be', 'jorn.neeus@profo.be'),
+    ('timothy.vanraemdonck@profo.be', 'kathleen.nerinckx@profo.be'),
+    ('timothy.vanraemdonck@profo.be', 'nele.tkindt@profo.be'),
     ('nathan.blondeel@profo.be', 'thibo.bleys@profo.be'),
     ('nathan.blondeel@profo.be', 'sky.buggenhout@profo.be'),
     ('nathan.blondeel@profo.be', 'gitte.hellemans@profo.be'),
@@ -159,7 +170,10 @@ begin
     join public.gebruikers goedkeurder on goedkeurder.id = scope.goedkeurder_id
     where scope.actief = true
       and goedkeurder.actief = true
-      and lower(coalesce(goedkeurder.rol, '')) = 'regiodirecteur'
+      and (
+        lower(coalesce(goedkeurder.rol, '')) = 'regiodirecteur'
+        or lower(goedkeurder.email) = 'timothy.vanraemdonck@profo.be'
+      )
       and (
         (scope.scope_type = 'teamlid' and scope.teamlid_id in (bestelling.besteller_id, bestelling.aangemaakt_door_id))
         or (scope.scope_type = 'locatie' and scope.locatie_id = bestelling.locatie_id)
