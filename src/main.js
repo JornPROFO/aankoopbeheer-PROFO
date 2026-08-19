@@ -35,8 +35,10 @@ import {
   formatDateTime,
   getLocationLabel,
   getUserLabel,
+  getUserRole,
   isAdminUser,
   isApproverUser,
+  normalizeRole,
   parseDecimal,
   roundMoney,
 } from './utils/format.js';
@@ -2209,15 +2211,30 @@ function renderOrderFilters(admin, approver) {
 }
 
 function renderStatusTrail(status) {
-  const visibleStatuses = ['Ter goedkeuring', 'Goedgekeurd', 'In behandeling', 'Besteld', 'Gedeeltelijk geleverd', 'Geleverd', 'Afgesloten'];
-  const currentIndex = visibleStatuses.indexOf(status);
+  const normalizedStatus = getNormalizedStatus(status);
+
+  if (['Extra informatie gevraagd', 'Geweigerd'].includes(normalizedStatus)) {
+    return `
+      <div class="status-trail" aria-label="Status">
+        <span class="is-current">${escapeHtml(getStatusLabel(normalizedStatus))}</span>
+      </div>
+    `;
+  }
+
+  const visibleStatuses = ['Ter goedkeuring', 'Goedgekeurd', 'Besteld'];
+  const progressStatus = normalizedStatus === 'In behandeling'
+    ? 'Goedgekeurd'
+    : ['Gedeeltelijk geleverd', 'Geleverd', 'Afgesloten'].includes(normalizedStatus)
+      ? 'Besteld'
+      : normalizedStatus;
+  const currentIndex = visibleStatuses.indexOf(progressStatus);
 
   return `
     <div class="status-trail" aria-label="Statusverloop">
       ${visibleStatuses
         .map((item, index) => {
           const isDone = currentIndex >= 0 && index <= currentIndex;
-          const isCurrent = item === status;
+          const isCurrent = item === progressStatus;
           return `<span class="${isDone ? 'is-done' : ''} ${isCurrent ? 'is-current' : ''}">${escapeHtml(getStatusLabel(item))}</span>`;
         })
         .join('')}
@@ -2956,6 +2973,7 @@ async function handleOrder(form) {
   const categorie = getDefaultOrderCategory(cartItems);
   const hasOtherProductRequest = cartItems.some(({ product }) => isOtherProductRequest(product));
   const hasPriceToConfirm = cartItems.some(({ product }) => isProductPriceToConfirm(product));
+  const automaticallyApproved = normalizeRole(getUserRole(besteller)) === 'regiodirecteur';
 
   if (hasOtherProductRequest && !andereProducten) {
     state.error = 'Beschrijf bij "Andere producten" welk product je wil laten bestellen.';
@@ -2972,7 +2990,7 @@ async function handleOrder(form) {
     besteller_email: besteller.email,
     aangemaakt_door_id: state.appUser.id,
     aangemaakt_door_email: state.session.user.email,
-    status: 'Ter goedkeuring',
+    status: automaticallyApproved ? 'Goedgekeurd' : 'Ter goedkeuring',
     opmerkingen: [
       `Categorie: ${categorie}`,
       hasPriceToConfirm ? 'Prijsafspraak: een of meerdere EHBO-artikelen hebben nog geen vaste catalogusprijs. Aankoop bevestigt de effectieve prijs bij verwerking.' : '',
@@ -3006,13 +3024,19 @@ async function handleOrder(form) {
   try {
     const order = await createOrder(orderPayload, linePayloads);
     state.mailWarning = '';
-    await notifyOrderSubmitted(order);
+    if (automaticallyApproved) {
+      await notifyOrderStatusChanged(order, 'Goedgekeurd');
+    } else {
+      await notifyOrderSubmitted(order);
+    }
 
     state.cart = {};
     state.orderReview = false;
     persistCart();
     clearOrderDraft();
-    state.notice = 'De bestelling is doorgestuurd en staat klaar voor goedkeuring.';
+    state.notice = automaticallyApproved
+      ? 'De bestelling is automatisch goedgekeurd omdat de besteller regiodirecteur is. Aankoopbeheer kan ze nu bij de leverancier invoeren.'
+      : 'De bestelling is doorgestuurd en staat klaar voor goedkeuring.';
     state.view = 'bestellingen';
     window.location.hash = '#bestellingen';
     await bootstrapData();
@@ -4102,7 +4126,7 @@ function getFilteredOrders(admin, approver = false) {
 function getOrderActionStatuses(order, admin, approver) {
   const status = getNormalizedStatus(order.status);
 
-  if (admin && status === 'Goedgekeurd') {
+  if (admin && ['Goedgekeurd', 'In behandeling'].includes(status)) {
     return ['Besteld'];
   }
 
@@ -4515,6 +4539,11 @@ function getNormalizedStatus(status) {
 
 function getStatusLabel(status) {
   const normalized = getNormalizedStatus(status);
+
+  if (normalized === 'In behandeling') {
+    return 'Goedgekeurd - nog te bestellen';
+  }
+
   return orderStatuses.find((item) => item.value === normalized)?.label || normalized;
 }
 

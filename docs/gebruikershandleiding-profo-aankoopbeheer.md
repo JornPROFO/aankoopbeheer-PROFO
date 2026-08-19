@@ -76,6 +76,10 @@ Inkt en toner komen dus mee in dezelfde winkelmand. Zo kan aankoopbeheer nadien 
 
 Via Bestellingen zie je je eigen bestellingen en hun status. De bevoegde directeur kiest alleen tussen goedkeuren, extra informatie vragen of weigeren. Na goedkeuring bevestigt aankoopbeheer met één knop dat de bestelling bij de leverancier is geplaatst.
 
+Een ouder dossier dat nog op **In behandeling** stond, verschijnt als **Goedgekeurd - nog te bestellen**. Aankoopbeheer kan dit rechtstreeks afronden met **Besteld bij leverancier**.
+
+Wanneer een regiodirecteur zelf een bestelling indient, is geen eigen goedkeuring nodig. De bestelling wordt onmiddellijk goedgekeurd doorgestuurd naar aankoopbeheer.
+
 Mogelijke statussen zijn onder meer:
 
 - Ter goedkeuring: de bestelling wacht op controle.

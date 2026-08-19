@@ -39,6 +39,10 @@ Bij elke bestelling ziet de beheerder minstens:
 
 De dagelijkse acties zijn bewust beperkt. De bevoegde directeur kan een aanvraag goedkeuren, extra informatie vragen of weigeren. Na goedkeuring krijgt aankoopbeheer één primaire actie: **Besteld bij leverancier**. Daarmee wordt de status op Besteld gezet en ontvangt de besteller de melding dat de bestelling op komst is. Oudere en uitzonderlijke statussen blijven leesbaar voor historiek en rapportering, maar worden niet als gewone actieknoppen aangeboden.
 
+Bestaande dossiers met de vroegere status **In behandeling** worden getoond als **Goedgekeurd - nog te bestellen** en krijgen dezelfde actie **Besteld bij leverancier**. Het zichtbare statusverloop is beperkt tot Ter goedkeuring, Goedgekeurd en Besteld.
+
+Wanneer de besteller zelf de rol **Regiodirecteur** heeft, wordt de aanvraag bij het indienen automatisch op **Goedgekeurd** gezet. Er wordt geen goedkeuringsmelding aan de regiodirecteur zelf verstuurd. Aankoopbeheer ontvangt onmiddellijk de melding om de bestelling bij de leverancier in te voeren.
+
 Voor de praktische verwerking kan de beheerder een invoerlijst voor externe bestelplatformen openen. Die lijst bundelt goedgekeurde en lopende bestelregels per leverancier. De lijst kan via de browser afgedrukt of als PDF bewaard worden. Na invoer op de externe website zet beheer de betrokken bestelling op Besteld.
 
 ## Rechten en zichtbaarheid
@@ -102,6 +106,7 @@ Zolang Resend en de DNS-validatie nog niet volledig klaar zijn, moet de interne 
 13. Keur de bestelling goed en controleer of aankoopbeheer daarna een melding krijgt.
 14. Test een weigering of vraag om extra informatie.
 15. Klik na goedkeuring als beheerder op Besteld bij leverancier en controleer dat de besteller de melding krijgt dat de bestelling op komst is.
+16. Dien een bestelling in op naam van een regiodirecteur en controleer dat ze onmiddellijk op Goedgekeurd staat en rechtstreeks bij aankoopbeheer terechtkomt.
 16. Open als beheerder de invoerlijst externe sites en controleer of alleen goedgekeurde of lopende regels per leverancier gegroepeerd staan.
 17. Print de invoerlijst of bewaar ze als PDF via de browser.
 18. Gebruik een vorige bestelling opnieuw en controleer of de producten opnieuw in het winkelmandje staan.
