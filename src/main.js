@@ -35,8 +35,10 @@ import {
   formatDateTime,
   getLocationLabel,
   getUserLabel,
+  getUserRole,
   isAdminUser,
   isApproverUser,
+  normalizeRole,
   parseDecimal,
   roundMoney,
 } from './utils/format.js';
@@ -2971,6 +2973,7 @@ async function handleOrder(form) {
   const categorie = getDefaultOrderCategory(cartItems);
   const hasOtherProductRequest = cartItems.some(({ product }) => isOtherProductRequest(product));
   const hasPriceToConfirm = cartItems.some(({ product }) => isProductPriceToConfirm(product));
+  const automaticallyApproved = normalizeRole(getUserRole(besteller)) === 'regiodirecteur';
 
   if (hasOtherProductRequest && !andereProducten) {
     state.error = 'Beschrijf bij "Andere producten" welk product je wil laten bestellen.';
@@ -2987,7 +2990,7 @@ async function handleOrder(form) {
     besteller_email: besteller.email,
     aangemaakt_door_id: state.appUser.id,
     aangemaakt_door_email: state.session.user.email,
-    status: 'Ter goedkeuring',
+    status: automaticallyApproved ? 'Goedgekeurd' : 'Ter goedkeuring',
     opmerkingen: [
       `Categorie: ${categorie}`,
       hasPriceToConfirm ? 'Prijsafspraak: een of meerdere EHBO-artikelen hebben nog geen vaste catalogusprijs. Aankoop bevestigt de effectieve prijs bij verwerking.' : '',
@@ -3021,13 +3024,19 @@ async function handleOrder(form) {
   try {
     const order = await createOrder(orderPayload, linePayloads);
     state.mailWarning = '';
-    await notifyOrderSubmitted(order);
+    if (automaticallyApproved) {
+      await notifyOrderStatusChanged(order, 'Goedgekeurd');
+    } else {
+      await notifyOrderSubmitted(order);
+    }
 
     state.cart = {};
     state.orderReview = false;
     persistCart();
     clearOrderDraft();
-    state.notice = 'De bestelling is doorgestuurd en staat klaar voor goedkeuring.';
+    state.notice = automaticallyApproved
+      ? 'De bestelling is automatisch goedgekeurd omdat de besteller regiodirecteur is. Aankoopbeheer kan ze nu bij de leverancier invoeren.'
+      : 'De bestelling is doorgestuurd en staat klaar voor goedkeuring.';
     state.view = 'bestellingen';
     window.location.hash = '#bestellingen';
     await bootstrapData();
