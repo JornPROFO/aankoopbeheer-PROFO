@@ -28,7 +28,7 @@ Bestellingen zijn organisatiegegevens met een persoonsgegevenscomponent. De verw
 | Superadmin | Technisch en uitzonderlijk beheer | Alles wat nodig is voor technische ondersteuning, rechtenbeheer en incidentopvolging. | Gebruikers- en rolconfiguratie, technische correcties, noodherstelacties. | RLS- en configuratiecorrecties, gebruikersactivatie, noodcorrecties en technische instellingen. | Alleen uitzonderlijk en gedocumenteerd. Harde delete gebeurt niet als normale beheeractie. |
 | Locatieverantwoordelijke of regiodirecteur | Mogelijke latere rol voor lokale opvolging | Bestellingen van de eigen locatie of regio. | Eventueel bestellingen namens de locatie. | Eventueel status of interne toelichting voor de eigen locatie, als PROFO dat beleidsmatig wil. | Geen delete. |
 
-De goedkeuringsrol is op 13/07/2026 organisatorisch uitgebreid. Timothy Van Raemdonck krijgt als algemeen directeur organisatiebreed goedkeuringsrecht. Karima Lakdim, Nathan Blondeel, Annelies Vuye en Joke DeLille krijgen als regiodirecteur een goedkeuringsrol voor de medewerkers die tot hun regio of team behoren. De exacte teamkoppeling moet uit de actuele personeels- of teamlijst worden overgenomen in de goedkeuringsscopes.
+De goedkeuringsrol wordt gekoppeld aan de bevoegde regiodirecteur. Karima Lakdim, Nathan Blondeel, Annelies Vuye en Joke DeLille krijgen als regiodirecteur een goedkeuringsrol voor de medewerkers die tot hun regio of team behoren. Timothy Van Raemdonck is als algemeen directeur geen organisatiebrede standaardgoedkeurder voor aankoopaanvragen. De exacte teamkoppeling moet uit de actuele personeels- of teamlijst worden overgenomen in de goedkeuringsscopes.
 
 ## Praktische rechten per onderdeel
 

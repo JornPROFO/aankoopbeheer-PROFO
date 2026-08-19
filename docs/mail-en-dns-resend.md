@@ -58,6 +58,7 @@ SUPABASE_SERVICE_ROLE_KEY
 RESEND_API_KEY
 MAIL_FROM
 AANKOOPBEHEER_MAIL_TO
+AANKOOPBEHEER_PRIMARY_MAIL_TO
 ```
 
 `MAIL_FROM` voor Aankoopbeheer:
@@ -65,6 +66,15 @@ AANKOOPBEHEER_MAIL_TO
 ```text
 PROFO Aankoopbeheer <aankoopbeheer@meldingen.profo.be>
 ```
+
+Ontvangers voor goedgekeurde bestellingen:
+
+```text
+AANKOOPBEHEER_MAIL_TO=jorn.neeus@profo.be;kathleen.nerinckx@profo.be
+AANKOOPBEHEER_PRIMARY_MAIL_TO=jorn.neeus@profo.be
+```
+
+Jorn ontvangt de primaire melding om in te voeren bij de leverancier. Kathleen ontvangt een afzonderlijke back-upmelding met de expliciete afspraak dat zij alleen overneemt bij afwezigheid of na onderlinge afstemming.
 
 Gebruik geen afzender op een domein dat in Resend nog niet verified is.
 
