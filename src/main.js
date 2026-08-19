@@ -2209,15 +2209,30 @@ function renderOrderFilters(admin, approver) {
 }
 
 function renderStatusTrail(status) {
-  const visibleStatuses = ['Ter goedkeuring', 'Goedgekeurd', 'In behandeling', 'Besteld', 'Gedeeltelijk geleverd', 'Geleverd', 'Afgesloten'];
-  const currentIndex = visibleStatuses.indexOf(status);
+  const normalizedStatus = getNormalizedStatus(status);
+
+  if (['Extra informatie gevraagd', 'Geweigerd'].includes(normalizedStatus)) {
+    return `
+      <div class="status-trail" aria-label="Status">
+        <span class="is-current">${escapeHtml(getStatusLabel(normalizedStatus))}</span>
+      </div>
+    `;
+  }
+
+  const visibleStatuses = ['Ter goedkeuring', 'Goedgekeurd', 'Besteld'];
+  const progressStatus = normalizedStatus === 'In behandeling'
+    ? 'Goedgekeurd'
+    : ['Gedeeltelijk geleverd', 'Geleverd', 'Afgesloten'].includes(normalizedStatus)
+      ? 'Besteld'
+      : normalizedStatus;
+  const currentIndex = visibleStatuses.indexOf(progressStatus);
 
   return `
     <div class="status-trail" aria-label="Statusverloop">
       ${visibleStatuses
         .map((item, index) => {
           const isDone = currentIndex >= 0 && index <= currentIndex;
-          const isCurrent = item === status;
+          const isCurrent = item === progressStatus;
           return `<span class="${isDone ? 'is-done' : ''} ${isCurrent ? 'is-current' : ''}">${escapeHtml(getStatusLabel(item))}</span>`;
         })
         .join('')}
@@ -4102,7 +4117,7 @@ function getFilteredOrders(admin, approver = false) {
 function getOrderActionStatuses(order, admin, approver) {
   const status = getNormalizedStatus(order.status);
 
-  if (admin && status === 'Goedgekeurd') {
+  if (admin && ['Goedgekeurd', 'In behandeling'].includes(status)) {
     return ['Besteld'];
   }
 
@@ -4515,6 +4530,11 @@ function getNormalizedStatus(status) {
 
 function getStatusLabel(status) {
   const normalized = getNormalizedStatus(status);
+
+  if (normalized === 'In behandeling') {
+    return 'Goedgekeurd - nog te bestellen';
+  }
+
   return orderStatuses.find((item) => item.value === normalized)?.label || normalized;
 }
 

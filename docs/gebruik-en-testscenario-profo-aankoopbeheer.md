@@ -39,6 +39,8 @@ Bij elke bestelling ziet de beheerder minstens:
 
 De dagelijkse acties zijn bewust beperkt. De bevoegde directeur kan een aanvraag goedkeuren, extra informatie vragen of weigeren. Na goedkeuring krijgt aankoopbeheer één primaire actie: **Besteld bij leverancier**. Daarmee wordt de status op Besteld gezet en ontvangt de besteller de melding dat de bestelling op komst is. Oudere en uitzonderlijke statussen blijven leesbaar voor historiek en rapportering, maar worden niet als gewone actieknoppen aangeboden.
 
+Bestaande dossiers met de vroegere status **In behandeling** worden getoond als **Goedgekeurd - nog te bestellen** en krijgen dezelfde actie **Besteld bij leverancier**. Het zichtbare statusverloop is beperkt tot Ter goedkeuring, Goedgekeurd en Besteld.
+
 Voor de praktische verwerking kan de beheerder een invoerlijst voor externe bestelplatformen openen. Die lijst bundelt goedgekeurde en lopende bestelregels per leverancier. De lijst kan via de browser afgedrukt of als PDF bewaard worden. Na invoer op de externe website zet beheer de betrokken bestelling op Besteld.
 
 ## Rechten en zichtbaarheid
