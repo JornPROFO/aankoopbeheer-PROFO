@@ -371,7 +371,7 @@ function getStatusMailIntro(status: string) {
   }
 
   if (normalizedStatus === 'Besteld') {
-    return 'Je bestelling werd ingevoerd bij de leverancier.';
+    return 'Je bestelling werd bij de leverancier geplaatst en is op komst.';
   }
 
   if (normalizedStatus === 'Gedeeltelijk geleverd') {

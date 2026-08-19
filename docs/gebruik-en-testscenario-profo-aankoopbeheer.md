@@ -37,7 +37,7 @@ Bij elke bestelling ziet de beheerder minstens:
 - mailstatus;
 - huidige status.
 
-Een beheerder kan de status aanpassen naar onder meer ter goedkeuring, goedgekeurd, in behandeling, extra informatie gevraagd, geweigerd, besteld, gedeeltelijk geleverd, geleverd of afgesloten. De applicatie probeert elke statuswijziging ook in een aparte statuslog te bewaren. Als die optionele logtabel nog niet in Supabase bestaat, blijft de statuswijziging zelf wel werken.
+De dagelijkse acties zijn bewust beperkt. De bevoegde directeur kan een aanvraag goedkeuren, extra informatie vragen of weigeren. Na goedkeuring krijgt aankoopbeheer één primaire actie: **Besteld bij leverancier**. Daarmee wordt de status op Besteld gezet en ontvangt de besteller de melding dat de bestelling op komst is. Oudere en uitzonderlijke statussen blijven leesbaar voor historiek en rapportering, maar worden niet als gewone actieknoppen aangeboden.
 
 Voor de praktische verwerking kan de beheerder een invoerlijst voor externe bestelplatformen openen. Die lijst bundelt goedgekeurde en lopende bestelregels per leverancier. De lijst kan via de browser afgedrukt of als PDF bewaard worden. Na invoer op de externe website zet beheer de betrokken bestelling op Besteld.
 
@@ -101,7 +101,7 @@ Zolang Resend en de DNS-validatie nog niet volledig klaar zijn, moet de interne 
 12. Controleer als goedkeurder of de bestelling zichtbaar is binnen de eigen scope.
 13. Keur de bestelling goed en controleer of aankoopbeheer daarna een melding krijgt.
 14. Test een weigering of vraag om extra informatie.
-15. Wijzig als beheerder de status naar in behandeling, besteld en geleverd.
+15. Klik na goedkeuring als beheerder op Besteld bij leverancier en controleer dat de besteller de melding krijgt dat de bestelling op komst is.
 16. Open als beheerder de invoerlijst externe sites en controleer of alleen goedgekeurde of lopende regels per leverancier gegroepeerd staan.
 17. Print de invoerlijst of bewaar ze als PDF via de browser.
 18. Gebruik een vorige bestelling opnieuw en controleer of de producten opnieuw in het winkelmandje staan.
