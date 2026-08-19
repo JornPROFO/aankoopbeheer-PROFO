@@ -10,12 +10,14 @@ import {
 } from './services/authService.js';
 import {
   createOrder,
+  createApproverNotifications,
   createNotification,
   disablePushSubscription,
   disableInkCartridge,
   disableProduct,
   disablePrinter,
   getActiveUserByEmail,
+  invokeNewUserMail,
   invokeOrderMail,
   loadAankoopData,
   markNotificationRead,
@@ -1066,9 +1068,10 @@ function renderShell() {
     <div class="app-layout">
       <nav class="sidebar" aria-label="Hoofdnavigatie">
         ${navLink('start', 'Start', unreadCount)}
-        ${navLink('bestellen', 'Nieuwe bestelling')}
+        ${navLink('bestellen', 'Onderhoud en algemene producten')}
         ${navLink('ehbo', 'EHBO')}
         ${navLink('inkt', 'Inkt')}
+        ${navLink('winkelmand', 'Mijn winkelmand', getCartItems().length)}
         ${navLink('bestellingen', 'Bestellingen')}
         ${navLink('handleiding', 'Handleiding')}
         ${admin ? navLink('analyse', 'Analyse') : ''}
@@ -1116,6 +1119,10 @@ function renderCurrentView(admin, approver) {
     return renderInkWorkspace();
   }
 
+  if (state.view === 'winkelmand') {
+    return renderCartWorkspace();
+  }
+
   if (state.view === 'ehbo') {
     return renderEhboWorkspace();
   }
@@ -1151,8 +1158,8 @@ function renderStart(admin, approver) {
     ${state.mailWarning ? `<div class="warning-panel">${escapeHtml(state.mailWarning)}</div>` : ''}
     <section class="start-actions">
       <a class="action-card is-primary" href="#bestellen">
-        <span>Nieuwe bestelling</span>
-        <strong>Onderhoud en algemene producten</strong>
+        <span>Onderhoud en algemene producten</span>
+        <strong>Nieuwe aanvraag samenstellen</strong>
         <small>${cartItems.length ? `${cartItems.length} product(en) staan al klaar in je winkelmand.` : 'Kies producten, controleer en dien in.'}</small>
       </a>
       <a class="action-card" href="#inkt">
@@ -1235,7 +1242,7 @@ function renderUserGuide() {
       <article class="panel guide-card">
         <h3>5. Een bestelling plaatsen</h3>
         <ol>
-          <li>Kies <strong>Nieuwe bestelling</strong> voor algemene producten of <strong>EHBO</strong> voor EHBO-materiaal.</li>
+          <li>Kies <strong>Onderhoud en algemene producten</strong> voor de gewone catalogus of <strong>EHBO</strong> voor EHBO-materiaal.</li>
           <li>Zoek het product en klik op <strong>In winkelmand</strong>.</li>
           <li>Controleer je winkelmand, kies de locatie en controleer de besteller.</li>
           <li>Klik op <strong>Bestelling controleren</strong>.</li>
@@ -1250,7 +1257,7 @@ function renderUserGuide() {
           <li>Kies de locatie en daarna de juiste printer.</li>
           <li>Selecteer de nodige kleur of toner.</li>
           <li>Klik op <strong>Toevoegen aan winkelmand</strong>.</li>
-          <li>Rond de bestelling af via <strong>Nieuwe bestelling</strong>, samen met eventuele andere producten.</li>
+          <li>Rond de bestelling af via <strong>Mijn winkelmand</strong>, samen met eventuele andere producten.</li>
         </ol>
       </article>
       <article class="panel guide-card">
@@ -1422,6 +1429,32 @@ function renderOrderWorkspace() {
         </div>
         ${renderCart(cartItems)}
       </aside>
+    </section>
+  `;
+}
+
+function renderCartWorkspace() {
+  const cartItems = getCartItems();
+
+  return `
+    <section class="page-heading">
+      <div>
+        <p class="eyebrow">Mijn winkelmand</p>
+        <h2>Bestelling controleren en doorsturen</h2>
+      </div>
+      <p class="page-intro">
+        Controleer de gekozen producten, locatie en aanvrager. Na het doorsturen ontvangt de betrokken regiodirecteur de aanvraag ter goedkeuring.
+      </p>
+    </section>
+    ${state.error ? `<div class="warning-panel">${escapeHtml(state.error)}</div>` : ''}
+    ${state.notice ? `<div class="notice-panel">${escapeHtml(state.notice)}</div>` : ''}
+    ${state.mailWarning ? `<div class="warning-panel">${escapeHtml(state.mailWarning)}</div>` : ''}
+    <section class="panel cart-page-panel">
+      <div class="panel-header">
+        <h3>Mijn winkelmand</h3>
+        <span>${cartItems.length} product${cartItems.length === 1 ? '' : 'en'}</span>
+      </div>
+      ${renderCart(cartItems)}
     </section>
   `;
 }
@@ -2774,6 +2807,13 @@ async function handleAuth(form) {
     if (state.authMode === 'register') {
       const name = String(formData.get('name') ?? '').trim();
       const result = await signUpWithPassword(email, password, { full_name: name || email });
+      if (result.user?.id) {
+        try {
+          await invokeNewUserMail(result.user.id, email);
+        } catch (notificationError) {
+          console.warn('De interne melding over de nieuwe gebruiker kon niet worden verzonden.', notificationError);
+        }
+      }
       state.session = result.session;
       state.authMode = result.session ? state.authMode : 'login';
       state.notice = result.session
@@ -3038,11 +3078,11 @@ async function handleInkOrder(form) {
   state.inkReview = false;
   state.orderReview = false;
   state.error = '';
-  state.notice = 'De inkt of toner is toegevoegd aan de gewone winkelmand. Controleer en dien de volledige bestelling in via Nieuwe bestelling.';
+  state.notice = 'De inkt of toner is toegevoegd aan je winkelmand. Controleer en dien de volledige bestelling in via Mijn winkelmand.';
   persistCart();
   persistOrderDraft();
-  state.view = 'bestellen';
-  window.location.hash = '#bestellen';
+  state.view = 'winkelmand';
+  window.location.hash = '#winkelmand';
   render();
 }
 
@@ -3365,10 +3405,7 @@ async function handleOrderMailRetry(orderId) {
 }
 
 async function notifyOrderSubmitted(order) {
-  const recipients = uniqueActiveUsers([
-    ...getOrderStakeholderUsers(order),
-    ...getApprovalNotificationUsers(),
-  ]);
+  const recipients = uniqueActiveUsers(getOrderStakeholderUsers(order));
 
   const sent = await sendOrderNotifications(recipients, order, {
     type: 'bestelling_ingediend',
@@ -3376,8 +3413,17 @@ async function notifyOrderSubmitted(order) {
     boodschap: `Bestelling ${order.id} voor ${order.locatie_naam || 'een locatie'} staat klaar in Aankoopbeheer.`,
   });
 
-  if (!sent) {
-    state.mailWarning = 'De bestelling is bewaard. Voer nog de SQL voor interne meldingen uit zodat collega\'s automatisch een melding in de app krijgen.';
+  let approverNotified = false;
+  try {
+    const approverNotificationIds = await createApproverNotifications(order.id);
+    approverNotified = approverNotificationIds.length > 0;
+    await Promise.all(approverNotificationIds.map((notificationId) => sendPushNotification(notificationId).catch(() => null)));
+  } catch {
+    approverNotified = false;
+  }
+
+  if (!sent || !approverNotified) {
+    state.mailWarning = 'De bestelling is bewaard. De interne melding aan de aanvrager of gekoppelde regiodirecteur kon niet volledig worden aangemaakt.';
   }
 
   return sendOrderMail(order, 'De bestelling is bewaard en de interne melding/pushmelding is verwerkt.');
@@ -3385,7 +3431,7 @@ async function notifyOrderSubmitted(order) {
 
 async function notifyOrderStatusChanged(order, status) {
   const normalizedStatus = getNormalizedStatus(status);
-  const stakeholderUsers = getOrderStakeholderUsers(order);
+  const stakeholderUsers = normalizedStatus === 'Goedgekeurd' ? [] : getOrderStakeholderUsers(order);
   const adminUsers = normalizedStatus === 'Goedgekeurd' ? getAdminNotificationUsers() : [];
   const recipients = uniqueActiveUsers([...stakeholderUsers, ...adminUsers]);
   const statusLabel = getStatusLabel(status);
@@ -3456,10 +3502,6 @@ function getOrderStakeholderUsers(order) {
     findUserById(order.besteller_id),
     findUserById(order.aangemaakt_door_id),
   ]);
-}
-
-function getApprovalNotificationUsers() {
-  return state.data.users.filter((user) => isApproverUser(user, user.email));
 }
 
 function getAdminNotificationUsers() {
@@ -4928,5 +4970,5 @@ function persistAnalysisFilters() {
 
 function getRoute() {
   const route = window.location.hash.replace('#', '');
-  return ['start', 'bestellen', 'ehbo', 'inkt', 'bestellingen', 'handleiding', 'analyse', 'beheer'].includes(route) ? route : 'start';
+  return ['start', 'bestellen', 'ehbo', 'inkt', 'winkelmand', 'bestellingen', 'handleiding', 'analyse', 'beheer'].includes(route) ? route : 'start';
 }

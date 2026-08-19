@@ -14,9 +14,11 @@ Bij een nieuwe bestelling kiest de medewerker de locatie, de besteller, de categ
 
 ## Gebruik door goedkeurder
 
-De algemeen directeur en de regiodirecteurs krijgen een aparte goedkeuringsrol. Zij kunnen bestellingen binnen hun bevoegdheid controleren en daarna goedkeuren, weigeren of extra informatie vragen. Pas na goedkeuring komt de bestelling op de invoerlijst voor aankoopbeheer, zodat Jorn of Kathleen ze kan invoeren bij de externe leverancier.
+De regiodirecteurs krijgen een aparte goedkeuringsrol. Zij kunnen bestellingen van de medewerkers binnen hun regio of team controleren en daarna goedkeuren, weigeren of extra informatie vragen. Pas na goedkeuring komt de bestelling op de invoerlijst voor aankoopbeheer, zodat Jorn ze kan invoeren bij de externe leverancier. Kathleen ontvangt dezelfde melding als back-up en neemt de invoer alleen over wanneer Jorn afwezig is of wanneer dit onderling werd afgesproken.
 
-De voorziene goedkeurders zijn Timothy Van Raemdonck, Karima Lakdim, Nathan Blondeel, Annelies Vuye en Joke DeLille. De exacte koppeling tussen regiodirecteur en teamleden wordt beheerd in Supabase via goedkeuringsscopes en moet overeenkomen met de actuele personeels- of teamlijst.
+De voorziene goedkeurders zijn Karima Lakdim, Nathan Blondeel, Annelies Vuye en Joke DeLille. Timothy Van Raemdonck is algemeen directeur en wordt niet als organisatiebrede standaardgoedkeurder voor aankopen ingezet. De exacte koppeling tussen regiodirecteur en teamleden wordt beheerd in Supabase via goedkeuringsscopes en moet overeenkomen met de actuele personeels- of teamlijst.
+
+Bij een nieuwe registratie ontvangt Jorn een beheermelding. De gekoppelde regiodirecteur ontvangt eveneens een melding. De bevestigingsmail waarmee de gebruiker het eigen e-mailadres bevestigt, blijft om veiligheidsredenen naar de gebruiker zelf gaan.
 
 ## Gebruik door beheerder
 
@@ -85,7 +87,7 @@ Zolang Resend en de DNS-validatie nog niet volledig klaar zijn, moet de interne 
 
 ## Testscenario's
 
-1. Meld aan als beheerder en controleer of Start, Nieuwe bestelling, Inkt, Bestellingen, Analyse en Beheer zichtbaar zijn.
+1. Meld aan als beheerder en controleer of Start, Onderhoud en algemene producten, EHBO, Inkt, Mijn winkelmand, Bestellingen, Analyse en Beheer zichtbaar zijn.
 2. Meld aan als gewone medewerker en controleer of Analyse en Beheer niet zichtbaar zijn.
 3. Plaats een onderhoudsproduct in het winkelmandje.
 4. Vul locatie, besteller, categorie, prioriteit en toelichting in.

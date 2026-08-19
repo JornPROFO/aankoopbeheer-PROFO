@@ -34,7 +34,7 @@ export function getUserRole(user) {
 
 const beheerderEmails = new Set(['jorn.neeus@profo.be', 'kathleen.nerinckx@profo.be']);
 const adminRoles = new Set(['admin', 'beheerder', 'beheerder aankoop', 'aankoopbeheerder', 'superadmin']);
-const approverRoles = new Set(['goedkeurder aankoop', 'algemeen directeur', 'regiodirecteur']);
+const approverRoles = new Set(['goedkeurder aankoop', 'regiodirecteur']);
 const superAdminRoles = new Set(['superadmin']);
 
 export function normalizeRole(value) {

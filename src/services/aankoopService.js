@@ -277,6 +277,37 @@ export async function invokeOrderMail(orderId) {
   return data ?? null;
 }
 
+export async function createApproverNotifications(orderId) {
+  const { data, error } = await supabase.rpc('aankoop_meld_regiodirecteur', {
+    p_bestelling_id: orderId,
+  });
+
+  if (error) {
+    if (isMissingNotificationsTable(error)) {
+      return [];
+    }
+
+    throw error;
+  }
+
+  return Array.isArray(data) ? data.filter(Boolean) : data ? [data] : [];
+}
+
+export async function invokeNewUserMail(userId, email) {
+  const { data, error } = await supabase.functions.invoke('send-aankoopregistratie', {
+    body: {
+      user_id: userId,
+      email,
+    },
+  });
+
+  if (error) {
+    throw new Error(await getFunctionErrorMessage(error));
+  }
+
+  return data ?? null;
+}
+
 async function getFunctionErrorMessage(error) {
   const response = error.context;
 

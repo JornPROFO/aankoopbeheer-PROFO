@@ -50,7 +50,7 @@ Op iPhone werken sommige meldingen alleen goed wanneer de app op het beginscherm
 
 ## 5. Een bestelling plaatsen
 
-1. Kies Nieuwe bestelling voor algemene producten.
+1. Kies Onderhoud en algemene producten voor de gewone catalogus.
 2. Gebruik EHBO voor EHBO-materiaal.
 3. Zoek het product en klik op In winkelmand.
 4. Controleer je winkelmand.
@@ -68,7 +68,7 @@ De productcategorie wordt automatisch meegenomen. Je hoeft die dus niet zelf te 
 3. Kies de juiste printer.
 4. Selecteer de nodige kleur of toner.
 5. Klik op Toevoegen aan winkelmand.
-6. Rond de bestelling af via Nieuwe bestelling, samen met eventuele andere producten.
+6. Rond de bestelling af via Mijn winkelmand, samen met eventuele andere producten.
 
 Inkt en toner komen dus mee in dezelfde winkelmand. Zo kan aankoopbeheer nadien zien welke externe leveranciers nodig zijn.
 

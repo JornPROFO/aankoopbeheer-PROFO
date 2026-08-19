@@ -22,7 +22,7 @@ serve(async (req) => {
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SERVICE_ROLE_KEY') ?? '';
     const resendApiKey = Deno.env.get('RESEND_API_KEY') ?? '';
     const mailFrom = Deno.env.get('MAIL_FROM') ?? 'PROFO Aankoopbeheer <aankoopbeheer@meldingen.profo.be>';
-    const beheerderMail = parseRecipients(Deno.env.get('AANKOOPBEHEER_MAIL_TO') ?? 'jorn.neeus@profo.be');
+    const beheerderMail = parseRecipients(Deno.env.get('AANKOOPBEHEER_MAIL_TO') ?? 'jorn.neeus@profo.be;kathleen.nerinckx@profo.be');
 
     if (!supabaseUrl || !serviceRoleKey || !resendApiKey) {
       return json({ error: 'Mailfunctie is nog niet volledig geconfigureerd. Controleer SUPABASE_URL, SERVICE_ROLE_KEY en RESEND_API_KEY in de Supabase Edge Function secrets.' }, 500);
@@ -83,14 +83,16 @@ async function buildMailPlan(
   beheerderMail: string[],
 ) {
   if (status === 'Ter goedkeuring') {
-    const approvers = await getApprovalRecipients(supabase, order, beheerderMail);
+    const approval = await getApprovalRecipients(supabase, order, beheerderMail.slice(0, 1));
     return {
       status: 'Verzonden naar goedkeurder en besteller',
       messages: [
         {
-          to: approvers,
-          subject: `PROFO-bestelling te controleren - ${order.locatie_naam} - bestelling ${order.id}`,
-          text: buildApprovalMailBody(order),
+          to: approval.recipients,
+          subject: approval.mapped
+            ? `PROFO-bestelling te controleren - ${order.locatie_naam} - bestelling ${order.id}`
+            : `Actie nodig: geen regiodirecteur gekoppeld - bestelling ${order.id}`,
+          text: approval.mapped ? buildApprovalMailBody(order) : buildMissingApproverMailBody(order),
         },
         {
           to: String(order.besteller_email || ''),
@@ -102,19 +104,20 @@ async function buildMailPlan(
   }
 
   if (status === 'Goedgekeurd') {
+    const [primaryManager, ...backupManagers] = beheerderMail;
     return {
-      status: 'Goedgekeurd: melding verzonden naar aankoopbeheer en besteller',
+      status: 'Goedgekeurd: melding verzonden naar aankoopbeheer',
       messages: [
         {
-          to: beheerderMail,
+          to: primaryManager,
           subject: `PROFO-bestelling goedgekeurd - invoeren bij leverancier - ${order.locatie_naam} - bestelling ${order.id}`,
           text: buildManagerMailBody(order),
         },
-        {
-          to: String(order.besteller_email || ''),
-          subject: `PROFO-bestelling ${order.id} goedgekeurd`,
-          text: buildRequesterMailBody(order, lines, 'Je bestelling werd goedgekeurd. Aankoopbeheer krijgt nu de melding om de bestelling bij de leverancier in te voeren.'),
-        },
+        ...backupManagers.map((recipient) => ({
+          to: recipient,
+          subject: `Back-up aankoopbeheer - goedgekeurde bestelling ${order.id} - ${order.locatie_naam}`,
+          text: buildBackupManagerMailBody(order),
+        })),
       ],
     };
   }
@@ -168,7 +171,7 @@ async function getApprovalRecipients(
     .eq('actief', true);
 
   if (error || !scopes?.length) {
-    return fallbackRecipients;
+    return { recipients: fallbackRecipients, mapped: false };
   }
 
   const bestellerId = String(order.besteller_id ?? '');
@@ -195,28 +198,31 @@ async function getApprovalRecipients(
   ];
 
   if (!approverIds.length) {
-    return fallbackRecipients;
+    return { recipients: fallbackRecipients, mapped: false };
   }
 
   const { data: users, error: userError } = await supabase
     .from('gebruikers')
-    .select('id, email, actief')
+    .select('id, email, actief, rol')
     .in('id', approverIds)
     .eq('actief', true);
 
   if (userError) {
-    return fallbackRecipients;
+    return { recipients: fallbackRecipients, mapped: false };
   }
 
   const recipients = [
     ...new Set(
       (users ?? [])
+        .filter((user) => String(user.rol || '').trim().toLowerCase() === 'regiodirecteur')
         .map((user) => String(user.email || '').trim().toLowerCase())
         .filter(Boolean),
     ),
   ];
 
-  return recipients.length ? recipients : fallbackRecipients;
+  return recipients.length
+    ? { recipients, mapped: true }
+    : { recipients: fallbackRecipients, mapped: false };
 }
 
 function buildApprovalMailBody(order: Record<string, unknown>) {
@@ -236,6 +242,23 @@ function buildApprovalMailBody(order: Record<string, unknown>) {
   ].join('\n');
 }
 
+function buildMissingApproverMailBody(order: Record<string, unknown>) {
+  return [
+    'Dag Jorn,',
+    '',
+    'Er werd een aanvraag ingediend waarvoor nog geen actieve regiodirecteur is gekoppeld.',
+    'De aanvraag is niet naar Timothy of een andere algemene goedkeurder doorgestuurd.',
+    '',
+    `Bestelling: ${order.id}`,
+    `Locatie: ${order.locatie_naam}`,
+    `Aanvrager: ${order.besteller_naam} <${order.besteller_email}>`,
+    '',
+    'Koppel de aanvrager in de goedkeuringsscopes aan de juiste regiodirecteur en laat de melding daarna opnieuw versturen.',
+    '',
+    'PROFO Aankoopbeheer',
+  ].join('\n');
+}
+
 function buildManagerMailBody(order: Record<string, unknown>) {
   return [
     'Dag Jorn,',
@@ -248,6 +271,22 @@ function buildManagerMailBody(order: Record<string, unknown>) {
     `Totaal incl. btw: ${formatCurrency(order.totaal_incl_btw)}`,
     '',
     'Open de app en ga naar Bestellingen om de bestelling in te voeren bij het bestelplatform. Zet de bestelling daarna op Besteld.',
+    '',
+    'PROFO Aankoopbeheer',
+  ].join('\n');
+}
+
+function buildBackupManagerMailBody(order: Record<string, unknown>) {
+  return [
+    'Dag Kathleen,',
+    '',
+    'De regiodirecteur heeft onderstaande aanvraag goedgekeurd. Jorn ontvangt de primaire melding om de bestelling bij de leverancier in te voeren.',
+    'Neem de invoer alleen over wanneer Jorn afwezig is of wanneer dit onderling werd afgesproken.',
+    '',
+    `Bestelling: ${order.id}`,
+    `Locatie: ${order.locatie_naam}`,
+    `Aanvrager: ${order.besteller_naam} <${order.besteller_email}>`,
+    `Totaal incl. btw: ${formatCurrency(order.totaal_incl_btw)}`,
     '',
     'PROFO Aankoopbeheer',
   ].join('\n');
