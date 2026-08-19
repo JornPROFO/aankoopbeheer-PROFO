@@ -1,6 +1,7 @@
 -- PROFO Aankoopbeheer - goedkeuringsflow corrigeren.
 -- Timothy is algemeen directeur en wordt niet organisatiebreed belast met aankoopgoedkeuringen.
--- De huidige testgebruikers worden gekoppeld aan regiodirecteur Karima Lakdim.
+-- Alle regionale medewerkers worden op basis van de actuele PROFO-contactenlijst
+-- gekoppeld aan de directeur die op hun regionale tabblad vermeld staat.
 
 begin;
 
@@ -33,11 +34,74 @@ revoke all on function public.current_gebruiker_is_goedkeurder() from public;
 revoke all on function public.current_gebruiker_is_goedkeurder() from anon;
 grant execute on function public.current_gebruiker_is_goedkeurder() to authenticated;
 
-with koppelingen (goedkeurder_email, teamlid_email) as (
-  values
-    ('karima.lakdim@profo.be', 'kim.dupont@profo.be'),
-    ('karima.lakdim@profo.be', 'michelle.heussen@profo.be')
+update public.gebruikers
+set rol = 'Regiodirecteur',
+    updated_at = now()
+where lower(email) in (
+  'nathan.blondeel@profo.be',
+  'karima.lakdim@profo.be',
+  'annelies.vuye@profo.be',
+  'joke.delille@profo.be'
 )
+  and actief = true;
+
+create temporary table aankoop_regio_koppelingen (
+  goedkeurder_email text not null,
+  teamlid_email text not null,
+  primary key (goedkeurder_email, teamlid_email)
+) on commit drop;
+
+insert into aankoop_regio_koppelingen (goedkeurder_email, teamlid_email)
+  values
+    ('nathan.blondeel@profo.be', 'thibo.bleys@profo.be'),
+    ('nathan.blondeel@profo.be', 'sky.buggenhout@profo.be'),
+    ('nathan.blondeel@profo.be', 'gitte.hellemans@profo.be'),
+    ('nathan.blondeel@profo.be', 'sara.an.greefs@profo.be'),
+    ('nathan.blondeel@profo.be', 'nima.rasoolzadeh@profo.be'),
+    ('nathan.blondeel@profo.be', 'mehtap.uysal@profo.be'),
+    ('nathan.blondeel@profo.be', 'wout.vangeel@profo.be'),
+    ('nathan.blondeel@profo.be', 'laura.verbruggen@profo.be'),
+    ('nathan.blondeel@profo.be', 'zeb.marichal@profo.be'),
+    ('nathan.blondeel@profo.be', 'yoshi.vanostaede@profo.be'),
+    ('nathan.blondeel@profo.be', 'seppe.huysmans@profo.be'),
+    ('nathan.blondeel@profo.be', 'femke.vangestel@profo.be'),
+    ('nathan.blondeel@profo.be', 'glen.vandeneynde@profo.be'),
+    ('nathan.blondeel@profo.be', 'tino.crabbe@profo.be'),
+    ('nathan.blondeel@profo.be', 'joke.jannes@profo.be'),
+    ('nathan.blondeel@profo.be', 'fleur.stroobants@profo.be'),
+    ('nathan.blondeel@profo.be', 'jade.bloemen@profo.be'),
+    ('nathan.blondeel@profo.be', 'britt.soebert@profo.be'),
+    ('nathan.blondeel@profo.be', 'britt.vanimmerseel@profo.be'),
+    ('karima.lakdim@profo.be', 'mathijs.cremers@profo.be'),
+    ('karima.lakdim@profo.be', 'dirk.denridder@profo.be'),
+    ('karima.lakdim@profo.be', 'margareth.vandervelden@profo.be'),
+    ('karima.lakdim@profo.be', 'kim.dupont@profo.be'),
+    ('karima.lakdim@profo.be', 'michelle.heussen@profo.be'),
+    ('karima.lakdim@profo.be', 'veronique.salden@profo.be'),
+    ('karima.lakdim@profo.be', 'deborah.codorniu.agua@profo.be'),
+    ('karima.lakdim@profo.be', 'nawal.naime@profo.be'),
+    ('karima.lakdim@profo.be', 'sabrina.vandenbrink@profo.be'),
+    ('karima.lakdim@profo.be', 'johannes.crommen@profo.be'),
+    ('karima.lakdim@profo.be', 'bavo.nys@profo.be'),
+    ('karima.lakdim@profo.be', 'tom.heiremans@profo.be'),
+    ('karima.lakdim@profo.be', 'astrid.verwimp@profo.be'),
+    ('karima.lakdim@profo.be', 'karl.ferlin@profo.be'),
+    ('karima.lakdim@profo.be', 'bert.giesbers@profo.be'),
+    ('annelies.vuye@profo.be', 'lowie.cloet@profo.be'),
+    ('annelies.vuye@profo.be', 'brecht.valepijn@profo.be'),
+    ('annelies.vuye@profo.be', 'david.denoulet@profo.be'),
+    ('annelies.vuye@profo.be', 'sarah.declippeleir@profo.be'),
+    ('annelies.vuye@profo.be', 'vicky.dewilde@profo.be'),
+    ('annelies.vuye@profo.be', 'faith.dhaen@profo.be'),
+    ('annelies.vuye@profo.be', 'ismail.chaouki@profo.be'),
+    ('annelies.vuye@profo.be', 'stela.cardaku@profo.be'),
+    ('joke.delille@profo.be', 'kurt.debruyne@profo.be'),
+    ('joke.delille@profo.be', 'simon.viaene@profo.be'),
+    ('joke.delille@profo.be', 'wendy.degraeuwe@profo.be'),
+    ('joke.delille@profo.be', 'ellen.vandevelde@profo.be'),
+    ('joke.delille@profo.be', 'femke.vanneste@profo.be'),
+    ('joke.delille@profo.be', 'jamie.decruw@profo.be');
+
 insert into public.aankoop_goedkeurder_scopes (
   goedkeurder_id,
   scope_type,
@@ -45,22 +109,17 @@ insert into public.aankoop_goedkeurder_scopes (
   actief
 )
 select goedkeurder.id, 'teamlid', teamlid.id, true
-from koppelingen koppeling
+from aankoop_regio_koppelingen koppeling
 join public.gebruikers goedkeurder on lower(goedkeurder.email) = koppeling.goedkeurder_email
 join public.gebruikers teamlid on lower(teamlid.email) = koppeling.teamlid_email
 where goedkeurder.actief = true
   and teamlid.actief = true
 on conflict do nothing;
 
-with koppelingen (goedkeurder_email, teamlid_email) as (
-  values
-    ('karima.lakdim@profo.be', 'kim.dupont@profo.be'),
-    ('karima.lakdim@profo.be', 'michelle.heussen@profo.be')
-)
 update public.aankoop_goedkeurder_scopes scope
 set actief = true,
     updated_at = now()
-from koppelingen koppeling
+from aankoop_regio_koppelingen koppeling
 join public.gebruikers goedkeurder on lower(goedkeurder.email) = koppeling.goedkeurder_email
 join public.gebruikers teamlid on lower(teamlid.email) = koppeling.teamlid_email
 where scope.goedkeurder_id = goedkeurder.id
@@ -139,6 +198,9 @@ join public.gebruikers goedkeurder on goedkeurder.id = scope.goedkeurder_id
 left join public.gebruikers teamlid on teamlid.id = scope.teamlid_id
 where lower(goedkeurder.email) in (
   'timothy.vanraemdonck@profo.be',
-  'karima.lakdim@profo.be'
+  'nathan.blondeel@profo.be',
+  'karima.lakdim@profo.be',
+  'annelies.vuye@profo.be',
+  'joke.delille@profo.be'
 )
 order by goedkeurder.naam, teamlid.naam;
