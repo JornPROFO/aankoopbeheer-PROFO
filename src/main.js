@@ -4116,7 +4116,32 @@ function getVisibleNotifications() {
 }
 
 function getUnreadNotifications() {
-  return getVisibleNotifications().filter((notification) => !notification.gelezen_op);
+  return getVisibleNotifications().filter((notification) => !notification.gelezen_op && notificationStillNeedsAttention(notification));
+}
+
+function notificationStillNeedsAttention(notification) {
+  if (!notification.bestelling_id) {
+    return true;
+  }
+
+  const order = state.data.orders.find((item) => String(item.id) === String(notification.bestelling_id));
+
+  if (!order) {
+    return true;
+  }
+
+  const type = String(notification.type || '').toLowerCase();
+  const status = getNormalizedStatus(order.status);
+
+  if (type === 'status_goedgekeurd') {
+    return ['Goedgekeurd', 'In behandeling'].includes(status);
+  }
+
+  if (type === 'bestelling_ingediend') {
+    return ['Ter goedkeuring', 'Extra informatie gevraagd'].includes(status);
+  }
+
+  return true;
 }
 
 function getFilteredOrders(admin, approver = false) {

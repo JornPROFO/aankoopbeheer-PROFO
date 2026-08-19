@@ -39,6 +39,8 @@ Bij elke bestelling ziet de beheerder minstens:
 
 De dagelijkse acties zijn bewust beperkt. De bevoegde directeur kan een aanvraag goedkeuren, extra informatie vragen of weigeren. Na goedkeuring krijgt aankoopbeheer één primaire actie: **Besteld bij leverancier**. Daarmee wordt de status op Besteld gezet en ontvangt de besteller de melding dat de bestelling op komst is. Oudere en uitzonderlijke statussen blijven leesbaar voor historiek en rapportering, maar worden niet als gewone actieknoppen aangeboden.
 
+De rode teller en het meldingenblok tonen alleen onafgehandelde acties. Een goedkeuringsmelding verdwijnt daar automatisch zodra de bestelling op Besteld staat. Een melding over een ingediende aanvraag verdwijnt voor de goedkeurder zodra de aanvraag niet langer ter goedkeuring staat.
+
 Bestaande dossiers met de vroegere status **In behandeling** worden getoond als **Goedgekeurd - nog te bestellen** en krijgen dezelfde actie **Besteld bij leverancier**. Het zichtbare statusverloop is beperkt tot Ter goedkeuring, Goedgekeurd en Besteld.
 
 Wanneer de besteller zelf de rol **Regiodirecteur** heeft, wordt de aanvraag bij het indienen automatisch op **Goedgekeurd** gezet. Er wordt geen goedkeuringsmelding aan de regiodirecteur zelf verstuurd. Aankoopbeheer ontvangt onmiddellijk de melding om de bestelling bij de leverancier in te voeren.
