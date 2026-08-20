@@ -59,6 +59,7 @@ const ehboCategory = 'Veiligheid/EHBO';
 const ehboDefaultImage = '/assets/ehbo-koffer-a-aanvulling.svg';
 const defaultDocumentTitle = 'PROFO Aankoopbeheer';
 const supplierDeliveryMetaLabel = 'Leveringen leveranciers';
+const expectedDeliveryMetaLabel = 'Verwachte leverdatum';
 const appPublicUrl = 'https://aankoopbeheer-profo.vercel.app/';
 const passiveRefreshMs = 15000;
 const passiveRefreshViews = new Set(['start', 'bestellingen', 'analyse', 'beheer']);
@@ -145,6 +146,7 @@ const state = {
   mailWarning: '',
   installPrompt: null,
   pushBusy: false,
+  expectedDeliveryOrderId: '',
 };
 
 onAuthChange(async (session, event) => {
@@ -228,6 +230,11 @@ app.addEventListener('submit', async (event) => {
   if (form.matches('[data-ink-order-form]')) {
     event.preventDefault();
     await handleInkOrder(form);
+  }
+
+  if (form.matches('[data-expected-delivery-form]')) {
+    event.preventDefault();
+    await handleOrderPlaced(form);
   }
 });
 
@@ -345,7 +352,25 @@ app.addEventListener('click', async (event) => {
   }
 
   if (target.matches('[data-status]')) {
-    await handleStatusChange(target.dataset.orderId, target.dataset.status);
+    if (target.dataset.status === 'Besteld') {
+      state.expectedDeliveryOrderId = target.dataset.orderId || '';
+      state.error = '';
+      render();
+    } else {
+      await handleStatusChange(target.dataset.orderId, target.dataset.status);
+    }
+  }
+
+  if (target.matches('[data-cancel-expected-delivery]')) {
+    state.expectedDeliveryOrderId = '';
+    state.error = '';
+    render();
+  }
+
+  if (target.matches('[data-expected-delivery]')) {
+    state.expectedDeliveryOrderId = target.dataset.expectedDelivery || '';
+    state.error = '';
+    render();
   }
 
   if (target.matches('[data-supplier-delivery]')) {
@@ -1085,6 +1110,7 @@ function renderShell() {
       </main>
     </div>
     ${renderProductPreview()}
+    ${renderExpectedDeliveryModal()}
   `;
 }
 
@@ -2048,6 +2074,7 @@ function renderOrderCard(order, admin, approver) {
         <div><dt>Categorie</dt><dd>${escapeHtml(meta.categorie || 'Niet vermeld')}</dd></div>
         <div><dt>Prioriteit</dt><dd>${escapeHtml(getPriorityLabel(meta.prioriteit || 'normaal'))}</dd></div>
         <div><dt>Gewenst tegen</dt><dd>${escapeHtml(meta.gewenst_tegen ? formatDateLabel(meta.gewenst_tegen) : 'Niet vermeld')}</dd></div>
+        ${meta.verwachte_leverdatum ? `<div><dt>Verwachte levering</dt><dd>${escapeHtml(formatDateLabel(meta.verwachte_leverdatum))}</dd></div>` : ''}
         <div><dt>Totaal</dt><dd>${formatCurrency(order.totaal_incl_btw)}</dd></div>
         <div><dt>Melding</dt><dd>${escapeHtml(order.mail_status || 'Interne opvolging')}</dd></div>
       </dl>
@@ -2078,10 +2105,53 @@ function renderOrderCard(order, admin, approver) {
         <summary>Meer</summary>
         <div class="record-actions">
           <button class="ghost-button" type="button" data-copy-order="${escapeHtml(order.id)}">Opnieuw gebruiken</button>
+          ${admin && ['Besteld', 'Gedeeltelijk geleverd', 'Geleverd'].includes(normalizedStatus) ? `<button class="ghost-button" type="button" data-expected-delivery="${escapeHtml(order.id)}">${meta.verwachte_leverdatum ? 'Leverdatum wijzigen' : 'Leverdatum toevoegen'}</button>` : ''}
           ${admin ? `<button class="ghost-button" type="button" data-resend-order-mail="${escapeHtml(order.id)}">E-mail opnieuw sturen</button>` : ''}
         </div>
       </details>
     </article>
+  `;
+}
+
+function renderExpectedDeliveryModal() {
+  if (!state.expectedDeliveryOrderId) {
+    return '';
+  }
+
+  const order = state.data.orders.find((item) => String(item.id) === String(state.expectedDeliveryOrderId));
+
+  if (!order) {
+    return '';
+  }
+
+  const existingDate = getOrderMeta(order).verwachte_leverdatum || '';
+
+  return `
+    <div class="image-modal" role="dialog" aria-modal="true" aria-labelledby="expected-delivery-title">
+      <button class="image-modal-backdrop" type="button" data-cancel-expected-delivery aria-label="Venster sluiten"></button>
+      <section class="image-modal-panel">
+        <div class="image-modal-header">
+          <div>
+            <p class="eyebrow">Bestelling ${escapeHtml(order.id)}</p>
+            <h2 id="expected-delivery-title">Besteld bij leverancier</h2>
+          </div>
+          <button class="ghost-button" type="button" data-cancel-expected-delivery>Sluiten</button>
+        </div>
+        <form class="auth-form" data-expected-delivery-form>
+          <p>Vul de datum in die de leverancier heeft bevestigd. Deze datum wordt meegestuurd naar ${escapeHtml(order.besteller_naam || 'de besteller')} als verwachte, niet-gegarandeerde leverdatum.</p>
+          ${state.error ? `<div class="warning-panel">${escapeHtml(state.error)}</div>` : ''}
+          <input type="hidden" name="order_id" value="${escapeHtml(order.id)}" />
+          <label class="field">
+            <span>Verwachte leverdatum volgens leverancier</span>
+            <input name="expected_delivery_date" type="date" value="${escapeHtml(existingDate)}" required />
+          </label>
+          <div class="record-actions">
+            <button class="primary-button" type="submit">Bevestigen en besteller verwittigen</button>
+            <button class="ghost-button" type="button" data-cancel-expected-delivery>Annuleren</button>
+          </div>
+        </form>
+      </section>
+    </div>
   `;
 }
 
@@ -3314,6 +3384,48 @@ async function handleStatusChange(orderId, status) {
   }
 }
 
+async function handleOrderPlaced(form) {
+  const formData = new FormData(form);
+  const orderId = String(formData.get('order_id') ?? '');
+  const expectedDeliveryDate = String(formData.get('expected_delivery_date') ?? '').trim();
+  const order = state.data.orders.find((item) => String(item.id) === orderId);
+
+  if (!order || !/^\d{4}-\d{2}-\d{2}$/.test(expectedDeliveryDate)) {
+    state.error = 'Vul de verwachte leverdatum in die de leverancier heeft bevestigd.';
+    render();
+    return;
+  }
+
+  try {
+    const opmerkingen = setOrderMetaValue(order.opmerkingen, expectedDeliveryMetaLabel, expectedDeliveryDate);
+    const updatedOrder = await updateOrderDeliveryStatus(
+      orderId,
+      { status: 'Besteld', opmerkingen },
+      {
+        actorName: getUserLabel(state.appUser),
+        actorEmail: state.session?.user?.email ?? '',
+      },
+    );
+    const orderForNotification = mergeUpdatedOrder(order, updatedOrder);
+    state.data.orders = state.data.orders.map((item) => (String(item.id) === orderId ? orderForNotification : item));
+    state.expectedDeliveryOrderId = '';
+    state.error = '';
+    state.mailWarning = '';
+    render();
+
+    const mailResult = await notifyOrderStatusChanged(orderForNotification, 'Besteld');
+    const deliveryLabel = formatDateLabel(expectedDeliveryDate);
+    const statusNotice = `Bestelling is bij de leverancier geplaatst. De besteller is verwittigd dat de levering volgens de leverancier rond ${deliveryLabel} wordt verwacht.`;
+    state.notice = mailResult.ok
+      ? `${statusNotice} De e-mailmelding is door de mailfunctie aanvaard.`
+      : statusNotice;
+    await bootstrapData();
+  } catch (error) {
+    state.error = error.message;
+    render();
+  }
+}
+
 async function handleSupplierDeliveryChange(orderId, supplierKey, deliveryStatus) {
   try {
     const order = state.data.orders.find((item) => String(item.id) === String(orderId));
@@ -3469,6 +3581,8 @@ async function notifyOrderStatusChanged(order, status) {
   const title = normalizedStatus === 'Goedgekeurd' ? 'Bestelling goedgekeurd' : `Bestelling ${statusLabel.toLowerCase()}`;
   const message = normalizedStatus === 'Goedgekeurd'
     ? `Bestelling ${order.id} is goedgekeurd en mag bij de leverancier worden ingevoerd.`
+    : normalizedStatus === 'Besteld' && getOrderMeta(order).verwachte_leverdatum
+      ? `Bestelling ${order.id} is bij de leverancier geplaatst. Verwachte levering volgens de leverancier: ${formatDateLabel(getOrderMeta(order).verwachte_leverdatum)}.`
     : `Bestelling ${order.id} kreeg de status "${statusLabel}".`;
 
   const sent = await sendOrderNotifications(recipients, order, {
@@ -4530,6 +4644,7 @@ function getOrderMeta(order) {
     categorie: getMetaValue(text, 'Categorie'),
     prioriteit: getMetaValue(text, 'Prioriteit') || 'normaal',
     gewenst_tegen: getMetaValue(text, 'Gewenst tegen'),
+    verwachte_leverdatum: getMetaValue(text, expectedDeliveryMetaLabel),
   };
 }
 
@@ -4542,7 +4657,7 @@ function getMetaValue(text, label) {
 function getOrderFreeText(order) {
   return String(order?.opmerkingen ?? '')
     .split('\n')
-    .filter((line) => !new RegExp(`^(Categorie|Prioriteit|Gewenst tegen|${supplierDeliveryMetaLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}):`, 'i').test(line.trim()))
+    .filter((line) => !new RegExp(`^(Categorie|Prioriteit|Gewenst tegen|${expectedDeliveryMetaLabel}|${supplierDeliveryMetaLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}):`, 'i').test(line.trim()))
     .join('\n')
     .trim();
 }

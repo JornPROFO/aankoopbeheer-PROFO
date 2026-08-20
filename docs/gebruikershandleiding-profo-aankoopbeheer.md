@@ -95,6 +95,8 @@ Mogelijke statussen zijn onder meer:
 - Geweigerd: de bestelling werd niet goedgekeurd.
 - Extra informatie gevraagd: er is nog verduidelijking nodig.
 
+Wanneer aankoopbeheer op **Besteld bij leverancier** klikt, wordt eerst de verwachte leverdatum gevraagd die de leverancier heeft bevestigd. De app berekent of voorspelt deze datum niet zelf. Na bevestiging ontvangt de besteller automatisch de status **Besteld** met de manueel ingevoerde, niet-gegarandeerde leverdatum. De datum blijft zichtbaar bij de bestelling en kan later via **Meer > Leverdatum wijzigen** worden aangepast.
+
 Gelezen meldingen verdwijnen uit de meldingenlijst op het startscherm.
 
 ## 8. Meldingen inschakelen

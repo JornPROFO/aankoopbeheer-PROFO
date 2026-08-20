@@ -156,7 +156,7 @@ async function buildMailPlan(
       {
         to: String(order.besteller_email || ''),
         subject: `PROFO-bestelling ${order.id} - ${getStatusMailSubject(status)}`,
-        text: buildRequesterMailBody(order, lines, getStatusMailIntro(status)),
+        text: buildRequesterMailBody(order, lines, getStatusMailIntro(status, order)),
       },
     ],
   };
@@ -334,7 +334,7 @@ function buildRequesterMailBody(order: Record<string, unknown>, lines: Record<st
 function getVisibleOrderNote(value: unknown) {
   return String(value ?? '')
     .split('\n')
-    .filter((line) => !/^(Categorie|Prioriteit|Gewenst tegen|Leveringen leveranciers):/i.test(line.trim()))
+    .filter((line) => !/^(Categorie|Prioriteit|Gewenst tegen|Verwachte leverdatum|Leveringen leveranciers):/i.test(line.trim()))
     .join('\n')
     .trim();
 }
@@ -365,7 +365,7 @@ function getStatusMailSubject(status: string) {
   return `status ${normalizedStatus.toLowerCase()}`;
 }
 
-function getStatusMailIntro(status: string) {
+function getStatusMailIntro(status: string, order: Record<string, unknown>) {
   const normalizedStatus = normalizeStatus(status);
 
   if (normalizedStatus === 'In behandeling') {
@@ -373,7 +373,11 @@ function getStatusMailIntro(status: string) {
   }
 
   if (normalizedStatus === 'Besteld') {
-    return 'Je bestelling werd bij de leverancier geplaatst en is op komst.';
+    const expectedDeliveryDate = getOrderMetaValue(order.opmerkingen, 'Verwachte leverdatum');
+    const deliveryText = expectedDeliveryDate ? formatDate(expectedDeliveryDate) : '';
+    return deliveryText
+      ? `Je bestelling werd bij de leverancier geplaatst. Volgens de bevestiging van de leverancier wordt de levering momenteel verwacht op ${deliveryText}. Dit is een verwachte en geen gegarandeerde leverdatum.`
+      : 'Je bestelling werd bij de leverancier geplaatst. Er werd nog geen verwachte leverdatum meegedeeld.';
   }
 
   if (normalizedStatus === 'Gedeeltelijk geleverd') {
@@ -452,6 +456,17 @@ function parseRecipients(value: string) {
     .split(/[;,]/)
     .map((recipient) => recipient.trim().toLowerCase())
     .filter(Boolean);
+}
+
+function getOrderMetaValue(value: unknown, label: string) {
+  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = String(value ?? '').match(new RegExp(`^${escapedLabel}:\\s*(.+)$`, 'im'));
+  return match ? match[1].trim() : '';
+}
+
+function formatDate(value: string) {
+  const [year, month, day] = value.split('-');
+  return year && month && day ? `${day}/${month}/${year}` : value;
 }
 
 function getPurchaseManagementRecipients(configuredRecipients: string) {
