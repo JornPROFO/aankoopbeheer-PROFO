@@ -1978,6 +1978,47 @@ h4 {
   }
 }
 
+.privacy-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.privacy-card {
+  padding: 1.4rem;
+}
+
+.privacy-card h3 {
+  margin-top: 0;
+  color: var(--red-dark);
+}
+
+.privacy-card p:last-child {
+  margin-bottom: 0;
+}
+
+.privacy-warning {
+  padding: 1rem;
+  border-left: 4px solid var(--red);
+  background: var(--pink);
+  border-radius: 0.4rem;
+}
+
+.public-information-page {
+  width: min(1100px, calc(100% - 2rem));
+  margin: 2rem auto;
+}
+
+.public-information-back {
+  margin-top: 1.5rem;
+}
+
+@media (max-width: 760px) {
+  .privacy-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media print {
   @page {
     margin: 14mm;

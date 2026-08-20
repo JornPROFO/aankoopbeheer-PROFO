@@ -1,22 +1,18 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.52.0';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders, json as secureJson } from '../_shared/security.ts';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders(req) });
   }
 
   try {
-    const { user_id, email } = await req.json();
+    const { user_id, email, registration_token } = await req.json();
     const normalizedEmail = String(email || '').trim().toLowerCase();
 
-    if (!user_id || !normalizedEmail.endsWith('@profo.be')) {
-      return json({ error: 'Ongeldige registratiegegevens.' }, 400);
+    if (!user_id || !normalizedEmail.endsWith('@profo.be') || String(registration_token || '').length < 32) {
+      return secureJson(req, { error: 'Ongeldige registratiegegevens.' }, 400);
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
@@ -26,23 +22,27 @@ serve(async (req) => {
     const primaryManager = parseRecipients(Deno.env.get('AANKOOPBEHEER_PRIMARY_MAIL_TO') ?? 'jorn.neeus@profo.be');
 
     if (!supabaseUrl || !serviceRoleKey || !resendApiKey || !primaryManager.length) {
-      return json({ error: 'De registratiemelding is nog niet volledig geconfigureerd.' }, 500);
+      return secureJson(req, { error: 'De registratiemelding is nog niet volledig geconfigureerd.' }, 500);
     }
 
     const supabase = createClient(supabaseUrl, serviceRoleKey);
     const { data: authResult, error: authError } = await supabase.auth.admin.getUserById(String(user_id));
 
     if (authError || !authResult.user || String(authResult.user.email || '').toLowerCase() !== normalizedEmail) {
-      return json({ error: 'De geregistreerde gebruiker kon niet worden bevestigd.' }, 403);
+      return secureJson(req, { error: 'De geregistreerde gebruiker kon niet worden bevestigd.' }, 403);
+    }
+
+    if (String(authResult.user.user_metadata?.aankoop_registratie_token || '') !== String(registration_token)) {
+      return secureJson(req, { error: 'De registratiecontrole is ongeldig.' }, 403);
     }
 
     const createdAt = new Date(authResult.user.created_at).getTime();
     if (!Number.isFinite(createdAt) || Date.now() - createdAt > 30 * 60 * 1000) {
-      return json({ error: 'Deze registratie is niet meer nieuw.' }, 409);
+      return secureJson(req, { error: 'Deze registratie is niet meer nieuw.' }, 409);
     }
 
     if (authResult.user.app_metadata?.aankoop_registratie_gemeld_op) {
-      return json({ ok: true, already_sent: true });
+      return secureJson(req, { ok: true, already_sent: true });
     }
 
     const { data: appUser } = await supabase
@@ -76,11 +76,15 @@ serve(async (req) => {
         ...authResult.user.app_metadata,
         aankoop_registratie_gemeld_op: new Date().toISOString(),
       },
+      user_metadata: {
+        ...authResult.user.user_metadata,
+        aankoop_registratie_token: null,
+      },
     });
 
-    return json({ ok: true });
+    return secureJson(req, { ok: true });
   } catch (error) {
-    return json({ error: error.message ?? String(error) }, 500);
+    return secureJson(req, { error: error.message ?? String(error) }, 500);
   }
 });
 
@@ -118,7 +122,6 @@ async function getRegionalDirectorRecipients(supabase: ReturnType<typeof createC
       .filter(Boolean),
   )];
 }
-
 function buildRegistrationMailBody(details: {
   displayName: string;
   email: string;
@@ -167,11 +170,4 @@ async function sendMail(options: { apiKey: string; from: string; to: string[]; s
 
 function parseRecipients(value: string) {
   return value.split(/[;,]/).map((recipient) => recipient.trim().toLowerCase()).filter(Boolean);
-}
-
-function json(body: Record<string, unknown>, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
 }
