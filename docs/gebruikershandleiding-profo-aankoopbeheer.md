@@ -82,6 +82,8 @@ Een ouder dossier dat nog op **In behandeling** stond, verschijnt als **Goedgeke
 
 Wanneer een regiodirecteur zelf een bestelling indient, is geen eigen goedkeuring nodig. De bestelling wordt onmiddellijk goedgekeurd doorgestuurd naar aankoopbeheer.
 
+Dezelfde uitzondering geldt wanneer Jorn of Kathleen zelf als besteller vermeld staat. Omdat zij aankoopbeheer uitvoeren, wordt hun bestelling onmiddellijk goedgekeurd en kan ze zonder tussenkomst van Timothy of een regiodirecteur bij de leverancier worden ingevoerd. Wanneer zij een bestelling op naam van een andere medewerker invoeren, blijft de normale goedkeuringsroute van die medewerker van toepassing.
+
 Mogelijke statussen zijn onder meer:
 
 - Ter goedkeuring: de bestelling wacht op controle.
