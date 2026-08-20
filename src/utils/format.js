@@ -55,6 +55,11 @@ export function isApproverUser(user, sessionEmail = '') {
   return approverRoles.has(role) || isAdminUser(user, email);
 }
 
+export function isOrderAutomaticallyApproved(user) {
+  return isAdminUser(user, user?.email)
+    || normalizeRole(getUserRole(user)) === 'regiodirecteur';
+}
+
 export function isSuperAdminUser(user, sessionEmail = '') {
   const email = String(user?.email || sessionEmail || '').trim().toLowerCase();
   const role = normalizeRole(getUserRole(user));

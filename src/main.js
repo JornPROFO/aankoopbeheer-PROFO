@@ -38,6 +38,7 @@ import {
   getUserRole,
   isAdminUser,
   isApproverUser,
+  isOrderAutomaticallyApproved,
   normalizeRole,
   parseDecimal,
   roundMoney,
@@ -1445,7 +1446,7 @@ function renderCartWorkspace() {
         <h2>Bestelling controleren en doorsturen</h2>
       </div>
       <p class="page-intro">
-        Controleer de gekozen producten, locatie en aanvrager. Na het doorsturen ontvangt de betrokken regiodirecteur de aanvraag ter goedkeuring.
+        Controleer de gekozen producten, locatie en besteller. Bestellingen van medewerkers gaan naar hun regiodirecteur; aankoopbeheerders en regiodirecteurs hebben geen goedkeuring nodig wanneer zij zelf de besteller zijn.
       </p>
     </section>
     ${state.error ? `<div class="warning-panel">${escapeHtml(state.error)}</div>` : ''}
@@ -2973,7 +2974,7 @@ async function handleOrder(form) {
   const categorie = getDefaultOrderCategory(cartItems);
   const hasOtherProductRequest = cartItems.some(({ product }) => isOtherProductRequest(product));
   const hasPriceToConfirm = cartItems.some(({ product }) => isProductPriceToConfirm(product));
-  const automaticallyApproved = normalizeRole(getUserRole(besteller)) === 'regiodirecteur';
+  const automaticallyApproved = isOrderAutomaticallyApproved(besteller);
 
   if (hasOtherProductRequest && !andereProducten) {
     state.error = 'Beschrijf bij "Andere producten" welk product je wil laten bestellen.';
@@ -3032,10 +3033,12 @@ async function handleOrder(form) {
 
     state.cart = {};
     state.orderReview = false;
+    state.orderFilters = normalizeOrderFilters({});
     persistCart();
+    persistOrderFilters();
     clearOrderDraft();
     state.notice = automaticallyApproved
-      ? 'De bestelling is automatisch goedgekeurd omdat de besteller regiodirecteur is. Aankoopbeheer kan ze nu bij de leverancier invoeren.'
+      ? 'De bestelling is automatisch goedgekeurd omdat de besteller aankoopbeheerder of regiodirecteur is. Ze kan nu bij de leverancier worden ingevoerd.'
       : 'De bestelling is doorgestuurd en staat klaar voor goedkeuring.';
     state.view = 'bestellingen';
     window.location.hash = '#bestellingen';
