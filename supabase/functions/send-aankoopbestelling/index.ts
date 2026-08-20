@@ -334,7 +334,7 @@ function buildRequesterMailBody(order: Record<string, unknown>, lines: Record<st
 function getVisibleOrderNote(value: unknown) {
   return String(value ?? '')
     .split('\n')
-    .filter((line) => !/^(Categorie|Prioriteit|Gewenst tegen|Verwachte leverdatum|Leveringen leveranciers):/i.test(line.trim()))
+    .filter((line) => !/^(Categorie|Prioriteit|Gewenst tegen|Verwachte leverdatum|Besteld op|Leveringen leveranciers):/i.test(line.trim()))
     .join('\n')
     .trim();
 }

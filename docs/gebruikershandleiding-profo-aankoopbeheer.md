@@ -97,6 +97,10 @@ Mogelijke statussen zijn onder meer:
 
 Wanneer aankoopbeheer op **Besteld bij leverancier** klikt, wordt eerst de verwachte leverdatum gevraagd die de leverancier heeft bevestigd. De app berekent of voorspelt deze datum niet zelf. Na bevestiging ontvangt de besteller automatisch de status **Besteld** met de manueel ingevoerde, niet-gegarandeerde leverdatum. De datum blijft zichtbaar bij de bestelling en kan later via **Meer > Leverdatum wijzigen** worden aangepast.
 
+De bestellingenpagina is voor aankoopbeheer verdeeld in **Te verwerken**, **Onderweg** en **Afgewerkt**. Alleen goedgekeurde bestellingen die nog bij een leverancier moeten worden ingevoerd, verschijnen in de afdrukbare invoerlijst. Zodra een bestelling op **Besteld** staat, verhuist ze naar **Onderweg** en kan ze niet opnieuw via de leveranciers-PDF worden afgedrukt. Na volledige levering verhuist ze naar **Afgewerkt**. Gewone bestellers zien hun eigen dossiers onder **Lopend** en **Afgewerkt**.
+
+De pagina **Analyse** gebruikt standaard alleen effectief bestelde dossiers: **Besteld**, **Gedeeltelijk geleverd**, **Geleverd** en **Afgesloten**. Aankoopbeheer kan per periode, product, locatie en status analyseren hoeveel eenheden en welk bedrag werd besteld. De kruistabel **Producten per locatie** toont welke locaties de grootste afnemers van een product zijn en, omgekeerd, welke producten binnen een locatie het meest worden besteld. Voor beleids- of boekhoudkundige controle kan de volledige analyse worden afgedrukt.
+
 Gelezen meldingen verdwijnen uit de meldingenlijst op het startscherm.
 
 ## 8. Meldingen inschakelen

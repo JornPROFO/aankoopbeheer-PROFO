@@ -677,6 +677,41 @@ h4 {
   margin-bottom: 1rem;
 }
 
+.order-segments {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.order-segments button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--profo-red-dark);
+  background: #ffffff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.order-segments button.is-active {
+  border-color: var(--profo-red);
+  background: var(--profo-pink);
+  font-weight: 700;
+}
+
+.order-segments button span {
+  min-width: 1.8rem;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  color: #ffffff;
+  background: var(--profo-red);
+  text-align: center;
+}
+
 .order-export-panel {
   margin-bottom: 1rem;
 }
@@ -1651,6 +1686,22 @@ h4 {
   gap: 0.8rem;
 }
 
+.analysis-insights {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.analysis-cross-panel {
+  overflow-x: auto;
+}
+
+.analysis-cross-table .analysis-table-head,
+.analysis-cross-table .analysis-table-row {
+  grid-template-columns: minmax(240px, 1.4fr) minmax(180px, 1fr) 100px 90px 140px;
+  min-width: 850px;
+}
+
 .analysis-summary-card {
   display: grid;
   gap: 0.25rem;
@@ -1812,6 +1863,8 @@ h4 {
   .admin-switcher,
   .analysis-layout,
   .analysis-summary,
+  .analysis-insights,
+  .order-segments,
   .start-actions,
   .dashboard-grid,
   .guide-layout,
