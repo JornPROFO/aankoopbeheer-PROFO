@@ -1,6 +1,6 @@
 # PROFO Aankoopbeheer - gebruikershandleiding
 
-Laatste bijwerking: 16/07/2026
+Laatste bijwerking: 20/08/2026
 
 ## Waarvoor dient Aankoopbeheer?
 
@@ -19,6 +19,8 @@ Open de app via: https://aankoopbeheer-profo.vercel.app/
 5. Meld daarna aan via Inloggen.
 
 Lukt aanmelden niet of krijg je geen toegang, contacteer aankoopbeheer. Je account moet gekoppeld zijn aan een actieve PROFO-gebruiker.
+
+De privacyverklaring is zonder aanmelding bereikbaar via de link onderaan het aanmeldscherm. Na aanmelding staat **Privacy** ook in de hoofdnavigatie.
 
 ## 2. Wachtwoord vergeten
 
@@ -99,7 +101,7 @@ Wanneer aankoopbeheer op **Besteld bij leverancier** klikt, wordt eerst de verwa
 
 De bestellingenpagina is voor aankoopbeheer verdeeld in **Te verwerken**, **Onderweg** en **Afgewerkt**. Alleen goedgekeurde bestellingen die nog bij een leverancier moeten worden ingevoerd, verschijnen in de afdrukbare invoerlijst. Zodra een bestelling op **Besteld** staat, verhuist ze naar **Onderweg** en kan ze niet opnieuw via de leveranciers-PDF worden afgedrukt. Na volledige levering verhuist ze naar **Afgewerkt**. Gewone bestellers zien hun eigen dossiers onder **Lopend** en **Afgewerkt**.
 
-De pagina **Analyse** gebruikt standaard alleen effectief bestelde dossiers: **Besteld**, **Gedeeltelijk geleverd**, **Geleverd** en **Afgesloten**. Aankoopbeheer kan per periode, product, locatie en status analyseren hoeveel eenheden en welk bedrag werd besteld. De kruistabel **Producten per locatie** toont welke locaties de grootste afnemers van een product zijn en, omgekeerd, welke producten binnen een locatie het meest worden besteld. Voor beleids- of boekhoudkundige controle kan de volledige analyse worden afgedrukt.
+De pagina **Analyse** gebruikt standaard alleen effectief bestelde dossiers: **Besteld**, **Gedeeltelijk geleverd**, **Geleverd** en **Afgesloten**. Aankoopbeheer kan per periode, product, locatie en status analyseren hoeveel eenheden en welk bedrag werd besteld. De kruistabel **Producten per locatie** toont welke locaties de grootste afnemers van een product zijn en, omgekeerd, welke producten binnen een locatie het meest worden besteld. Voor beleids- of boekhoudkundige controle kan de volledige analyse worden afgedrukt. De rapportage haalt alle bestellingen op die de ingelogde beheerder volgens de toegangsregels mag zien en is niet beperkt tot alleen de recentste dossiers.
 
 Gelezen meldingen verdwijnen uit de meldingenlijst op het startscherm.
 

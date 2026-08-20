@@ -280,6 +280,7 @@ app.addEventListener('click', async (event) => {
 
   if (target.matches('[data-sign-out]')) {
     await signOut();
+    clearPrivateLocalData();
     stopPassiveRefresh();
     state.session = null;
     state.appUser = null;
@@ -930,6 +931,11 @@ function render() {
     return;
   }
 
+  if (state.view === 'privacy') {
+    app.innerHTML = renderPrivacyStatement(Boolean(state.session && state.appUser));
+    return;
+  }
+
   if (!state.session) {
     app.innerHTML = renderAuth();
     return;
@@ -1026,8 +1032,13 @@ function renderAuth() {
               ? ''
               : `<label class="field">
                   <span>Wachtwoord</span>
-                  <input name="password" type="password" autocomplete="${isRegister ? 'new-password' : 'current-password'}" required />
-                </label>`
+                  <input name="password" type="password" autocomplete="${isRegister ? 'new-password' : 'current-password'}" ${isRegister ? 'minlength="12"' : ''} required />
+                  ${isRegister ? '<small class="field-hint">Gebruik minstens 12 tekens en kies een uniek wachtwoord dat je niet voor andere toepassingen gebruikt.</small>' : ''}
+                </label>
+                ${isRegister ? `<label class="field">
+                  <span>Herhaal wachtwoord</span>
+                  <input name="password_repeat" type="password" autocomplete="new-password" minlength="12" required />
+                </label>` : ''}`
           }
           <button class="primary-button" type="submit">${isReset ? 'Herstellink mailen' : isRegister ? 'Account aanmaken' : 'Inloggen'}</button>
           ${
@@ -1038,6 +1049,7 @@ function renderAuth() {
         </form>
         <p class="auth-note">
           De app gebruikt dezelfde PROFO-gebruikerslijst en locatielijst als Voertuigenbeheer.
+          Lees hoe we persoonsgegevens gebruiken in de <a href="#privacy">privacyverklaring</a>.
         </p>
       </section>
     </main>
@@ -1130,6 +1142,7 @@ function renderShell() {
         ${navLink('winkelmand', 'Mijn winkelmand', getCartItems().length)}
         ${navLink('bestellingen', 'Bestellingen')}
         ${navLink('handleiding', 'Handleiding')}
+        ${navLink('privacy', 'Privacy')}
         ${admin ? navLink('analyse', 'Analyse') : ''}
         ${admin ? navLink('beheer', 'Beheer') : ''}
       </nav>
@@ -1170,6 +1183,11 @@ function renderCurrentView(admin, approver) {
 
   if (state.view === 'handleiding') {
     return renderUserGuide();
+  }
+
+
+  if (state.view === 'privacy') {
+    return renderPrivacyStatement(true);
   }
 
   if (state.view === 'inkt') {
@@ -1336,6 +1354,55 @@ function renderUserGuide() {
         <p>Plaats alleen bestellingen die nodig zijn voor de werking van je locatie of team. Twijfel je of een product in de app hoort, geef dit door aan aankoopbeheer zodat het artikel correct kan worden toegevoegd.</p>
       </article>
     </section>
+  `;
+}
+
+function renderPrivacyStatement(inApp = false) {
+  return `
+    <main class="${inApp ? '' : 'public-information-page'}">
+      <section class="page-heading privacy-heading">
+        <div>
+          <p class="eyebrow">Privacy</p>
+          <h2>Privacyverklaring PROFO Aankoopbeheer</h2>
+        </div>
+        <p class="page-intro">Versie 20 augustus 2026. Deze verklaring legt in gewone taal uit welke persoonsgegevens de bestelapp gebruikt en waarom.</p>
+      </section>
+      <section class="privacy-layout">
+        <article class="panel privacy-card">
+          <h3>Wie is verantwoordelijk?</h3>
+          <p>PROFO vzw is verantwoordelijk voor de verwerking van persoonsgegevens in Aankoopbeheer. Voor vragen of de uitoefening van je privacyrechten kan je contact opnemen met de functionaris voor gegevensbescherming via <a href="mailto:jorn.neeus@profo.be">jorn.neeus@profo.be</a>.</p>
+        </article>
+        <article class="panel privacy-card">
+          <h3>Waarom gebruiken we deze gegevens?</h3>
+          <p>We gebruiken de gegevens om interne bestellingen aan te vragen, door de bevoegde regiodirecteur te laten beoordelen, bij leveranciers in te voeren, de levering op te volgen en aankopen per product en locatie te analyseren voor beleid en boekhouding.</p>
+          <p>De verwerking gebeurt binnen de normale organisatie van het werk en het gerechtvaardigde organisatorische belang van PROFO om aankopen correct, controleerbaar en doelmatig te beheren. De analyse is bedoeld voor aankoopbeleid en budgetopvolging, niet voor verborgen individuele prestatiecontrole.</p>
+        </article>
+        <article class="panel privacy-card">
+          <h3>Welke gegevens verwerken we?</h3>
+          <p>Naam, PROFO-mailadres, functie of rol, gekoppelde locatie, bestellingen, bestelregels, bedragen, statussen, leverinformatie, meldingen en beperkte technische informatie die nodig is voor beveiliging en foutopvolging.</p>
+          <div class="privacy-warning"><strong>Noteer geen gevoelige persoonsgegevens.</strong> Vermeld in vrije tekstvelden geen medische gegevens, informatie over cliënten of andere vertrouwelijke personeelsinformatie.</div>
+        </article>
+        <article class="panel privacy-card">
+          <h3>Wie kan de gegevens zien?</h3>
+          <p>De besteller ziet de eigen bestellingen. De bevoegde regiodirecteur ziet aanvragen binnen de toegewezen scope. Aankoopbeheer en strikt bevoegde technische beheerders hebben ruimere toegang voor verwerking, ondersteuning, rapportage en incidentopvolging.</p>
+          <p>Voor hosting, databank, authenticatie en transactionele meldingen maakt PROFO gebruik van Supabase, Vercel en Resend. Zij verwerken gegevens uitsluitend voor de technische dienstverlening volgens de toepasselijke afspraken en waarborgen.</p>
+        </article>
+        <article class="panel privacy-card">
+          <h3>Hoelang bewaren we de gegevens?</h3>
+          <p>We bewaren bestelgegevens zolang dit nodig is voor aankoopopvolging, boekhoudkundige aansluiting, interne controle en eventuele betwistingen. Accounts worden gedeactiveerd zodra toegang niet meer nodig is. Technische logs worden niet langer bewaard dan nodig voor beveiliging en foutanalyse. Concrete termijnen worden vastgelegd en opgevolgd in het PROFO-verwerkingsregister en bewaarbeleid.</p>
+          <p>Lokale conceptgegevens op het toestel worden verwijderd wanneer je de bestelling wist, indient of je afmeldt.</p>
+        </article>
+        <article class="panel privacy-card">
+          <h3>Welke rechten heb je?</h3>
+          <p>Je kan, voor zover de AVG dit in jouw situatie voorziet, vragen om inzage, correctie, beperking, bezwaar of verwijdering. Je kan ook een klacht indienen bij de Belgische Gegevensbeschermingsautoriteit. Een verzoek wordt steeds beoordeeld rekening houdend met wettelijke bewaarplichten en de rechten van anderen.</p>
+        </article>
+        <article class="panel privacy-card">
+          <h3>Beveiliging en incidenten</h3>
+          <p>De app gebruikt persoonlijke accounts, rollen, databankregels, versleutelde verbindingen en beperkte toegangsrechten. Meld een verkeerd verzonden bericht, onverwachte toegang of ander mogelijk privacy-incident onmiddellijk via <a href="mailto:jorn.neeus@profo.be">jorn.neeus@profo.be</a>.</p>
+        </article>
+      </section>
+      ${inApp ? '' : '<p class="public-information-back"><a class="ghost-button" href="#start">Terug naar aanmelden</a></p>'}
+    </main>
   `;
 }
 
@@ -1614,7 +1681,8 @@ function renderInkWorkspace() {
         }
         <label class="field">
           <span>Opmerking voor verwerking</span>
-          <textarea name="opmerkingen" placeholder="Bijvoorbeeld dringend, bijna leeg, of enkel bestellen samen met andere materialen.">${escapeHtml(state.inkDraft.opmerkingen ?? '')}</textarea>
+          <textarea name="opmerkingen" maxlength="1000" placeholder="Bijvoorbeeld dringend, bijna leeg, of enkel bestellen samen met andere materialen.">${escapeHtml(state.inkDraft.opmerkingen ?? '')}</textarea>
+          <small class="field-hint">Vermeld geen medische gegevens, cliëntinformatie of andere vertrouwelijke persoonsgegevens.</small>
         </label>
       </section>
 
@@ -1963,11 +2031,12 @@ function renderCart(cartItems) {
       </div>
       <label class="field">
         <span>Opmerking voor verwerking</span>
-        <textarea name="opmerkingen" placeholder="Bijvoorbeeld praktische info voor aankoopbeheer of een korte toelichting bij het gevraagde materiaal.">${escapeHtml(opmerkingen)}</textarea>
+        <textarea name="opmerkingen" maxlength="1000" placeholder="Bijvoorbeeld praktische info voor aankoopbeheer of een korte toelichting bij het gevraagde materiaal.">${escapeHtml(opmerkingen)}</textarea>
+        <small class="field-hint">Vermeld geen medische gegevens, cliëntinformatie of andere vertrouwelijke persoonsgegevens.</small>
       </label>
       <label class="field">
         <span>Andere producten</span>
-        <textarea name="andere_producten" placeholder="Product niet gevonden in de catalogus? Noteer hier wat nodig is, met merk/type of verpakking indien gekend.">${escapeHtml(andereProducten)}</textarea>
+        <textarea name="andere_producten" maxlength="1000" placeholder="Product niet gevonden in de catalogus? Noteer hier wat nodig is, met merk/type of verpakking indien gekend.">${escapeHtml(andereProducten)}</textarea>
       </label>
       ${state.orderReview ? renderOrderReview(cartItems, totals) : ''}
       <div class="form-actions">
@@ -3009,6 +3078,7 @@ async function handleAuth(form) {
   const formData = new FormData(form);
   const email = String(formData.get('email') ?? '').trim().toLowerCase();
   const password = String(formData.get('password') ?? '');
+  const repeatedPassword = String(formData.get('password_repeat') ?? '');
   state.authEmail = email;
 
   const validationMessage = getProfoEmailValidationMessage(email);
@@ -3031,10 +3101,24 @@ async function handleAuth(form) {
 
     if (state.authMode === 'register') {
       const name = String(formData.get('name') ?? '').trim();
-      const result = await signUpWithPassword(email, password, { full_name: name || email });
+      if (password.length < 12) {
+        state.error = 'Kies een wachtwoord van minstens 12 tekens.';
+        render();
+        return;
+      }
+      if (password !== repeatedPassword) {
+        state.error = 'De twee wachtwoorden zijn niet gelijk.';
+        render();
+        return;
+      }
+      const registrationToken = `${crypto.randomUUID()}${crypto.randomUUID()}`;
+      const result = await signUpWithPassword(email, password, {
+        full_name: name || email,
+        aankoop_registratie_token: registrationToken,
+      });
       if (result.user?.id) {
         try {
-          await invokeNewUserMail(result.user.id, email);
+          await invokeNewUserMail(result.user.id, email, registrationToken);
         } catch (notificationError) {
           console.warn('De interne melding over de nieuwe gebruiker kon niet worden verzonden.', notificationError);
         }
@@ -5403,5 +5487,15 @@ function persistAnalysisFilters() {
 
 function getRoute() {
   const route = window.location.hash.replace('#', '');
-  return ['start', 'bestellen', 'ehbo', 'inkt', 'winkelmand', 'bestellingen', 'handleiding', 'analyse', 'beheer'].includes(route) ? route : 'start';
+  return ['start', 'bestellen', 'ehbo', 'inkt', 'winkelmand', 'bestellingen', 'handleiding', 'privacy', 'analyse', 'beheer'].includes(route) ? route : 'start';
+}
+
+function clearPrivateLocalData() {
+  [cartStorageKey, orderDraftStorageKey, productDraftStorageKey, inkDraftStorageKey, inkCartridgeDraftStorageKey, analysisFiltersStorageKey, orderFiltersStorageKey]
+    .forEach((key) => localStorage.removeItem(key));
+  state.cart = {};
+  state.orderDraft = {};
+  state.inkDraft = {};
+  state.productDraft = {};
+  state.inkCartridgeDraft = {};
 }

@@ -118,28 +118,27 @@ export async function getNotifications() {
 }
 
 export async function getOrders() {
-  const orders = await run(
-    supabase
-      .from('aankoop_bestellingen')
-      .select(orderSelect)
-      .order('created_at', { ascending: false })
-      .limit(80),
-  );
+  const orders = await runPaged((from, to) => supabase
+    .from('aankoop_bestellingen')
+    .select(orderSelect)
+    .order('created_at', { ascending: false })
+    .range(from, to));
 
   if (!orders.length) {
     return [];
   }
 
-  const lines = await run(
-    supabase
+  const lines = [];
+  const orderIds = orders.map((order) => order.id);
+  for (let index = 0; index < orderIds.length; index += 100) {
+    const chunk = orderIds.slice(index, index + 100);
+    lines.push(...await runPaged((from, to) => supabase
       .from('aankoop_bestelregels')
       .select('*')
-      .in(
-        'bestelling_id',
-        orders.map((order) => order.id),
-      )
-      .order('id', { ascending: true }),
-  );
+      .in('bestelling_id', chunk)
+      .order('id', { ascending: true })
+      .range(from, to)));
+  }
 
   const linesByOrder = lines.reduce((map, line) => {
     const group = map.get(line.bestelling_id) ?? [];
@@ -293,11 +292,12 @@ export async function createApproverNotifications(orderId) {
   return Array.isArray(data) ? data.filter(Boolean) : data ? [data] : [];
 }
 
-export async function invokeNewUserMail(userId, email) {
+export async function invokeNewUserMail(userId, email, registrationToken) {
   const { data, error } = await supabase.functions.invoke('send-aankoopregistratie', {
     body: {
       user_id: userId,
       email,
+      registration_token: registrationToken,
     },
   });
 
@@ -506,4 +506,13 @@ async function run(request) {
   }
 
   return data ?? [];
+}
+
+async function runPaged(buildRequest, pageSize = 1000) {
+  const rows = [];
+  for (let from = 0; ; from += pageSize) {
+    const page = await run(buildRequest(from, from + pageSize - 1));
+    rows.push(...page);
+    if (page.length < pageSize) return rows;
+  }
 }

@@ -1,21 +1,17 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.52.0';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { assertOrderAccess, corsHeaders, HttpError, json as secureJson, requireActiveUser } from '../_shared/security.ts';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders(req) });
   }
 
   try {
     const { bestelling_id } = await req.json();
 
     if (!bestelling_id) {
-      return json({ error: 'bestelling_id ontbreekt.' }, 400);
+      return secureJson(req, { error: 'bestelling_id ontbreekt.' }, 400);
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
@@ -27,10 +23,11 @@ serve(async (req) => {
     );
 
     if (!supabaseUrl || !serviceRoleKey || !resendApiKey) {
-      return json({ error: 'Mailfunctie is nog niet volledig geconfigureerd. Controleer SUPABASE_URL, SERVICE_ROLE_KEY en RESEND_API_KEY in de Supabase Edge Function secrets.' }, 500);
+      return secureJson(req, { error: 'Mailfunctie is nog niet volledig geconfigureerd. Controleer SUPABASE_URL, SERVICE_ROLE_KEY en RESEND_API_KEY in de Supabase Edge Function secrets.' }, 500);
     }
 
     const supabase = createClient(supabaseUrl, serviceRoleKey);
+    const caller = await requireActiveUser(req, supabase);
 
     const { data: order, error: orderError } = await supabase
       .from('aankoop_bestellingen')
@@ -41,6 +38,8 @@ serve(async (req) => {
     if (orderError) {
       throw orderError;
     }
+
+    await assertOrderAccess(supabase, caller, order);
 
     const { data: lines, error: linesError } = await supabase
       .from('aankoop_bestelregels')
@@ -71,9 +70,9 @@ serve(async (req) => {
       })
       .eq('id', bestelling_id);
 
-    return json({ ok: true });
+    return secureJson(req, { ok: true });
   } catch (error) {
-    return json({ error: error.message ?? String(error) }, 500);
+    return secureJson(req, { error: error.message ?? String(error) }, error instanceof HttpError ? error.status : 500);
   }
 });
 
@@ -161,7 +160,6 @@ async function buildMailPlan(
     ],
   };
 }
-
 async function getApprovalRecipients(
   supabase: ReturnType<typeof createClient>,
   order: Record<string, unknown>,
@@ -485,14 +483,4 @@ function formatCurrency(value: unknown) {
     style: 'currency',
     currency: 'EUR',
   }).format(Number(value || 0));
-}
-
-function json(body: Record<string, unknown>, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      ...corsHeaders,
-      'Content-Type': 'application/json',
-    },
-  });
 }
