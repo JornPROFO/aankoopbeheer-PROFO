@@ -60,6 +60,7 @@ const ehboDefaultImage = '/assets/ehbo-koffer-a-aanvulling.svg';
 const defaultDocumentTitle = 'PROFO Aankoopbeheer';
 const supplierDeliveryMetaLabel = 'Leveringen leveranciers';
 const expectedDeliveryMetaLabel = 'Verwachte leverdatum';
+const orderedAtMetaLabel = 'Besteld op';
 const appPublicUrl = 'https://aankoopbeheer-profo.vercel.app/';
 const passiveRefreshMs = 15000;
 const passiveRefreshViews = new Set(['start', 'bestellingen', 'analyse', 'beheer']);
@@ -95,7 +96,8 @@ const orderStatuses = [
   { value: 'Afgesloten', label: 'Afgesloten', description: 'Administratief afgewerkt.' },
 ];
 
-const externalEntryStatuses = new Set(['Goedgekeurd', 'In behandeling', 'Besteld']);
+const externalEntryStatuses = new Set(['Goedgekeurd', 'In behandeling']);
+const effectivelyOrderedStatuses = new Set(['Besteld', 'Gedeeltelijk geleverd', 'Geleverd', 'Afgesloten']);
 const defaultOrderFilterStatuses = ['Ter goedkeuring', 'Goedgekeurd', 'In behandeling', 'Besteld', 'Gedeeltelijk geleverd', 'Geleverd', 'Afgesloten'];
 
 const legacyStatusMap = {
@@ -141,6 +143,7 @@ const state = {
   inkCartridgeDraft: readInkCartridgeDraft(),
   analysisFilters: readAnalysisFilters(),
   orderFilters: readOrderFilters(),
+  orderSegment: 'active',
   catalogSearch: '',
   previewProductId: '',
   mailWarning: '',
@@ -335,6 +338,13 @@ app.addEventListener('click', async (event) => {
 
   if (target.matches('[data-reset-order-filters]')) {
     state.orderFilters = normalizeOrderFilters({});
+    persistOrderFilters();
+    render();
+  }
+
+  if (target.matches('[data-order-segment]')) {
+    state.orderSegment = target.dataset.orderSegment || 'active';
+    state.orderFilters.status = '';
     persistOrderFilters();
     render();
   }
@@ -2039,9 +2049,41 @@ function renderOrders(admin, approver) {
     </section>
     ${state.notice ? `<div class="notice-panel">${escapeHtml(state.notice)}</div>` : ''}
     ${state.mailWarning ? `<div class="warning-panel">${escapeHtml(state.mailWarning)}</div>` : ''}
+    ${renderOrderSegments(admin)}
     ${renderOrderFilters(admin, approver)}
     ${admin ? renderExternalEntryPanel() : ''}
     <div data-order-results aria-live="polite">${renderOrderResults(admin, approver)}</div>
+  `;
+}
+
+function renderOrderSegments(admin) {
+  const definitions = admin
+    ? [
+        { value: 'work', label: 'Te verwerken' },
+        { value: 'transit', label: 'Onderweg' },
+        { value: 'closed', label: 'Afgewerkt' },
+      ]
+    : [
+        { value: 'active', label: 'Lopend' },
+        { value: 'closed', label: 'Afgewerkt' },
+      ];
+  const allowedValues = new Set(definitions.map((item) => item.value));
+
+  if (!allowedValues.has(state.orderSegment)) {
+    state.orderSegment = definitions[0].value;
+  }
+
+  const approver = isApproverUser(state.appUser, state.session?.user?.email ?? '');
+
+  return `
+    <nav class="order-segments" aria-label="Bestellingen per fase">
+      ${definitions
+        .map((item) => {
+          const count = getVisibleOrders(admin, approver).filter((order) => orderMatchesOrderSegment(order, item.value, admin)).length;
+          return `<button class="${state.orderSegment === item.value ? 'is-active' : ''}" type="button" data-order-segment="${item.value}">${item.label}<span>${count}</span></button>`;
+        })
+        .join('')}
+    </nav>
   `;
 }
 
@@ -2085,7 +2127,7 @@ function renderExternalEntryPanel() {
         </button>
       </div>
       <p class="panel-intro">
-        Deze lijst bundelt goedgekeurde, lopende en reeds ingevoerde bestellingen per leverancier. Zo kan beheer de externe invoer voorbereiden en achteraf nog controleren wat werd besteld.
+        Deze lijst bevat uitsluitend bestellingen die nog bij een leverancier moeten worden ingevoerd. Zodra een bestelling op <strong>Besteld</strong> staat, verdwijnt ze definitief uit deze afdrukbare werklijst om dubbele invoer te voorkomen.
       </p>
     </section>
   `;
@@ -2116,6 +2158,7 @@ function renderOrderCard(order, admin, approver) {
         <div><dt>Prioriteit</dt><dd>${escapeHtml(getPriorityLabel(meta.prioriteit || 'normaal'))}</dd></div>
         <div><dt>Gewenst tegen</dt><dd>${escapeHtml(meta.gewenst_tegen ? formatDateLabel(meta.gewenst_tegen) : 'Niet vermeld')}</dd></div>
         ${meta.verwachte_leverdatum ? `<div><dt>Verwachte levering</dt><dd>${escapeHtml(formatDateLabel(meta.verwachte_leverdatum))}</dd></div>` : ''}
+        ${meta.besteld_op ? `<div><dt>Bij leverancier besteld</dt><dd>${escapeHtml(formatDateTime(meta.besteld_op))}</dd></div>` : ''}
         <div><dt>Totaal</dt><dd>${formatCurrency(order.totaal_incl_btw)}</dd></div>
         <div><dt>Melding</dt><dd>${escapeHtml(order.mail_status || 'Interne opvolging')}</dd></div>
       </dl>
@@ -2133,6 +2176,7 @@ function renderOrderCard(order, admin, approver) {
           .join('')}
       </div>
       ${freeText ? `<p class="order-note">${escapeHtml(freeText)}</p>` : ''}
+      ${renderSupplierDeliveryPanel(order)}
       ${
         actionStatuses.length
           ? `<div class="record-actions">
@@ -2359,6 +2403,7 @@ function renderAnalysis() {
   const data = getAnalysisData(filters);
   const chartRows = filters.group_by === 'location' ? data.byLocation : data.byProduct;
   const tableTitle = filters.group_by === 'location' ? 'Analyse per locatie' : 'Analyse per product';
+  const metricLabel = filters.metric === 'quantity' ? 'aantal bestelde eenheden' : 'totale bestelwaarde';
 
   return `
     <section class="analysis-page">
@@ -2368,7 +2413,7 @@ function renderAnalysis() {
           <h2>Bestelcijfers</h2>
         </div>
         <p class="page-intro">
-          Filter bestellingen op periode, locatie, product en status. De resultaten kunnen afgedrukt worden of visueel bekeken worden.
+          Analyseer wat in een periode effectief bij leveranciers werd besteld, welke producten het meest worden gebruikt en welke locaties de grootste afnemers zijn.
         </p>
       </section>
 
@@ -2410,6 +2455,13 @@ function renderAnalysis() {
             </select>
           </label>
           <label class="field">
+            <span>Rapportagebasis</span>
+            <select name="order_scope">
+              <option value="purchased" ${filters.order_scope === 'purchased' ? 'selected' : ''}>Effectief besteld</option>
+              <option value="all" ${filters.order_scope === 'all' ? 'selected' : ''}>Alle aanvragen</option>
+            </select>
+          </label>
+          <label class="field">
             <span>Analyse</span>
             <select name="group_by">
               <option value="product" ${filters.group_by === 'product' ? 'selected' : ''}>Per product</option>
@@ -2423,10 +2475,18 @@ function renderAnalysis() {
               <option value="pie" ${filters.chart_type === 'pie' ? 'selected' : ''}>Taartdiagram</option>
             </select>
           </label>
+          <label class="field">
+            <span>Meetwaarde</span>
+            <select name="metric">
+              <option value="quantity" ${filters.metric === 'quantity' ? 'selected' : ''}>Aantal eenheden</option>
+              <option value="total" ${filters.metric === 'total' ? 'selected' : ''}>Bedrag incl. btw</option>
+            </select>
+          </label>
         </div>
         <div class="form-actions analysis-actions">
           <button class="ghost-button" type="button" data-print-analysis>Afdrukken</button>
         </div>
+        <p class="field-hint">Vergelijk aantallen tussen locaties bij voorkeur nadat je één product hebt gekozen; verschillende besteleenheden zoals dozen, rollen en stuks zijn onderling niet rechtstreeks vergelijkbaar.</p>
       </form>
 
       <section class="analysis-summary">
@@ -2437,13 +2497,18 @@ function renderAnalysis() {
         ${analysisSummaryCard('Totaal', formatCurrency(data.summary.total), 'incl. btw')}
       </section>
 
+      <section class="analysis-insights">
+        ${analysisInsightCard('Meest besteld product', data.topProduct, 'product')}
+        ${analysisInsightCard('Grootste afnemer', data.topLocation, 'locatie')}
+      </section>
+
       <section class="analysis-layout">
         <div class="panel analysis-chart-panel">
           <div class="panel-header">
             <h3>${escapeHtml(tableTitle)}</h3>
-            <span>${chartRows.length} regels</span>
+            <span>Gerangschikt volgens ${escapeHtml(metricLabel)}</span>
           </div>
-          ${chartRows.length ? renderAnalysisChart(chartRows, filters.chart_type) : '<div class="empty-state is-compact"><p>Geen gegevens voor deze filter.</p></div>'}
+          ${chartRows.length ? renderAnalysisChart(chartRows, filters.chart_type, filters.metric) : '<div class="empty-state is-compact"><p>Geen effectief bestelde producten gevonden voor deze selectie.</p></div>'}
         </div>
 
         <div class="panel analysis-table-panel">
@@ -2454,7 +2519,32 @@ function renderAnalysis() {
           ${renderAnalysisTable(chartRows)}
         </div>
       </section>
+
+
+      <section class="panel analysis-cross-panel">
+        <div class="panel-header">
+          <div>
+            <h3>Producten per locatie</h3>
+            <span>Gebruik deze kruistabel om grootverbruikers per product of het productprofiel van één locatie te herkennen.</span>
+          </div>
+        </div>
+        ${renderProductLocationTable(data.byProductLocation)}
+      </section>
     </section>
+  `;
+}
+
+function analysisInsightCard(title, row, type) {
+  if (!row) {
+    return `<article class="analysis-summary-card"><span>${escapeHtml(title)}</span><strong>Geen gegevens</strong><small>Pas de periode of filters aan.</small></article>`;
+  }
+
+  return `
+    <article class="analysis-summary-card">
+      <span>${escapeHtml(title)}</span>
+      <strong>${escapeHtml(row.label)}</strong>
+      <small>${escapeHtml(row.quantity)} eenheden · ${formatCurrency(row.total)} · ${escapeHtml(row.orders)} bestelling${row.orders === 1 ? '' : 'en'} (${escapeHtml(type)})</small>
+    </article>
   `;
 }
 
@@ -2468,29 +2558,32 @@ function analysisSummaryCard(label, value, detail) {
   `;
 }
 
-function renderAnalysisChart(rows, chartType) {
-  const topRows = rows.slice(0, 8);
+function renderAnalysisChart(rows, chartType, metric = 'quantity') {
+  const topRows = [...rows]
+    .sort((a, b) => Number(b[metric] || 0) - Number(a[metric] || 0) || a.label.localeCompare(b.label, 'nl-BE'))
+    .slice(0, 8);
 
   if (chartType === 'pie') {
-    return renderPieChart(topRows);
+    return renderPieChart(topRows, metric);
   }
 
-  return renderBarChart(topRows);
+  return renderBarChart(topRows, metric);
 }
 
-function renderBarChart(rows) {
-  const max = Math.max(...rows.map((row) => row.total), 1);
+function renderBarChart(rows, metric) {
+  const max = Math.max(...rows.map((row) => Number(row[metric] || 0)), 1);
 
   return `
     <div class="bar-chart" aria-label="Staafdiagram">
       ${rows
         .map((row) => {
-          const percentage = Math.max(3, Math.round((row.total / max) * 100));
+          const value = Number(row[metric] || 0);
+          const percentage = Math.max(3, Math.round((value / max) * 100));
           return `
             <div class="bar-row">
               <span>${escapeHtml(row.label)}</span>
               <div class="bar-track"><div class="bar-fill" style="width: ${percentage}%"></div></div>
-              <strong>${formatCurrency(row.total)}</strong>
+              <strong>${metric === 'quantity' ? escapeHtml(value) : formatCurrency(value)}</strong>
             </div>
           `;
         })
@@ -2499,8 +2592,8 @@ function renderBarChart(rows) {
   `;
 }
 
-function renderPieChart(rows) {
-  const total = rows.reduce((sum, row) => sum + row.total, 0);
+function renderPieChart(rows, metric) {
+  const total = rows.reduce((sum, row) => sum + Number(row[metric] || 0), 0);
   const radius = 70;
   const circumference = 2 * Math.PI * radius;
   let offset = 0;
@@ -2512,7 +2605,8 @@ function renderPieChart(rows) {
         <circle cx="90" cy="90" r="${radius}" fill="transparent" stroke="#f5dedd" stroke-width="34"></circle>
         ${rows
           .map((row, index) => {
-            const length = total > 0 ? (row.total / total) * circumference : 0;
+            const value = Number(row[metric] || 0);
+            const length = total > 0 ? (value / total) * circumference : 0;
             const segment = `
               <circle
                 cx="90"
@@ -2538,7 +2632,7 @@ function renderPieChart(rows) {
               <div>
                 <span style="background: ${colors[index % colors.length]}"></span>
                 <strong>${escapeHtml(row.label)}</strong>
-                <small>${formatCurrency(row.total)}</small>
+                <small>${metric === 'quantity' ? `${escapeHtml(row.quantity)} eenheden` : formatCurrency(row.total)}</small>
               </div>
             `,
           )
@@ -3425,6 +3519,37 @@ async function handleStatusChange(orderId, status) {
   }
 }
 
+function renderProductLocationTable(rows) {
+  if (!rows.length) {
+    return '<div class="empty-state is-compact"><p>Geen product- en locatiegegevens voor deze selectie.</p></div>';
+  }
+
+  return `
+    <div class="analysis-table analysis-cross-table">
+      <div class="analysis-table-head">
+        <span>Product</span>
+        <span>Locatie</span>
+        <span>Bestellingen</span>
+        <span>Aantal</span>
+        <span>Totaal incl. btw</span>
+      </div>
+      ${rows
+        .map(
+          (row) => `
+            <div class="analysis-table-row">
+              <span>${escapeHtml(row.productLabel)}</span>
+              <span>${escapeHtml(row.locationLabel)}</span>
+              <span>${escapeHtml(row.orders)}</span>
+              <span>${escapeHtml(row.quantity)}</span>
+              <strong>${formatCurrency(row.total)}</strong>
+            </div>
+          `,
+        )
+        .join('')}
+    </div>
+  `;
+}
+
 async function handleOrderPlaced(form) {
   const formData = new FormData(form);
   const orderId = String(formData.get('order_id') ?? '');
@@ -3438,7 +3563,9 @@ async function handleOrderPlaced(form) {
   }
 
   try {
-    const opmerkingen = setOrderMetaValue(order.opmerkingen, expectedDeliveryMetaLabel, expectedDeliveryDate);
+    const opmerkingenMetDatum = setOrderMetaValue(order.opmerkingen, expectedDeliveryMetaLabel, expectedDeliveryDate);
+    const orderedAt = getOrderMeta(order).besteld_op || new Date().toISOString();
+    const opmerkingen = setOrderMetaValue(opmerkingenMetDatum, orderedAtMetaLabel, orderedAt);
     const updatedOrder = await updateOrderDeliveryStatus(
       orderId,
       { status: 'Besteld', opmerkingen },
@@ -4303,7 +4430,27 @@ function notificationStillNeedsAttention(notification) {
 }
 
 function getFilteredOrders(admin, approver = false) {
-  return getVisibleOrders(admin, approver).filter((order) => orderMatchesOrderFilters(order, state.orderFilters));
+  return getVisibleOrders(admin, approver).filter(
+    (order) => orderMatchesOrderSegment(order, state.orderSegment, admin) && orderMatchesOrderFilters(order, state.orderFilters),
+  );
+}
+
+function orderMatchesOrderSegment(order, segment, admin) {
+  const status = getNormalizedStatus(order.status);
+
+  if (segment === 'closed') {
+    return ['Geleverd', 'Afgesloten', 'Geweigerd'].includes(status);
+  }
+
+  if (admin && segment === 'transit') {
+    return ['Besteld', 'Gedeeltelijk geleverd'].includes(status);
+  }
+
+  if (admin && segment === 'work') {
+    return ['Ter goedkeuring', 'Extra informatie gevraagd', 'Goedgekeurd', 'In behandeling'].includes(status);
+  }
+
+  return !['Geleverd', 'Afgesloten', 'Geweigerd'].includes(status);
 }
 
 function getOrderActionStatuses(order, admin, approver) {
@@ -4570,7 +4717,7 @@ function renderExternalEntryPrintHtml(rows) {
       <body>
         <h1>Invoerlijst externe bestelplatformen</h1>
         <p class="meta">Gemaakt op ${escapeHtml(generatedAt)} - ${rows.length} bestelregel${rows.length === 1 ? '' : 's'} uit ${orderCount} bestelling${orderCount === 1 ? '' : 'en'}.</p>
-        <p>Gebruik deze lijst om bestellingen in te voeren op de externe leverancierssites of om achteraf te controleren wat werd besteld. Zet de betrokken bestelling na invoer in Aankoopbeheer op <strong>Besteld</strong>.</p>
+        <p>Gebruik deze werklijst uitsluitend om nog niet verwerkte bestellingen in te voeren op de externe leverancierssites. Zet elke bestelling onmiddellijk na invoer in Aankoopbeheer op <strong>Besteld</strong>; ze wordt daarna niet meer in deze PDF opgenomen.</p>
         ${groups
           .map(
             (group) => `
@@ -4686,6 +4833,7 @@ function getOrderMeta(order) {
     prioriteit: getMetaValue(text, 'Prioriteit') || 'normaal',
     gewenst_tegen: getMetaValue(text, 'Gewenst tegen'),
     verwachte_leverdatum: getMetaValue(text, expectedDeliveryMetaLabel),
+    besteld_op: getMetaValue(text, orderedAtMetaLabel),
   };
 }
 
@@ -4698,7 +4846,7 @@ function getMetaValue(text, label) {
 function getOrderFreeText(order) {
   return String(order?.opmerkingen ?? '')
     .split('\n')
-    .filter((line) => !new RegExp(`^(Categorie|Prioriteit|Gewenst tegen|${expectedDeliveryMetaLabel}|${supplierDeliveryMetaLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}):`, 'i').test(line.trim()))
+    .filter((line) => !new RegExp(`^(Categorie|Prioriteit|Gewenst tegen|${expectedDeliveryMetaLabel}|${orderedAtMetaLabel}|${supplierDeliveryMetaLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}):`, 'i').test(line.trim()))
     .join('\n')
     .trim();
 }
@@ -4804,6 +4952,9 @@ function getAnalysisData(filters) {
     });
   });
 
+  const byProduct = aggregateAnalysisRows(rows, 'productLabel');
+  const byLocation = aggregateAnalysisRows(rows, 'locationLabel');
+
   return {
     summary: {
       orders: orderIds.size,
@@ -4812,13 +4963,25 @@ function getAnalysisData(filters) {
       quantity: rows.reduce((sum, row) => sum + row.quantity, 0),
       total: roundMoney(rows.reduce((sum, row) => sum + row.total, 0)),
     },
-    byProduct: aggregateAnalysisRows(rows, 'productLabel'),
-    byLocation: aggregateAnalysisRows(rows, 'locationLabel'),
+    byProduct,
+    byLocation,
+    byProductLocation: aggregateProductLocationRows(rows),
+    topProduct: [...byProduct].sort((a, b) => b.quantity - a.quantity || b.total - a.total)[0] ?? null,
+    topLocation: [...byLocation].sort((a, b) => {
+      return filters.product_key
+        ? b.quantity - a.quantity || b.total - a.total
+        : b.total - a.total || b.quantity - a.quantity;
+    })[0] ?? null,
   };
 }
 
 function orderMatchesAnalysisFilters(order, filters) {
-  const orderDate = getDateInputValue(order.created_at);
+  const status = getNormalizedStatus(order.status);
+  const orderDate = getAnalysisOrderDate(order);
+
+  if (filters.order_scope !== 'all' && !effectivelyOrderedStatuses.has(status)) {
+    return false;
+  }
 
   if (filters.date_from && orderDate && orderDate < filters.date_from) {
     return false;
@@ -4832,7 +4995,7 @@ function orderMatchesAnalysisFilters(order, filters) {
     return false;
   }
 
-  if (filters.status && getNormalizedStatus(order.status) !== String(filters.status)) {
+  if (filters.status && status !== String(filters.status)) {
     return false;
   }
 
@@ -4841,6 +5004,11 @@ function orderMatchesAnalysisFilters(order, filters) {
   }
 
   return true;
+}
+
+function getAnalysisOrderDate(order) {
+  const orderedAt = getOrderMeta(order).besteld_op;
+  return getDateInputValue(orderedAt || order.created_at);
 }
 
 function aggregateAnalysisRows(rows, key) {
@@ -4868,6 +5036,35 @@ function aggregateAnalysisRows(rows, key) {
       total: item.total,
     }))
     .sort((a, b) => b.total - a.total || a.label.localeCompare(b.label, 'nl-BE'));
+}
+
+function aggregateProductLocationRows(rows) {
+  const groups = rows.reduce((map, row) => {
+    const key = `${row.productLabel}\u0000${row.locationLabel}`;
+    const item = map.get(key) ?? {
+      productLabel: row.productLabel,
+      locationLabel: row.locationLabel,
+      orders: new Set(),
+      quantity: 0,
+      total: 0,
+    };
+
+    item.orders.add(row.orderId);
+    item.quantity += row.quantity;
+    item.total = roundMoney(item.total + row.total);
+    map.set(key, item);
+    return map;
+  }, new Map());
+
+  return [...groups.values()]
+    .map((item) => ({ ...item, orders: item.orders.size }))
+    .sort(
+      (a, b) =>
+        b.quantity - a.quantity ||
+        b.total - a.total ||
+        a.productLabel.localeCompare(b.productLabel, 'nl-BE') ||
+        a.locationLabel.localeCompare(b.locationLabel, 'nl-BE'),
+    );
 }
 
 function getAnalysisProductOptions() {
@@ -5168,8 +5365,10 @@ function readAnalysisFilters() {
     location_id: '',
     product_key: '',
     status: '',
+    order_scope: 'purchased',
     group_by: 'product',
     chart_type: 'bar',
+    metric: 'quantity',
   };
 
   try {
@@ -5191,8 +5390,10 @@ function readAnalysisFiltersFromForm(form) {
     location_id: String(formData.get('location_id') ?? ''),
     product_key: String(formData.get('product_key') ?? ''),
     status: String(formData.get('status') ?? ''),
+    order_scope: String(formData.get('order_scope') ?? 'purchased'),
     group_by: String(formData.get('group_by') ?? 'product'),
     chart_type: String(formData.get('chart_type') ?? 'bar'),
+    metric: String(formData.get('metric') ?? 'quantity'),
   };
 }
 
