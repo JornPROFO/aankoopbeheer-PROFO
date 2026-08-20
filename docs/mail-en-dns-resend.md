@@ -76,6 +76,8 @@ AANKOOPBEHEER_PRIMARY_MAIL_TO=jorn.neeus@profo.be
 
 Jorn ontvangt de primaire melding om in te voeren bij de leverancier. Kathleen ontvangt een afzonderlijke back-upmelding met de expliciete afspraak dat zij alleen overneemt bij afwezigheid of na onderlinge afstemming.
 
+De mailfunctie borgt deze twee adressen ook in de code. `AANKOOPBEHEER_MAIL_TO` kan bijkomende ontvangers bevatten, maar kan Jorn of Kathleen niet uitsluiten. Zo blijft de back-upflow werken wanneer een verouderde of onvolledige secret in Supabase staat.
+
 Gebruik geen afzender op een domein dat in Resend nog niet verified is.
 
 ## Edge Function deploy
