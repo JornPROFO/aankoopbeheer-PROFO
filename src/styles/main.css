@@ -2013,6 +2013,12 @@ h4 {
   margin-top: 1.5rem;
 }
 
+.privacy-heading-actions {
+  display: grid;
+  gap: 0.75rem;
+  justify-items: start;
+}
+
 @media (max-width: 760px) {
   .privacy-layout {
     grid-template-columns: 1fr;

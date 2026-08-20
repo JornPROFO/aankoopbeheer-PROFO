@@ -931,8 +931,8 @@ function render() {
     return;
   }
 
-  if (state.view === 'privacy') {
-    app.innerHTML = renderPrivacyStatement(Boolean(state.session && state.appUser));
+  if (state.view === 'privacy' && !state.session) {
+    app.innerHTML = renderPrivacyStatement(false);
     return;
   }
 
@@ -1365,7 +1365,10 @@ function renderPrivacyStatement(inApp = false) {
           <p class="eyebrow">Privacy</p>
           <h2>Privacyverklaring PROFO Aankoopbeheer</h2>
         </div>
-        <p class="page-intro">Versie 20 augustus 2026. Deze verklaring legt in gewone taal uit welke persoonsgegevens de bestelapp gebruikt en waarom.</p>
+        <div class="privacy-heading-actions">
+          <p class="page-intro">Versie 20 augustus 2026. Deze verklaring legt in gewone taal uit welke persoonsgegevens de bestelapp gebruikt en waarom.</p>
+          <a class="ghost-button" href="#start">${inApp ? 'Terug naar bestelomgeving' : 'Terug naar aanmelden'}</a>
+        </div>
       </section>
       <section class="privacy-layout">
         <article class="panel privacy-card">
@@ -1401,7 +1404,7 @@ function renderPrivacyStatement(inApp = false) {
           <p>De app gebruikt persoonlijke accounts, rollen, databankregels, versleutelde verbindingen en beperkte toegangsrechten. Meld een verkeerd verzonden bericht, onverwachte toegang of ander mogelijk privacy-incident onmiddellijk via <a href="mailto:jorn.neeus@profo.be">jorn.neeus@profo.be</a>.</p>
         </article>
       </section>
-      ${inApp ? '' : '<p class="public-information-back"><a class="ghost-button" href="#start">Terug naar aanmelden</a></p>'}
+      <p class="public-information-back"><a class="ghost-button" href="#start">${inApp ? 'Terug naar bestelomgeving' : 'Terug naar aanmelden'}</a></p>
     </main>
   `;
 }
