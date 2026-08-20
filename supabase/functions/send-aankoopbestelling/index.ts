@@ -22,7 +22,9 @@ serve(async (req) => {
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SERVICE_ROLE_KEY') ?? '';
     const resendApiKey = Deno.env.get('RESEND_API_KEY') ?? '';
     const mailFrom = Deno.env.get('MAIL_FROM') ?? 'PROFO Aankoopbeheer <aankoopbeheer@meldingen.profo.be>';
-    const beheerderMail = parseRecipients(Deno.env.get('AANKOOPBEHEER_MAIL_TO') ?? 'jorn.neeus@profo.be;kathleen.nerinckx@profo.be');
+    const beheerderMail = getPurchaseManagementRecipients(
+      Deno.env.get('AANKOOPBEHEER_MAIL_TO') ?? '',
+    );
 
     if (!supabaseUrl || !serviceRoleKey || !resendApiKey) {
       return json({ error: 'Mailfunctie is nog niet volledig geconfigureerd. Controleer SUPABASE_URL, SERVICE_ROLE_KEY en RESEND_API_KEY in de Supabase Edge Function secrets.' }, 500);
@@ -450,6 +452,17 @@ function parseRecipients(value: string) {
     .split(/[;,]/)
     .map((recipient) => recipient.trim().toLowerCase())
     .filter(Boolean);
+}
+
+function getPurchaseManagementRecipients(configuredRecipients: string) {
+  const primaryManager = 'jorn.neeus@profo.be';
+  const backupManager = 'kathleen.nerinckx@profo.be';
+
+  return [
+    primaryManager,
+    backupManager,
+    ...parseRecipients(configuredRecipients),
+  ].filter((recipient, index, recipients) => recipients.indexOf(recipient) === index);
 }
 
 function formatCurrency(value: unknown) {
