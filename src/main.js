@@ -333,6 +333,12 @@ app.addEventListener('click', async (event) => {
     openExternalEntryPrintView();
   }
 
+  if (target.matches('[data-reset-order-filters]')) {
+    state.orderFilters = normalizeOrderFilters({});
+    persistOrderFilters();
+    render();
+  }
+
   if (target.matches('[data-edit-product]')) {
     const product = state.data.products.find((item) => String(item.id) === String(target.dataset.editProduct));
     state.editingProduct = product ?? null;
@@ -564,7 +570,19 @@ function handleOrderFilterChange(event) {
 
   state.orderFilters = readOrderFiltersFromForm(form);
   persistOrderFilters();
-  render();
+  refreshOrderFilterResults();
+}
+
+function refreshOrderFilterResults() {
+  const container = app.querySelector('[data-order-results]');
+
+  if (!container) {
+    return;
+  }
+
+  const admin = isAdminUser(state.appUser, state.session?.user?.email ?? '');
+  const approver = isApproverUser(state.appUser, state.session?.user?.email ?? '');
+  container.innerHTML = renderOrderResults(admin, approver);
 }
 
 function handleCatalogSearchChange(event) {
@@ -2007,7 +2025,6 @@ function renderOrderReview(cartItems, totals) {
 }
 
 function renderOrders(admin, approver) {
-  const orders = getFilteredOrders(admin, approver);
   const orderTitle = admin ? 'Alle bestellingen' : approver ? 'Goed te keuren bestellingen' : 'Mijn bestellingen';
 
   return `
@@ -2024,8 +2041,32 @@ function renderOrders(admin, approver) {
     ${state.mailWarning ? `<div class="warning-panel">${escapeHtml(state.mailWarning)}</div>` : ''}
     ${renderOrderFilters(admin, approver)}
     ${admin ? renderExternalEntryPanel() : ''}
-    ${orders.length ? `<div class="order-list">${orders.map((order) => renderOrderCard(order, admin, approver)).join('')}</div>` : '<div class="empty-state"><p>Geen bestellingen gevonden voor deze filter.</p></div>'}
+    <div data-order-results aria-live="polite">${renderOrderResults(admin, approver)}</div>
   `;
+}
+
+function renderOrderResults(admin, approver) {
+  const orders = getFilteredOrders(admin, approver);
+  const search = state.orderFilters.search;
+
+  if (!orders.length) {
+    const message = search
+      ? `Geen resultaten gevonden voor “${search}” binnen de gekozen filters.`
+      : 'Geen bestellingen gevonden voor de gekozen filters.';
+    return `<div class="empty-state"><p>${escapeHtml(message)}</p><button class="ghost-button" type="button" data-reset-order-filters>Filters wissen</button></div>`;
+  }
+
+  return `
+    <div class="panel-header order-result-summary">
+      <span>${orders.length} bestelling${orders.length === 1 ? '' : 'en'} gevonden</span>
+      ${hasActiveOrderFilters() ? '<button class="ghost-button" type="button" data-reset-order-filters>Filters wissen</button>' : ''}
+    </div>
+    <div class="order-list">${orders.map((order) => renderOrderCard(order, admin, approver)).join('')}</div>
+  `;
+}
+
+function hasActiveOrderFilters() {
+  return Object.values(state.orderFilters).some((value) => String(value ?? '').trim() !== '');
 }
 
 function renderExternalEntryPanel() {
