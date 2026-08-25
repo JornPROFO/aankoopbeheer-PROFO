@@ -1,3 +1,4 @@
+import '@fontsource-variable/inter';
 import './styles/main.css';
 import {
   getCurrentSession,
@@ -65,8 +66,16 @@ const appPublicUrl = 'https://aankoopbeheer-profo.vercel.app/';
 const passiveRefreshMs = 15000;
 const passiveRefreshViews = new Set(['start', 'bestellingen', 'analyse', 'beheer']);
 const pushPublicKey = import.meta.env.VITE_PUSH_PUBLIC_KEY ?? '';
+const themeStorageKey = 'profo-aankoopbeheer-theme';
 let passiveRefreshTimer = null;
 let passiveRefreshRunning = false;
+
+initializeTheme();
+window.setTimeout(() => {
+  const splash = document.querySelector('[data-startup-splash]');
+  splash?.classList.add('is-hidden');
+  window.setTimeout(() => splash?.remove(), 450);
+}, 1750);
 
 const productCategories = [
   'Kantoorbenodigdheden',
@@ -261,6 +270,11 @@ app.addEventListener('click', async (event) => {
   const target = event.target.closest('button, a');
 
   if (!target) {
+    return;
+  }
+
+  if (target.matches('[data-theme-toggle]')) {
+    toggleTheme();
     return;
   }
 
@@ -981,6 +995,7 @@ function renderAuth() {
 
   return `
     <main class="auth-page">
+      <div class="auth-theme-toggle">${renderThemeToggle()}</div>
       <section class="auth-panel">
         <div class="auth-brand">
           <span class="brand-logo-box"><img src="/assets/profo-logo.png" alt="PROFO" /></span>
@@ -1091,8 +1106,17 @@ function renderPasswordRecovery() {
 function renderLoading() {
   return `
     <main class="loading-page">
-      <div class="spinner" aria-hidden="true"></div>
-      <p>Gegevens worden opgehaald.</p>
+      <section class="loading-shell" aria-label="Gegevens worden opgehaald">
+        <span class="skeleton skeleton-brand"></span>
+        <span class="skeleton skeleton-title"></span>
+        <span class="skeleton skeleton-line"></span>
+        <div class="skeleton-grid">
+          <span class="skeleton skeleton-card"></span>
+          <span class="skeleton skeleton-card"></span>
+          <span class="skeleton skeleton-card"></span>
+        </div>
+        <p>Je werkruimte wordt voorbereid.</p>
+      </section>
     </main>
   `;
 }
@@ -1129,22 +1153,26 @@ function renderShell() {
       </div>
       <div class="header-actions">
         <span class="environment-pill">${escapeHtml(userLabel)}</span>
+        ${renderThemeToggle()}
         ${state.installPrompt ? '<button class="header-button" type="button" data-install-app>Installeren</button>' : ''}
         <button class="header-button" type="button" data-sign-out>Afmelden</button>
       </div>
     </header>
     <div class="app-layout">
       <nav class="sidebar" aria-label="Hoofdnavigatie">
-        ${navLink('start', 'Start', unreadCount)}
-        ${navLink('bestellen', 'Onderhoud en algemene producten')}
-        ${navLink('ehbo', 'EHBO')}
-        ${navLink('inkt', 'Inkt')}
-        ${navLink('winkelmand', 'Mijn winkelmand', getCartItems().length)}
-        ${navLink('bestellingen', 'Bestellingen')}
-        ${navLink('handleiding', 'Handleiding')}
-        ${navLink('privacy', 'Privacy')}
-        ${admin ? navLink('analyse', 'Analyse') : ''}
-        ${admin ? navLink('beheer', 'Beheer') : ''}
+        <span class="nav-section-label">Werkruimte</span>
+        ${navLink('start', 'Start', unreadCount, 'home')}
+        ${navLink('bestellen', 'Producten', 0, 'package')}
+        ${navLink('ehbo', 'EHBO', 0, 'shield')}
+        ${navLink('inkt', 'Inkt', 0, 'printer')}
+        ${navLink('winkelmand', 'Mijn winkelmand', getCartItems().length, 'cart')}
+        ${navLink('bestellingen', 'Bestellingen', 0, 'orders')}
+        <span class="nav-section-label">Informatie</span>
+        ${navLink('handleiding', 'Handleiding', 0, 'book')}
+        ${navLink('privacy', 'Privacy', 0, 'lock')}
+        ${admin ? '<span class="nav-section-label">Beheer</span>' : ''}
+        ${admin ? navLink('analyse', 'Analyse', 0, 'chart') : ''}
+        ${admin ? navLink('beheer', 'Instellingen', 0, 'settings') : ''}
       </nav>
       <main class="content">
         ${state.setupError ? renderSetupError() : renderCurrentView(admin, approver)}
@@ -1155,9 +1183,61 @@ function renderShell() {
   `;
 }
 
-function navLink(id, label, badge = 0) {
+function navLink(id, label, badge = 0, icon = 'dot') {
   const active = state.view === id ? 'is-active' : '';
-  return `<a class="nav-link ${active}" href="#${id}"><span>${escapeHtml(label)}</span>${badge ? `<strong class="nav-badge">${escapeHtml(badge)}</strong>` : ''}</a>`;
+  return `<a class="nav-link ${active}" href="#${id}" ${active ? 'aria-current="page"' : ''}>${renderIcon(icon)}<span>${escapeHtml(label)}</span>${badge ? `<strong class="nav-badge">${escapeHtml(badge)}</strong>` : ''}</a>`;
+}
+
+function renderThemeToggle() {
+  return `<button class="theme-toggle" type="button" data-theme-toggle aria-label="Wissel tussen lichte en donkere weergave" title="Weergavethema wijzigen">${renderIcon('theme')}</button>`;
+}
+
+function renderKpi(label, value, detail, icon, tone) {
+  return `
+    <article class="kpi-card kpi-${tone}">
+      <span class="kpi-icon">${renderIcon(icon)}</span>
+      <div>
+        <span class="kpi-label">${escapeHtml(label)}</span>
+        <strong>${escapeHtml(value)}</strong>
+        <small>${escapeHtml(detail)}</small>
+      </div>
+    </article>
+  `;
+}
+
+function renderIcon(name) {
+  const paths = {
+    home: '<path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5M9.5 20v-6h5v6"/>',
+    package: '<path d="m4 7 8-4 8 4-8 4-8-4Z"/><path d="M4 7v10l8 4 8-4V7M12 11v10"/>',
+    shield: '<path d="M12 3 20 6v5c0 5-3.4 8.3-8 10-4.6-1.7-8-5-8-10V6l8-3Z"/><path d="M12 8v7M8.5 11.5h7"/>',
+    printer: '<path d="M7 8V3h10v5M7 17H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M7 14h10v7H7z"/>',
+    cart: '<path d="M3 4h2l2 11h10l2-7H6"/><circle cx="9" cy="19" r="1"/><circle cx="17" cy="19" r="1"/>',
+    orders: '<path d="M6 3h12v18H6zM9 7h6M9 11h6M9 15h4"/>',
+    book: '<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v17H6.5A2.5 2.5 0 0 0 4 22V5.5ZM20 5.5A2.5 2.5 0 0 0 17.5 3H13v17h4.5A2.5 2.5 0 0 1 20 22V5.5Z"/>',
+    lock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
+    chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+    settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"/>',
+    calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/>',
+    inbox: '<path d="M4 4h16l2 11v5H2v-5L4 4Z"/><path d="M2 15h6l2 3h4l2-3h6"/>',
+    theme: '<path d="M20.5 14.4A8.5 8.5 0 0 1 9.6 3.5 8.5 8.5 0 1 0 20.5 14.4Z"/>',
+    dot: '<circle cx="12" cy="12" r="3"/>',
+  };
+
+  return `<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${paths[name] || paths.dot}</svg>`;
+}
+
+function initializeTheme() {
+  const storedTheme = localStorage.getItem(themeStorageKey);
+  const theme = storedTheme === 'light' || storedTheme === 'dark'
+    ? storedTheme
+    : window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  document.documentElement.dataset.theme = theme;
+}
+
+function toggleTheme() {
+  const nextTheme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = nextTheme;
+  localStorage.setItem(themeStorageKey, nextTheme);
 }
 
 function renderSetupError() {
@@ -1217,6 +1297,11 @@ function renderStart(admin, approver) {
   const ownOrders = getVisibleOrders(admin, approver);
   const recentOrders = ownOrders.slice(0, 3);
   const cartItems = getCartItems();
+  const openOrders = ownOrders.filter((order) => !['Geleverd', 'Afgesloten', 'Geweigerd'].includes(getNormalizedStatus(order.status)));
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayOrders = ownOrders.filter((order) => String(order.created_at || '').slice(0, 10) === todayKey);
+  const pendingOrders = ownOrders.filter((order) => ['Ter goedkeuring', 'Extra informatie gevraagd'].includes(getNormalizedStatus(order.status)));
+  const openEhbo = openOrders.filter((order) => (order.regels || []).some((line) => /ehbo|verband|wond|pleister/i.test(String(line.product_naam || ''))));
 
   return `
     <section class="page-heading">
@@ -1231,23 +1316,33 @@ function renderStart(admin, approver) {
     ${state.error ? `<div class="warning-panel">${escapeHtml(state.error)}</div>` : ''}
     ${state.notice ? `<div class="notice-panel">${escapeHtml(state.notice)}</div>` : ''}
     ${state.mailWarning ? `<div class="warning-panel">${escapeHtml(state.mailWarning)}</div>` : ''}
+    <section class="kpi-grid" aria-label="Overzicht">
+      ${renderKpi('Open bestellingen', openOrders.length, 'Actieve opvolging', 'orders', 'red')}
+      ${renderKpi('Bestellingen vandaag', todayOrders.length, 'Sinds 00.00 uur', 'calendar', 'blue')}
+      ${renderKpi('Open aanvragen', pendingOrders.length, 'Wacht op actie', 'inbox', 'amber')}
+      ${renderKpi('EHBO-status', openEhbo.length ? `${openEhbo.length} actief` : 'Op peil', openEhbo.length ? 'Aanvulling in behandeling' : 'Geen open aanvulling', 'shield', 'green')}
+    </section>
     <section class="start-actions">
       <a class="action-card is-primary" href="#bestellen">
+        ${renderIcon('package')}
         <span>Onderhoud en algemene producten</span>
         <strong>Nieuwe aanvraag samenstellen</strong>
         <small>${cartItems.length ? `${cartItems.length} product(en) staan al klaar in je winkelmand.` : 'Kies producten, controleer en dien in.'}</small>
       </a>
       <a class="action-card" href="#inkt">
+        ${renderIcon('printer')}
         <span>Inkt en toner</span>
         <strong>Bestellen per printer</strong>
         <small>Kies locatie, printer en de nodige kleuren of set.</small>
       </a>
       <a class="action-card" href="#ehbo">
+        ${renderIcon('shield')}
         <span>EHBO</span>
         <strong>Koffer A aanvullen</strong>
         <small>Bestel verbandmiddelen en EHBO-materiaal per locatie.</small>
       </a>
       <a class="action-card" href="#bestellingen">
+        ${renderIcon('orders')}
         <span>Opvolging</span>
         <strong>${approver && !admin ? 'Goed te keuren' : 'Mijn bestellingen'}</strong>
         <small>${ownOrders.length} bestelling(en) zichtbaar voor opvolging.</small>
@@ -1255,9 +1350,9 @@ function renderStart(admin, approver) {
     </section>
     <section class="dashboard-grid">
       ${renderNotificationsPanel()}
-      <div class="panel">
+      <div class="panel activity-panel">
         <div class="panel-header">
-          <h3>Recente bestellingen</h3>
+          <h3>Recente activiteit</h3>
           <span>${recentOrders.length} zichtbaar</span>
         </div>
         ${recentOrders.length ? recentOrders.map(renderCompactOrder).join('') : '<div class="empty-state is-compact"><p>Nog geen recente bestellingen.</p></div>'}
