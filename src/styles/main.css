@@ -2056,3 +2056,570 @@ h4 {
     box-shadow: none;
   }
 }
+
+/* Visueel systeem 2026: een rustige, functionele PROFO-interface. */
+:root {
+  --profo-red: #b61917;
+  --profo-red-dark: #891811;
+  --profo-red-soft: #ce5f5a;
+  --profo-pink: #f5dedd;
+  --profo-rose: #e7acac;
+  --profo-bright: #c51718;
+  --profo-deep: #a11916;
+  --profo-warm: #c93a24;
+  --profo-alert: #cc2529;
+  --page: #f7f5f4;
+  --surface: #ffffff;
+  --surface-muted: #fbf8f8;
+  --text: #292525;
+  --muted: #6b6262;
+  --line: #e4dddd;
+  --line-strong: #d2c7c7;
+  --green: #286746;
+  --focus-ring: 0 0 0 3px rgba(182, 25, 23, 0.2);
+  --shadow: 0 1px 2px rgba(54, 37, 37, 0.08);
+  font-family: "Argentum Sans Light", "Calibri Light", Calibri, sans-serif;
+  font-size: 16px;
+}
+
+body {
+  line-height: 1.5;
+  letter-spacing: 0.005em;
+  background: var(--page);
+}
+
+h1,
+h2,
+h3,
+h4,
+strong,
+button,
+.nav-link,
+.category-pill,
+.status-badge {
+  font-family: "Argentum Sans Light", "Calibri Light", Calibri, sans-serif;
+}
+
+h1 {
+  font-size: clamp(1.75rem, 3.4vw, 2.55rem);
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+}
+
+h2 {
+  font-size: clamp(1.6rem, 2.7vw, 2.2rem);
+  font-weight: 600;
+  line-height: 1.18;
+  letter-spacing: -0.02em;
+}
+
+h3 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+h4 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.eyebrow {
+  margin-bottom: 0.25rem;
+  color: var(--profo-red-dark);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.09em;
+}
+
+.app-header {
+  min-height: 84px;
+  padding: 0.75rem clamp(1rem, 3vw, 2rem);
+  border-bottom: 4px solid var(--profo-red-dark);
+  background: var(--profo-red);
+}
+
+.brand-logo-box {
+  width: clamp(132px, 16vw, 208px);
+  max-width: 800px;
+  height: 56px;
+  padding: 0.3rem 0.65rem;
+  border: 0;
+  border-radius: 2px;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.auth-panel .brand-logo-box {
+  width: 168px;
+  height: 64px;
+}
+
+.app-header .eyebrow,
+.app-header h1 {
+  color: #ffffff;
+}
+
+.header-actions {
+  gap: 0.5rem;
+}
+
+.environment-pill {
+  padding: 0.35rem 0.6rem;
+  border: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.48);
+  border-radius: 0;
+  color: #ffffff;
+  font-size: 0.82rem;
+}
+
+.header-button,
+.ghost-button,
+.primary-button,
+.text-button {
+  min-height: 40px;
+  border-radius: 3px;
+  font-weight: 600;
+  box-shadow: none;
+  transform: none;
+  transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease;
+}
+
+.primary-button {
+  padding: 0 1rem;
+  border: 1px solid var(--profo-red);
+  background: var(--profo-red);
+}
+
+.primary-button:hover:not(:disabled) {
+  border-color: var(--profo-red-dark);
+  background: var(--profo-red-dark);
+}
+
+.ghost-button {
+  padding: 0 0.9rem;
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  background: var(--surface);
+}
+
+.ghost-button:hover:not(:disabled) {
+  border-color: var(--profo-red-soft);
+  color: var(--profo-red-dark);
+  background: var(--surface-muted);
+}
+
+.header-button {
+  min-height: 38px;
+  padding: 0 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  color: #ffffff;
+  background: transparent;
+}
+
+.header-button:hover:not(:disabled) {
+  border-color: #ffffff;
+  background: rgba(137, 24, 17, 0.34);
+}
+
+.header-button:active,
+.primary-button:active,
+.ghost-button:active {
+  transform: none;
+  box-shadow: none;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--focus-ring);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.text-button[data-cart-action="remove"],
+.text-button[data-ink-action="remove"],
+.ghost-button[data-disable-product],
+.ghost-button[data-disable-printer],
+.ghost-button[data-disable-ink-cartridge],
+.ghost-button[data-clear-cart],
+.ghost-button[data-clear-ink] {
+  color: var(--profo-alert);
+}
+
+.ghost-button[data-disable-product],
+.ghost-button[data-disable-printer],
+.ghost-button[data-disable-ink-cartridge] {
+  border-color: var(--profo-rose);
+}
+
+.auth-page,
+.loading-page {
+  background: var(--page);
+}
+
+.auth-panel {
+  padding: clamp(1.25rem, 4vw, 2rem);
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--profo-red);
+  border-radius: 2px;
+  box-shadow: var(--shadow);
+}
+
+.auth-tabs {
+  gap: 0;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--line-strong);
+  border-radius: 0;
+  background: transparent;
+}
+
+.auth-tabs button {
+  min-height: 44px;
+  border-radius: 0;
+  border-bottom: 3px solid transparent;
+}
+
+.auth-tabs button.is-active {
+  border-bottom-color: var(--profo-red);
+  color: var(--profo-red-dark);
+  background: var(--profo-pink);
+}
+
+.auth-forgot-link {
+  min-height: 44px;
+  padding: 0.5rem 0;
+}
+
+.app-layout {
+  grid-template-columns: 224px minmax(0, 1fr);
+}
+
+.sidebar {
+  padding: 1rem 0.75rem;
+  border-right: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.nav-link {
+  min-height: 42px;
+  padding: 0.65rem 0.75rem;
+  border-left: 3px solid transparent;
+  border-radius: 0;
+  color: var(--text);
+  font-size: 0.93rem;
+  font-weight: 500;
+}
+
+.nav-link:hover {
+  color: var(--profo-red-dark);
+  background: var(--surface-muted);
+}
+
+.nav-link.is-active {
+  border-left-color: var(--profo-red);
+  color: var(--profo-red-dark);
+  background: var(--profo-pink);
+}
+
+.nav-badge,
+.category-pill,
+.status-badge,
+.product-status-chip {
+  border-radius: 2px;
+}
+
+.content {
+  width: min(100%, 1500px);
+  padding: clamp(1rem, 3vw, 2rem);
+}
+
+.page-heading {
+  align-items: end;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.page-intro {
+  max-width: 72ch;
+  font-size: 0.98rem;
+}
+
+.panel,
+.catalog-panel,
+.cart-panel,
+.order-card,
+.product-card,
+.guide-card,
+.privacy-card,
+.analysis-summary-card {
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--surface);
+  box-shadow: none;
+}
+
+.panel,
+.catalog-panel,
+.cart-panel {
+  padding: clamp(1rem, 2vw, 1.25rem);
+}
+
+.panel-header,
+.catalog-toolbar {
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.dashboard-grid,
+.guide-layout,
+.product-grid,
+.start-actions,
+.admin-layout,
+.analysis-layout {
+  gap: 1rem;
+}
+
+.action-card {
+  min-height: 112px;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--profo-rose);
+  border-radius: 2px;
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: none;
+  transform: none;
+}
+
+.action-card:hover {
+  border-color: var(--profo-red-soft);
+  border-top-color: var(--profo-red);
+  background: var(--surface-muted);
+}
+
+.action-card.is-primary {
+  border-color: var(--profo-red);
+  border-top-color: var(--profo-red-dark);
+  color: #ffffff;
+  background: var(--profo-red);
+}
+
+.product-card {
+  overflow: hidden;
+}
+
+.product-image {
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-muted);
+}
+
+.product-content {
+  padding: 1rem;
+}
+
+.product-button {
+  width: auto;
+  align-self: flex-start;
+}
+
+.field {
+  gap: 0.35rem;
+}
+
+.field > span,
+.catalog-search > span {
+  color: var(--text);
+  font-size: 0.83rem;
+  font-weight: 600;
+}
+
+.field input,
+.field select,
+.field textarea,
+.catalog-search input {
+  min-height: 42px;
+  border: 1px solid var(--line-strong);
+  border-radius: 2px;
+  color: var(--text);
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.field input:hover,
+.field select:hover,
+.field textarea:hover,
+.catalog-search input:hover {
+  border-color: #b9aaaa;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus,
+.catalog-search input:focus {
+  border-color: var(--profo-red);
+  box-shadow: var(--focus-ring);
+}
+
+.field-hint {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.order-card,
+.compact-order,
+.notification-card,
+.cart-line,
+.ink-option,
+.admin-product-row,
+.admin-simple-row {
+  border-color: var(--line);
+  border-radius: 2px;
+  box-shadow: none;
+}
+
+.line-table {
+  border: 1px solid var(--line);
+  border-radius: 2px;
+}
+
+.line-table div,
+.analysis-table-row {
+  min-height: 48px;
+  padding-block: 0.7rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.analysis-table-head {
+  color: var(--profo-red-dark);
+  background: var(--profo-pink);
+}
+
+.quantity-control {
+  border-radius: 2px;
+  box-shadow: none;
+}
+
+.quantity-control button {
+  border-radius: 0;
+}
+
+.notice-panel,
+.warning-panel,
+.auth-notice,
+.auth-error,
+.privacy-warning,
+.push-control {
+  border-radius: 2px;
+  box-shadow: none;
+}
+
+.image-modal-panel {
+  border-radius: 2px;
+  box-shadow: 0 16px 48px rgba(41, 25, 25, 0.22);
+}
+
+@media (max-width: 980px) {
+  .app-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    padding: 0.5rem 0.75rem;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+  }
+
+  .nav-link {
+    flex: 0 0 auto;
+    min-height: 40px;
+    border-left: 0;
+    border-bottom: 3px solid transparent;
+  }
+
+  .nav-link.is-active {
+    border-bottom-color: var(--profo-red);
+  }
+}
+
+@media (max-width: 680px) {
+  .app-header {
+    min-height: auto;
+    padding: 0.75rem;
+  }
+
+  .brand-block {
+    width: 100%;
+  }
+
+  .brand-logo-box {
+    width: 128px;
+    height: 48px;
+  }
+
+  .app-header h1 {
+    font-size: 1.35rem;
+  }
+
+  .environment-pill {
+    max-width: 100%;
+    overflow: hidden;
+    border-left: 0;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .content {
+    padding: 1rem 0.75rem 1.5rem;
+  }
+
+  .page-heading {
+    align-items: start;
+    margin-bottom: 1rem;
+  }
+
+  .panel,
+  .catalog-panel,
+  .cart-panel {
+    padding: 1rem;
+  }
+
+  .product-grid,
+  .start-actions,
+  .dashboard-grid,
+  .guide-layout {
+    gap: 0.75rem;
+  }
+
+  .primary-button,
+  .ghost-button {
+    min-height: 44px;
+  }
+
+  .form-actions > button,
+  .form-actions > a {
+    width: 100%;
+  }
+
+  .line-table {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
