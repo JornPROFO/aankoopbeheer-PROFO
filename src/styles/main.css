@@ -3038,6 +3038,11 @@ button,
   color: #ffffff;
 }
 
+.action-card.is-primary span,
+.action-card.is-primary strong {
+  color: #ffffff;
+}
+
 .action-card strong {
   font-size: 1.04rem;
   font-weight: 650;
@@ -3049,7 +3054,7 @@ button,
 }
 
 .action-card.is-primary small {
-  color: rgba(255,255,255,.75);
+  color: rgba(255,255,255,.88);
 }
 
 .dashboard-grid {
