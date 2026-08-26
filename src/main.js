@@ -950,6 +950,11 @@ function render() {
     return;
   }
 
+  if (state.view === 'handleiding' && !state.session) {
+    app.innerHTML = renderUserGuide(false);
+    return;
+  }
+
   if (!state.session) {
     app.innerHTML = renderAuth();
     return;
@@ -1064,6 +1069,7 @@ function renderAuth() {
         </form>
         <p class="auth-note">
           De app gebruikt dezelfde PROFO-gebruikerslijst en locatielijst als Voertuigenbeheer.
+          Eerste keer? Lees vooraf de <a href="#handleiding">handleiding</a>.
           Lees hoe we persoonsgegevens gebruiken in de <a href="#privacy">privacyverklaring</a>.
         </p>
       </section>
@@ -1262,7 +1268,7 @@ function renderCurrentView(admin, approver) {
   }
 
   if (state.view === 'handleiding') {
-    return renderUserGuide();
+    return renderUserGuide(true);
   }
 
 
@@ -1368,16 +1374,19 @@ function renderStart(admin, approver) {
   `;
 }
 
-function renderUserGuide() {
-  return `
+function renderUserGuide(inApp = true) {
+  const content = `
     <section class="page-heading">
       <div>
         <p class="eyebrow">Handleiding</p>
         <h2>PROFO Aankoopbeheer gebruiken</h2>
       </div>
-      <p class="page-intro">
-        Deze korte handleiding helpt je om de app te openen, te installeren en een bestelling correct door te sturen.
-      </p>
+      <div class="privacy-heading-actions">
+        <p class="page-intro">
+          Deze korte handleiding helpt je om de app te openen, te installeren en een bestelling correct door te sturen.
+        </p>
+        ${inApp ? '' : '<a class="ghost-button" href="#start">Terug naar aanmelden</a>'}
+      </div>
     </section>
     <section class="guide-layout">
       <article class="panel guide-card">
@@ -1450,6 +1459,8 @@ function renderUserGuide() {
       </article>
     </section>
   `;
+
+  return inApp ? content : `<main class="public-information-page">${content}</main>`;
 }
 
 function renderPrivacyStatement(inApp = false) {
