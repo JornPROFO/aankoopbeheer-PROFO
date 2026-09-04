@@ -63,19 +63,14 @@ const supplierDeliveryMetaLabel = 'Leveringen leveranciers';
 const expectedDeliveryMetaLabel = 'Verwachte leverdatum';
 const orderedAtMetaLabel = 'Besteld op';
 const appPublicUrl = 'https://aankoopbeheer-profo.vercel.app/';
-const passiveRefreshMs = 15000;
+const passiveRefreshMs = 60000;
 const passiveRefreshViews = new Set(['start', 'bestellingen', 'analyse', 'beheer']);
 const pushPublicKey = import.meta.env.VITE_PUSH_PUBLIC_KEY ?? '';
-const themeStorageKey = 'profo-aankoopbeheer-theme';
 let passiveRefreshTimer = null;
 let passiveRefreshRunning = false;
+let lastPassiveRefreshAt = 0;
 
 initializeTheme();
-window.setTimeout(() => {
-  const splash = document.querySelector('[data-startup-splash]');
-  splash?.classList.add('is-hidden');
-  window.setTimeout(() => splash?.remove(), 450);
-}, 1750);
 
 const productCategories = [
   'Kantoorbenodigdheden',
@@ -270,11 +265,6 @@ app.addEventListener('click', async (event) => {
   const target = event.target.closest('button, a');
 
   if (!target) {
-    return;
-  }
-
-  if (target.matches('[data-theme-toggle]')) {
-    toggleTheme();
     return;
   }
 
@@ -905,7 +895,13 @@ async function refreshAankoopDataSilently() {
     return;
   }
 
+  // Vermijd volledige herlaadbeurten tijdens bestellen en dubbele focusmeldingen.
+  if (!passiveRefreshViews.has(state.view) || Date.now() - lastPassiveRefreshAt < 15000) {
+    return;
+  }
+
   passiveRefreshRunning = true;
+  lastPassiveRefreshAt = Date.now();
 
   try {
     const beforeSignature = getPassiveRefreshSignature();
@@ -1000,7 +996,6 @@ function renderAuth() {
 
   return `
     <main class="auth-page">
-      <div class="auth-theme-toggle">${renderThemeToggle()}</div>
       <section class="auth-panel">
         <div class="auth-brand">
           <span class="brand-logo-box"><img src="/assets/profo-logo.png" alt="PROFO" /></span>
@@ -1159,7 +1154,6 @@ function renderShell() {
       </div>
       <div class="header-actions">
         <span class="environment-pill">${escapeHtml(userLabel)}</span>
-        ${renderThemeToggle()}
         ${state.installPrompt ? '<button class="header-button" type="button" data-install-app>Installeren</button>' : ''}
         <button class="header-button" type="button" data-sign-out>Afmelden</button>
       </div>
@@ -1192,10 +1186,6 @@ function renderShell() {
 function navLink(id, label, badge = 0, icon = 'dot') {
   const active = state.view === id ? 'is-active' : '';
   return `<a class="nav-link ${active}" href="#${id}" ${active ? 'aria-current="page"' : ''}>${renderIcon(icon)}<span>${escapeHtml(label)}</span>${badge ? `<strong class="nav-badge">${escapeHtml(badge)}</strong>` : ''}</a>`;
-}
-
-function renderThemeToggle() {
-  return `<button class="theme-toggle" type="button" data-theme-toggle aria-label="Wissel tussen lichte en donkere weergave" title="Weergavethema wijzigen">${renderIcon('theme')}</button>`;
 }
 
 function renderKpi(label, value, detail, icon, tone) {
@@ -1233,17 +1223,8 @@ function renderIcon(name) {
 }
 
 function initializeTheme() {
-  const storedTheme = localStorage.getItem(themeStorageKey);
-  const theme = storedTheme === 'light' || storedTheme === 'dark'
-    ? storedTheme
-    : window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  document.documentElement.dataset.theme = theme;
-}
-
-function toggleTheme() {
-  const nextTheme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
-  document.documentElement.dataset.theme = nextTheme;
-  localStorage.setItem(themeStorageKey, nextTheme);
+  // De vaste lichte huisstijl is onafhankelijk van toestel- en oude thema-instellingen.
+  document.documentElement.dataset.theme = 'light';
 }
 
 function renderSetupError() {
@@ -2069,6 +2050,14 @@ function renderProductPreview() {
   `;
 }
 
+function renderCartProductImage(product) {
+  if (product.source_type === 'ink') {
+    return `<span class="color-badge color-${escapeHtml(product.kleur || 'bk').toLowerCase()}" aria-label="Inktkleur ${escapeHtml(product.kleur || 'BK')}">${escapeHtml(product.kleur || 'BK')}</span>`;
+  }
+  const image = product.image_url || (isEhboProduct(product) ? ehboDefaultImage : defaultImage);
+  return `<img class="cart-product-image" src="${escapeHtml(image)}" alt="${escapeHtml(product.naam)}" width="64" height="64" loading="lazy" decoding="async" />`;
+}
+
 function renderCart(cartItems) {
   if (!cartItems.length) {
     return `
@@ -2097,10 +2086,13 @@ function renderCart(cartItems) {
           .map(
             ({ key, product, quantity }) => `
               <article class="cart-line">
-                <div>
+                <div class="cart-product">
+                  ${renderCartProductImage(product)}
+                  <div class="cart-product-details">
                   <strong>${escapeHtml(product.naam)}</strong>
                   <span>${escapeHtml(product.eenheid || 'stuks')} - ${escapeHtml(getProductPriceLabel(product))}</span>
                   ${product.printer_label ? `<span>${escapeHtml(product.printer_label)}</span>` : ''}
+                  </div>
                 </div>
                 <div class="quantity-control" aria-label="Aantal">
                   <button type="button" data-cart-action="decrease" data-cart-key="${escapeHtml(key)}">-</button>
@@ -4310,6 +4302,7 @@ function cartridgeToCartProduct(cartridge) {
   return {
     id: getInkCartKey(cartridge.id),
     source_type: 'ink',
+    kleur: cartridge.kleur,
     actief: cartridge.actief !== false,
     naam: `${getInkColorLabel(cartridge.kleur)} - ${cartridge.naam}`,
     categorie: 'IT-materiaal',

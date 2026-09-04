@@ -1063,6 +1063,35 @@ h4 {
   justify-self: start;
 }
 
+.cart-product {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.cart-product-image {
+  flex: 0 0 64px;
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.cart-product-details {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 480px) {
+  .cart-line { grid-template-columns: minmax(0, 1fr); }
+  .cart-line .quantity-control { justify-self: start; margin-left: 76px; }
+}
+
 .quantity-control {
   display: grid;
   grid-template-columns: 34px 42px 34px;
@@ -2547,11 +2576,11 @@ button:disabled {
 
 /* Premium SaaS interface 2026 */
 :root {
-  --saas-bg: #f4f6f9;
+  --saas-bg: #f9f9f9;
   --saas-surface: rgba(255, 255, 255, 0.92);
   --saas-surface-solid: #ffffff;
   --saas-surface-subtle: #f8f9fb;
-  --saas-sidebar: #15171c;
+  --saas-sidebar: #ffffff;
   --saas-text: #202126;
   --saas-muted: #69707d;
   --saas-border: rgba(31, 35, 48, 0.09);
@@ -2621,7 +2650,7 @@ button,
   display: grid;
   place-items: center;
   overflow: hidden;
-  background: #090a0d;
+  background: #f9f9f9;
   opacity: 1;
   transition: opacity 420ms cubic-bezier(.4, 0, .2, 1), visibility 420ms;
 }
@@ -2666,7 +2695,7 @@ button,
 }
 
 .startup-product {
-  color: rgba(255,255,255,.72);
+  color: var(--profo-red-dark);
   font-size: .82rem;
   font-weight: 600;
   letter-spacing: .22em;
@@ -2791,14 +2820,15 @@ button,
   height: calc(100vh - 72px);
   padding: 1.25rem .85rem;
   border: 0;
-  color: rgba(255,255,255,.74);
+  color: var(--saas-text);
   background: var(--saas-sidebar);
+  border-right: 1px solid var(--saas-border);
   overflow-y: auto;
 }
 
 .nav-section-label {
   margin: 1rem .65rem .35rem;
-  color: rgba(255,255,255,.38);
+  color: var(--saas-muted);
   font-size: .66rem;
   font-weight: 650;
   letter-spacing: .12em;
@@ -2818,21 +2848,21 @@ button,
   padding: .62rem .72rem;
   border: 0;
   border-radius: 10px;
-  color: rgba(255,255,255,.68);
+  color: var(--saas-text);
   font-size: .86rem;
   font-weight: 500;
   transition: color 160ms ease, background-color 160ms ease, transform 160ms ease;
 }
 
 .nav-link:hover {
-  color: #ffffff;
-  background: rgba(255,255,255,.07);
+  color: var(--profo-red-dark);
+  background: #fbefee;
   transform: translateX(2px);
 }
 
 .nav-link.is-active {
-  color: #ffffff;
-  background: linear-gradient(90deg, rgba(182,25,23,.32), rgba(182,25,23,.12));
+  color: var(--profo-red-dark);
+  background: var(--profo-pink);
   box-shadow: inset 0 0 0 1px rgba(206,95,90,.15);
 }
 
@@ -3002,6 +3032,10 @@ button,
 
 .action-card {
   min-height: 184px;
+  grid-template-rows: 38px minmax(2.6em, auto) minmax(2.6em, auto) auto;
+  align-content: start;
+  align-items: start;
+  text-align: left;
   padding: 1.3rem;
   border: 1px solid var(--saas-border);
   border-radius: var(--radius-lg);
@@ -3028,19 +3062,19 @@ button,
 }
 
 .action-card.is-primary {
-  border-color: transparent;
-  color: #ffffff;
-  background: linear-gradient(145deg, #b61917, #891811);
-  box-shadow: 0 14px 30px rgba(137,24,17,.2);
+  border-color: var(--profo-red-soft);
+  color: var(--profo-red-dark);
+  background: var(--profo-pink);
+  box-shadow: var(--saas-shadow-sm);
 }
 
 .action-card.is-primary > .ui-icon {
-  color: #ffffff;
+  color: var(--profo-red-dark);
 }
 
 .action-card.is-primary span,
 .action-card.is-primary strong {
-  color: #ffffff;
+  color: var(--profo-red-dark);
 }
 
 .action-card strong {
@@ -3054,7 +3088,7 @@ button,
 }
 
 .action-card.is-primary small {
-  color: rgba(255,255,255,.88);
+  color: var(--profo-red-dark);
 }
 
 .dashboard-grid {
@@ -3102,6 +3136,11 @@ button,
 
 .primary-button {
   min-height: 42px;
+  height: auto;
+  padding: 0.65rem 1rem;
+  line-height: 1.35;
+  text-align: center;
+  white-space: normal;
   border: 0;
   border-radius: 10px;
   background: linear-gradient(180deg, #c51d1b, #a81816);
@@ -3122,6 +3161,11 @@ button,
 
 .ghost-button {
   border-color: var(--saas-border-strong);
+  height: auto;
+  padding: 0.65rem 1rem;
+  line-height: 1.35;
+  text-align: center;
+  white-space: normal;
   border-radius: 10px;
   color: var(--saas-text);
   background: var(--saas-surface-solid);
