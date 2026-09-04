@@ -2896,7 +2896,8 @@ button,
   width: min(100%, 1540px);
   min-height: calc(100vh - 72px);
   padding: clamp(1.25rem, 3vw, 2.5rem);
-  animation: page-enter 280ms cubic-bezier(.2,.8,.2,1) both;
+  /* Ook bij aantallen en filters wordt dit element opnieuw opgebouwd. */
+  animation: none;
 }
 
 @keyframes page-enter {
