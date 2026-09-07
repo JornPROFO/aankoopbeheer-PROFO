@@ -2752,7 +2752,11 @@ function renderBarChart(rows, metric) {
           return `
             <div class="bar-row">
               <span>${escapeHtml(row.label)}</span>
-              <div class="bar-track"><div class="bar-fill" style="width: ${percentage}%"></div></div>
+                <div class="bar-track">
+                  <svg class="bar-fill" viewBox="0 0 100 18" preserveAspectRatio="none" style="width: ${percentage}%" aria-hidden="true">
+                    <rect x="0" y="0" width="100" height="18" rx="9" fill="#b61917"></rect>
+                  </svg>
+                </div>
               <strong>${metric === 'quantity' ? escapeHtml(value) : formatCurrency(value)}</strong>
             </div>
           `;

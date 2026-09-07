@@ -1788,9 +1788,9 @@ h4 {
 }
 
 .bar-fill {
+  display: block;
   height: 100%;
   border-radius: inherit;
-  background: var(--profo-red);
 }
 
 .pie-chart-wrap {
@@ -3437,7 +3437,15 @@ button,
 
 @media print {
   @page {
+    size: A4 portrait;
     margin: 14mm;
+  }
+
+  html,
+  body,
+  body * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   body {
@@ -3465,6 +3473,39 @@ button,
   .analysis-chart-panel,
   .analysis-table-panel {
     break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .analysis-chart-panel {
+    display: block !important;
+    width: 100% !important;
+    margin-bottom: 8mm;
+  }
+
+  .bar-chart {
+    width: 100%;
+  }
+
+  .bar-row {
+    grid-template-columns: minmax(42mm, 1fr) minmax(60mm, 1.35fr) 25mm;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .bar-track {
+    border: 1px solid #ce5f5a;
+    background: #f5dedd !important;
+  }
+
+  .bar-fill rect {
+    fill: #b61917 !important;
+  }
+
+  .pie-chart,
+  .pie-chart circle,
+  .chart-legend span {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .panel,
