@@ -262,6 +262,7 @@ app.addEventListener('change', handleOrderFilterChange);
 app.addEventListener('input', handleCatalogSearchChange);
 app.addEventListener('input', handleAuthFieldChange);
 app.addEventListener('change', handleAuthFieldChange);
+app.addEventListener('error', handleCatalogImageError, true);
 
 app.addEventListener('click', async (event) => {
   const target = event.target.closest('button, a');
@@ -2001,12 +2002,13 @@ function renderProductCatalog(products, options = {}) {
 
 function renderProductCard(product) {
   const image = product.image_url || (isEhboProduct(product) ? ehboDefaultImage : defaultImage);
+  const fallbackImage = isEhboProduct(product) ? ehboDefaultImage : defaultImage;
   const step = Number(product.minimum_bestelhoeveelheid || 1);
 
   return `
     <article class="product-card">
       <div class="product-image">
-        <img src="${escapeHtml(image)}" alt="${escapeHtml(product.naam)}" loading="lazy" />
+        <img src="${escapeHtml(image)}" data-image-fallback="${escapeHtml(fallbackImage)}" alt="${escapeHtml(product.naam)}" loading="lazy" />
         <button class="image-zoom-button" type="button" data-preview-product="${escapeHtml(product.id)}">
           Vergroten
         </button>
@@ -2045,6 +2047,7 @@ function renderProductPreview() {
   }
 
   const image = product.image_url || (isEhboProduct(product) ? ehboDefaultImage : defaultImage);
+  const fallbackImage = isEhboProduct(product) ? ehboDefaultImage : defaultImage;
 
   return `
     <div class="image-modal" role="dialog" aria-modal="true" aria-labelledby="product-preview-title">
@@ -2058,7 +2061,7 @@ function renderProductPreview() {
           <button class="ghost-button" type="button" data-close-preview>Sluiten</button>
         </div>
         <div class="image-modal-body">
-          <img src="${escapeHtml(image)}" alt="${escapeHtml(product.naam)}" />
+          <img src="${escapeHtml(image)}" data-image-fallback="${escapeHtml(fallbackImage)}" alt="${escapeHtml(product.naam)}" />
         </div>
       </section>
     </div>
@@ -2070,7 +2073,23 @@ function renderCartProductImage(product) {
     return `<span class="color-badge color-${escapeHtml(product.kleur || 'bk').toLowerCase()}" aria-label="Inktkleur ${escapeHtml(product.kleur || 'BK')}">${escapeHtml(product.kleur || 'BK')}</span>`;
   }
   const image = product.image_url || (isEhboProduct(product) ? ehboDefaultImage : defaultImage);
-  return `<img class="cart-product-image" src="${escapeHtml(image)}" alt="${escapeHtml(product.naam)}" width="64" height="64" loading="lazy" decoding="async" />`;
+  const fallbackImage = isEhboProduct(product) ? ehboDefaultImage : defaultImage;
+  return `<img class="cart-product-image" src="${escapeHtml(image)}" data-image-fallback="${escapeHtml(fallbackImage)}" alt="${escapeHtml(product.naam)}" width="64" height="64" loading="lazy" decoding="async" />`;
+}
+
+function handleCatalogImageError(event) {
+  const image = event.target;
+  if (!(image instanceof HTMLImageElement)) {
+    return;
+  }
+
+  const fallback = image.dataset.imageFallback;
+  if (!fallback || image.dataset.fallbackApplied === 'true') {
+    return;
+  }
+
+  image.dataset.fallbackApplied = 'true';
+  image.src = fallback;
 }
 
 function renderCart(cartItems) {
