@@ -8,7 +8,7 @@ serve(async (req) => {
   }
 
   try {
-    const { bestelling_id } = await req.json();
+    const { bestelling_id, melding_type, gewijzigde_regel_id } = await req.json();
 
     if (!bestelling_id) {
       return secureJson(req, { error: 'bestelling_id ontbreekt.' }, 400);
@@ -52,7 +52,9 @@ serve(async (req) => {
     }
 
     const status = normalizeStatus(order.status);
-    const mailPlan = await buildMailPlan(supabase, order, lines ?? [], status, beheerderMail);
+    const mailPlan = melding_type === 'leveringsupdate'
+      ? buildDeliveryUpdateMailPlan(order, lines ?? [], gewijzigde_regel_id)
+      : await buildMailPlan(supabase, order, lines ?? [], status, beheerderMail);
 
     for (const message of mailPlan.messages) {
       await sendMail({
@@ -160,6 +162,62 @@ async function buildMailPlan(
     ],
   };
 }
+function buildDeliveryUpdateMailPlan(
+  order: Record<string, unknown>,
+  lines: Record<string, unknown>[],
+  changedLineId: unknown,
+) {
+  const line = lines.find((item) => String(item.id) === String(changedLineId));
+  if (!line) {
+    throw new Error('De gewijzigde bestelregel kon niet worden gevonden voor de leveringsmelding.');
+  }
+  const status = getDeliveryStatusLabel(line.leverstatus);
+  const expectedDate = formatDate(line.verwachte_leverdatum);
+  const note = String(line.leveringsopmerking || '').trim();
+  const body = [
+    `Beste ${order.besteller_naam ?? 'collega'},`,
+    '',
+    'Er is nieuwe informatie over de levering van een artikel uit je bestelling.',
+    '',
+    `Bestelling: ${order.id}`,
+    `Locatie: ${order.locatie_naam}`,
+    `Artikel: ${line.aantal} x ${line.product_naam}`,
+    `Leverstatus: ${status}`,
+    `Verwachte leverdatum: ${expectedDate || 'nog niet meegedeeld'}`,
+    `Toelichting: ${note || 'geen bijkomende toelichting'}`,
+    '',
+    'De overige artikelen van de bestelling behouden hun bestaande leverstatus.',
+    '',
+    'Met vriendelijke groet,',
+    'PROFO Aankoopbeheer',
+  ].join('\n');
+  return {
+    status: `Leveringsupdate verzonden: ${line.product_naam}`,
+    messages: [{
+      to: String(order.besteller_email || ''),
+      subject: `PROFO-bestelling ${order.id} - leverupdate ${line.product_naam}`,
+      text: body,
+    }],
+  };
+}
+
+function getDeliveryStatusLabel(value: unknown) {
+  return ({
+    open: 'Nog niet geleverd',
+    backorder: 'Backorder',
+    gedeeltelijk_geleverd: 'Gedeeltelijk geleverd',
+    geleverd: 'Geleverd',
+    geannuleerd: 'Geannuleerd',
+  } as Record<string, string>)[String(value || 'open')] || 'Nog niet geleverd';
+}
+
+function formatDate(value: unknown) {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  const date = new Date(`${text.slice(0, 10)}T12:00:00`);
+  return Number.isNaN(date.getTime()) ? text : new Intl.DateTimeFormat('nl-BE', { dateStyle: 'long' }).format(date);
+}
+
 async function getApprovalRecipients(
   supabase: ReturnType<typeof createClient>,
   order: Record<string, unknown>,

@@ -1,5 +1,6 @@
 import '@fontsource-variable/inter';
 import './styles/main.css';
+import './styles/delivery-status.css';
 import {
   getCurrentSession,
   onAuthChange,
@@ -28,6 +29,7 @@ import {
   saveProduct,
   savePrinter,
   updateOrderDeliveryStatus,
+  updateOrderLineDelivery,
   updateOrderStatus,
 } from './services/aankoopService.js';
 import {
@@ -394,8 +396,8 @@ app.addEventListener('click', async (event) => {
     render();
   }
 
-  if (target.matches('[data-supplier-delivery]')) {
-    await handleSupplierDeliveryChange(target.dataset.orderId, target.dataset.supplierKey, target.dataset.deliveryStatus);
+  if (target.matches('[data-save-line-delivery]')) {
+    await handleLineDeliveryChange(target);
   }
 
   if (target.matches('[data-resend-order-mail]')) {
@@ -2336,12 +2338,15 @@ function renderOrderCard(order, admin, approver) {
       <div class="line-table">
         ${order.regels
           .map(
-            (line) => `
+            (line) => {
+              const deliveryInfo = renderLineDeliveryInfo(line);
+              return `
               <div>
-                <span>${escapeHtml(line.aantal)} x ${escapeHtml(line.product_naam)}</span>
+                <span>${escapeHtml(line.aantal)} x ${escapeHtml(line.product_naam)}${deliveryInfo}</span>
                 <strong>${formatCurrency(line.lijn_totaal_incl_btw)}</strong>
               </div>
-            `,
+            `;
+            },
           )
           .join('')}
       </div>
@@ -2410,6 +2415,15 @@ function renderExpectedDeliveryModal() {
   `;
 }
 
+function renderLineDeliveryInfo(line) {
+  if (!line.leverstatus || line.leverstatus === 'open') {
+    return '';
+  }
+  const date = line.verwachte_leverdatum ? ` · verwacht op ${formatDateLabel(line.verwachte_leverdatum)}` : '';
+  const note = line.leveringsopmerking ? ` · ${line.leveringsopmerking}` : '';
+  return `<small class="line-delivery-info">${escapeHtml(getLineDeliveryLabel(line.leverstatus))}${escapeHtml(date)}${escapeHtml(note)}</small>`;
+}
+
 function renderSupplierDeliveryPanel(order) {
   const normalizedStatus = getNormalizedStatus(order.status);
   const followUpStatuses = new Set(['Besteld', 'Gedeeltelijk geleverd', 'Geleverd']);
@@ -2428,39 +2442,17 @@ function renderSupplierDeliveryPanel(order) {
       <div class="supplier-delivery-list">
         ${groups
           .map((group) => {
-            const state = getSupplierDeliveryState(order, group);
-            const delivered = state === 'geleverd';
+            const summary = getSupplierDeliverySummary(order, group);
 
             return `
-              <article class="supplier-delivery-row ${delivered ? 'is-delivered' : ''}">
-                <div>
+              <article class="supplier-delivery-row ${summary.allDelivered ? 'is-delivered' : ''}">
+                <div class="supplier-delivery-summary">
                   <strong>${escapeHtml(group.supplierName)}</strong>
                   <span>${group.lines.length} bestelregel${group.lines.length === 1 ? '' : 's'} - ${formatCurrency(group.totalIncl)}</span>
+                  <span class="supplier-delivery-status">${escapeHtml(summary.label)}</span>
                 </div>
-                <div class="supplier-delivery-actions">
-                  <span class="supplier-delivery-status">${delivered ? 'Geleverd' : 'Nog niet geleverd'}</span>
-                  <button
-                    class="ghost-button"
-                    type="button"
-                    data-order-id="${escapeHtml(order.id)}"
-                    data-supplier-key="${escapeHtml(group.supplierKey)}"
-                    data-delivery-status="open"
-                    data-supplier-delivery
-                    ${delivered ? '' : 'disabled'}
-                  >
-                    Nog niet geleverd
-                  </button>
-                  <button
-                    class="ghost-button"
-                    type="button"
-                    data-order-id="${escapeHtml(order.id)}"
-                    data-supplier-key="${escapeHtml(group.supplierKey)}"
-                    data-delivery-status="geleverd"
-                    data-supplier-delivery
-                    ${delivered ? 'disabled' : ''}
-                  >
-                    Geleverd
-                  </button>
+                <div class="supplier-delivery-lines">
+                  ${group.lines.map((line) => renderLineDeliveryEditor(order, group, line)).join('')}
                 </div>
               </article>
             `;
@@ -2468,6 +2460,41 @@ function renderSupplierDeliveryPanel(order) {
           .join('')}
       </div>
     </section>
+  `;
+}
+
+function renderLineDeliveryEditor(order, group, line) {
+  const delivery = getLineDeliveryState(order, group, line);
+  const options = [
+    ['open', 'Nog niet geleverd'],
+    ['backorder', 'Backorder'],
+    ['gedeeltelijk_geleverd', 'Gedeeltelijk geleverd'],
+    ['geleverd', 'Geleverd'],
+    ['geannuleerd', 'Geannuleerd'],
+  ];
+
+  return `
+    <div class="line-delivery-editor" data-line-delivery-editor>
+      <div class="line-delivery-product">
+        <strong>${escapeHtml(line.aantal)} x ${escapeHtml(line.product_naam)}</strong>
+        <span>${escapeHtml(line.eenheid || 'stuk')}</span>
+      </div>
+      <label class="field">
+        <span>Leverstatus</span>
+        <select name="leverstatus">
+          ${options.map(([value, label]) => `<option value="${value}" ${delivery.status === value ? 'selected' : ''}>${label}</option>`).join('')}
+        </select>
+      </label>
+      <label class="field">
+        <span>Verwachte leverdatum</span>
+        <input name="verwachte_leverdatum" type="date" value="${escapeHtml(delivery.expectedDate)}" />
+      </label>
+      <label class="field line-delivery-note">
+        <span>Toelichting</span>
+        <input name="leveringsopmerking" type="text" maxlength="500" value="${escapeHtml(delivery.note)}" placeholder="Bijvoorbeeld: nalevering volgens leverancier" />
+      </label>
+      <button class="ghost-button" type="button" data-save-line-delivery data-order-id="${escapeHtml(order.id)}" data-line-id="${escapeHtml(line.id)}">Bewaren en melden</button>
+    </div>
   `;
 }
 
@@ -3783,8 +3810,10 @@ async function handleOrderPlaced(form) {
   }
 }
 
-async function handleSupplierDeliveryChange(orderId, supplierKey, deliveryStatus) {
+async function handleLineDeliveryChange(button) {
   try {
+    const orderId = button.dataset.orderId;
+    const lineId = button.dataset.lineId;
     const order = state.data.orders.find((item) => String(item.id) === String(orderId));
 
     if (!order) {
@@ -3793,65 +3822,63 @@ async function handleSupplierDeliveryChange(orderId, supplierKey, deliveryStatus
       return;
     }
 
-    const groups = getOrderSupplierGroups(order);
-    const group = groups.find((item) => item.supplierKey === supplierKey);
-
-    if (!group) {
-      state.error = 'Deze leverancier kon niet meer gevonden worden in de bestelling.';
+    const editor = button.closest('[data-line-delivery-editor]');
+    const line = order.regels?.find((item) => String(item.id) === String(lineId));
+    if (!editor || !line) {
+      state.error = 'Dit artikel kon niet meer gevonden worden in de bestelling.';
       render();
       return;
     }
-
-    const deliveryMeta = getOrderDeliveryMeta(order);
-
-    if (deliveryStatus === 'geleverd') {
-      deliveryMeta[group.supplierKey] = {
-        name: group.supplierName,
-        status: 'geleverd',
-        updated_at: new Date().toISOString(),
-        actor: getUserLabel(state.appUser),
-      };
-    } else {
-      delete deliveryMeta[group.supplierKey];
-    }
-
-    const nextStatus = getOverallDeliveryStatus(groups, deliveryMeta);
+    const leverstatus = editor.querySelector('[name="leverstatus"]').value;
+    const verwachteLeverdatum = editor.querySelector('[name="verwachte_leverdatum"]').value;
+    const leveringsopmerking = editor.querySelector('[name="leveringsopmerking"]').value.trim();
+    const updatedLine = await updateOrderLineDelivery(lineId, {
+      leverstatus,
+      verwachte_leverdatum: verwachteLeverdatum,
+      leveringsopmerking,
+      actor: getUserLabel(state.appUser),
+    });
+    const updatedLines = order.regels.map((item) => String(item.id) === String(lineId) ? updatedLine : item);
+    const nextStatus = getOverallLineDeliveryStatus({ ...order, regels: updatedLines });
     const previousStatus = getNormalizedStatus(order.status);
-    const opmerkingen = setOrderMetaValue(
-      order.opmerkingen,
-      supplierDeliveryMetaLabel,
-      Object.keys(deliveryMeta).length ? JSON.stringify(deliveryMeta) : '',
-    );
+    const updatedOrder = previousStatus === nextStatus
+      ? order
+      : await updateOrderDeliveryStatus(orderId, { status: nextStatus, opmerkingen: order.opmerkingen }, {
+          actorName: getUserLabel(state.appUser),
+          actorEmail: state.session?.user?.email ?? '',
+        });
 
-    const updatedOrder = await updateOrderDeliveryStatus(
-      orderId,
-      { status: nextStatus, opmerkingen },
-      {
-        actorName: getUserLabel(state.appUser),
-        actorEmail: state.session?.user?.email ?? '',
-      },
-    );
-
-    const orderForNotification = mergeUpdatedOrder(order, updatedOrder);
+    const orderForNotification = { ...mergeUpdatedOrder(order, updatedOrder), regels: updatedLines };
     state.data.orders = state.data.orders.map((item) => (String(item.id) === String(orderId) ? orderForNotification : item));
     state.error = '';
     state.mailWarning = '';
 
-    let mailResult = { ok: true };
-    if (previousStatus !== nextStatus) {
-      render();
-      mailResult = await notifyOrderStatusChanged(orderForNotification, nextStatus);
-    }
-
-    const statusText = getStatusLabel(nextStatus).toLowerCase();
+    render();
+    const mailResult = await notifyLineDeliveryChanged(orderForNotification, updatedLine);
+    const statusText = getLineDeliveryLabel(leverstatus).toLowerCase();
     state.notice = mailResult.ok
-      ? `${group.supplierName} staat nu op ${deliveryStatus === 'geleverd' ? 'geleverd' : 'nog niet geleverd'}. De bestelling staat op ${statusText}.`
-      : `${group.supplierName} staat nu op ${deliveryStatus === 'geleverd' ? 'geleverd' : 'nog niet geleverd'}. De bestelling staat op ${statusText}, maar de e-mailmelding kon niet worden verstuurd.`;
+      ? `${line.product_naam} staat nu op ${statusText}. De besteller kreeg een melding.`
+      : `${line.product_naam} staat nu op ${statusText}, maar de e-mailmelding kon niet worden verstuurd.`;
     await bootstrapData();
   } catch (error) {
     state.error = error.message;
     render();
   }
+}
+
+async function notifyLineDeliveryChanged(order, line) {
+  const recipients = uniqueActiveUsers(getOrderStakeholderUsers(order));
+  const label = getLineDeliveryLabel(line.leverstatus);
+  const dateText = line.verwachte_leverdatum ? ` Verwachte leverdatum: ${formatDateLabel(line.verwachte_leverdatum)}.` : '';
+  const sent = await sendOrderNotifications(recipients, order, {
+    type: 'leverstatus_artikel',
+    titel: `Leverupdate: ${line.product_naam}`,
+    boodschap: `${line.product_naam} staat op "${label}".${dateText}`,
+  });
+  if (!sent) {
+    state.mailWarning = 'De leverstatus is bewaard, maar de interne melding kon niet worden aangemaakt.';
+  }
+  return sendOrderMail(order, 'De leverstatus is bewaard.', { notificationType: 'leveringsupdate', lineId: line.id });
 }
 
 function mergeUpdatedOrder(existingOrder, updatedOrder) {
@@ -3955,13 +3982,13 @@ async function notifyOrderStatusChanged(order, status) {
   return sendOrderMail(order, 'De status is aangepast en de interne melding/pushmelding is verwerkt.');
 }
 
-async function sendOrderMail(order, fallbackContext) {
+async function sendOrderMail(order, fallbackContext, options = {}) {
   if (!order?.id) {
     return { ok: false, message: 'Geen bestelling-id beschikbaar voor e-mailmelding.' };
   }
 
   try {
-    const result = await invokeOrderMail(order.id);
+    const result = await invokeOrderMail(order.id, options);
     return { ok: true, message: result?.ok ? 'E-mailmelding aanvaard door mailfunctie.' : 'Mailfunctie aangeroepen.' };
   } catch (error) {
     const detail = error?.message ? ` Technische melding: ${error.message}` : '';
@@ -4740,6 +4767,51 @@ function getOrderSupplierGroups(order) {
 function getSupplierDeliveryState(order, group) {
   const meta = getOrderDeliveryMeta(order);
   return meta[group.supplierKey]?.status === 'geleverd' ? 'geleverd' : 'open';
+}
+
+function getLineDeliveryState(order, group, line) {
+  const legacyDelivered = getSupplierDeliveryState(order, group) === 'geleverd';
+  return {
+    status: line.leverstatus_bijgewerkt_op
+      ? (line.leverstatus || 'open')
+      : (legacyDelivered ? 'geleverd' : (line.leverstatus || 'open')),
+    expectedDate: line.verwachte_leverdatum || '',
+    note: line.leveringsopmerking || '',
+  };
+}
+
+function getLineDeliveryLabel(status) {
+  return {
+    open: 'Nog niet geleverd',
+    backorder: 'Backorder',
+    gedeeltelijk_geleverd: 'Gedeeltelijk geleverd',
+    geleverd: 'Geleverd',
+    geannuleerd: 'Geannuleerd',
+  }[status] || 'Nog niet geleverd';
+}
+
+function getSupplierDeliverySummary(order, group) {
+  const states = group.lines.map((line) => getLineDeliveryState(order, group, line).status);
+  const allDelivered = states.length > 0 && states.every((status) => ['geleverd', 'geannuleerd'].includes(status));
+  const hasBackorder = states.includes('backorder');
+  const hasPartial = states.some((status) => ['gedeeltelijk_geleverd', 'geleverd'].includes(status));
+  return {
+    allDelivered,
+    label: allDelivered ? 'Geleverd' : hasBackorder ? 'Backorder aanwezig' : hasPartial ? 'Gedeeltelijk geleverd' : 'Nog niet geleverd',
+  };
+}
+
+function getOverallLineDeliveryStatus(order) {
+  const groups = getOrderSupplierGroups(order);
+  const lines = groups.flatMap((group) => group.lines.map((line) => ({
+    ...line,
+    leverstatus: getLineDeliveryState(order, group, line).status,
+  })));
+  if (!lines.length) return 'Besteld';
+  const statuses = lines.map((line) => line.leverstatus || 'open');
+  if (statuses.every((status) => ['geleverd', 'geannuleerd'].includes(status))) return 'Geleverd';
+  if (statuses.some((status) => ['geleverd', 'gedeeltelijk_geleverd'].includes(status))) return 'Gedeeltelijk geleverd';
+  return 'Besteld';
 }
 
 function getOrderDeliveryMeta(order) {

@@ -262,10 +262,12 @@ export async function sendPushNotification(notificationId) {
   return data ?? null;
 }
 
-export async function invokeOrderMail(orderId) {
+export async function invokeOrderMail(orderId, options = {}) {
   const { data, error } = await supabase.functions.invoke('send-aankoopbestelling', {
     body: {
       bestelling_id: orderId,
+      melding_type: options.notificationType ?? 'status',
+      gewijzigde_regel_id: options.lineId ?? null,
     },
   });
 
@@ -482,6 +484,31 @@ export async function updateOrderDeliveryStatus(id, { status, opmerkingen }, act
     });
   } catch {
     // De statuswijziging zelf blijft leidend. De logtabel kan via de optionele SQL worden toegevoegd.
+  }
+
+  return data;
+}
+
+export async function updateOrderLineDelivery(id, payload) {
+  const { data, error } = await supabase
+    .from('aankoop_bestelregels')
+    .update({
+      leverstatus: payload.leverstatus,
+      verwachte_leverdatum: payload.verwachte_leverdatum || null,
+      leveringsopmerking: payload.leveringsopmerking || null,
+      leverstatus_bijgewerkt_op: new Date().toISOString(),
+      leverstatus_bijgewerkt_door: payload.actor || null,
+    })
+    .eq('id', id)
+    .select('*')
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  if (!data) {
+    throw new Error('De leverstatus van dit artikel kon niet worden aangepast. Controleer je rechten en probeer opnieuw.');
   }
 
   return data;
