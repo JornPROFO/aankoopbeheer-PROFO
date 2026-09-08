@@ -42,7 +42,7 @@ from public.locaties locatie
 where lower(locatie.naam) = lower('Jorn Thuis')
   and (
     printer.inventaris_url like '%/hardware/953%'
-    or printer.inventaris_id in ('953', 'PICTURE360-953')
+    or printer.inventaris_id in ('953', 'PICTURE360-953', 'PROFO-PT-20XX-018')
   );
 
 -- Voeg Karima's printer toe of werk hem bij op basis van de unieke inventarislink.
@@ -142,4 +142,4 @@ order by locatie.naam, printer.naam, cartridge.sort_order;
 select id, naam, model, inventaris_id, inventaris_url, locatie_naam
 from public.aankoop_printers
 where inventaris_url like '%/hardware/953%'
-   or inventaris_id in ('953', 'PICTURE360-953');
+   or inventaris_id in ('953', 'PICTURE360-953', 'PROFO-PT-20XX-018');
