@@ -172,7 +172,7 @@ function buildDeliveryUpdateMailPlan(
     throw new Error('De gewijzigde bestelregel kon niet worden gevonden voor de leveringsmelding.');
   }
   const status = getDeliveryStatusLabel(line.leverstatus);
-  const expectedDate = formatDate(line.verwachte_leverdatum);
+  const expectedDate = formatDeliveryDate(line.verwachte_leverdatum);
   const note = String(line.leveringsopmerking || '').trim();
   const body = [
     `Beste ${order.besteller_naam ?? 'collega'},`,
@@ -211,7 +211,7 @@ function getDeliveryStatusLabel(value: unknown) {
   } as Record<string, string>)[String(value || 'open')] || 'Nog niet geleverd';
 }
 
-function formatDate(value: unknown) {
+function formatDeliveryDate(value: unknown) {
   const text = String(value || '').trim();
   if (!text) return '';
   const date = new Date(`${text.slice(0, 10)}T12:00:00`);
