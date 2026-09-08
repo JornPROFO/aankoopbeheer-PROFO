@@ -1568,6 +1568,35 @@ h4 {
   min-width: 0;
 }
 
+.selected-printer-card {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin: 0.75rem 0;
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  background: var(--page);
+}
+
+.selected-printer-card img,
+.ink-option-image {
+  width: 92px;
+  height: 68px;
+  flex: 0 0 auto;
+  object-fit: contain;
+  border: 1px solid var(--line);
+  background: #ffffff;
+}
+
+.selected-printer-card div {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.selected-printer-card span {
+  color: var(--muted);
+}
+
 .ink-check {
   display: flex;
   align-items: center;
@@ -1994,6 +2023,16 @@ h4 {
 
   .ink-option-side {
     justify-items: stretch;
+  }
+
+  .selected-printer-card {
+    align-items: flex-start;
+  }
+
+  .selected-printer-card img,
+  .ink-option-image {
+    width: 76px;
+    height: 58px;
   }
 
   .admin-product-row img {

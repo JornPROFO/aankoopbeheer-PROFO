@@ -1767,6 +1767,18 @@ function renderInkWorkspace() {
           </select>
         </label>
         ${
+          selectedPrinter
+            ? `<div class="selected-printer-card">
+                ${selectedPrinter.image_url ? `<img src="${escapeHtml(selectedPrinter.image_url)}" alt="${escapeHtml(getPrinterLabel(selectedPrinter))}" loading="lazy" />` : ''}
+                <div>
+                  <strong>${escapeHtml(getPrinterLabel(selectedPrinter))}</strong>
+                  <span>${escapeHtml(selectedPrinter.locatie_naam || '')}</span>
+                  ${normalizeHttpUrl(selectedPrinter.inventaris_url) ? `<a class="supplier-link" href="${escapeHtml(normalizeHttpUrl(selectedPrinter.inventaris_url))}" target="_blank" rel="noreferrer">Bekijk in inventaris</a>` : ''}
+                </div>
+              </div>`
+            : ''
+        }
+        ${
           selectedLocationId && !printersForLocation.length
             ? '<div class="empty-state is-compact"><p>Voor deze locatie zijn nog geen printers gekoppeld in beheer.</p></div>'
             : ''
@@ -1821,6 +1833,7 @@ function renderInkOptions(cartridges) {
                   <input type="checkbox" data-ink-toggle data-cartridge-id="${escapeHtml(cartridge.id)}" ${quantity > 0 ? 'checked' : ''} ${orderable ? '' : 'disabled'} />
                   <span class="color-badge color-${escapeHtml(cartridge.kleur).toLowerCase()}">${escapeHtml(cartridge.kleur)}</span>
                 </label>
+                ${cartridge.image_url ? `<img class="ink-option-image" src="${escapeHtml(cartridge.image_url)}" alt="" loading="lazy" />` : ''}
                 <div>
                   <strong>${escapeHtml(getInkColorLabel(cartridge.kleur))}</strong>
                   <span>${escapeHtml(cartridge.naam)}</span>
@@ -3057,6 +3070,7 @@ function renderPrinterAdmin() {
             <label class="field"><span>Model</span><input name="model" value="${escapeHtml(printerValue('model'))}" /></label>
             <label class="field"><span>Inventarisnummer</span><input name="inventaris_id" value="${escapeHtml(printerValue('inventaris_id'))}" placeholder="bv. PROFO-PT-2024-001" /></label>
             <label class="field"><span>Inventarislink</span><input name="inventaris_url" inputmode="url" value="${escapeHtml(printerValue('inventaris_url'))}" placeholder="https://inventaris.picture360.eu/..." /></label>
+            <label class="field"><span>Foto-URL of lokaal afbeeldingspad</span><input name="image_url" value="${escapeHtml(printerValue('image_url'))}" placeholder="/assets/printer.png" /></label>
           </div>
           <label class="field"><span>Volgorde</span><input name="sort_order" type="number" value="${escapeHtml(printerValue('sort_order', 100))}" /></label>
         </section>
@@ -3131,6 +3145,7 @@ function renderCartridgeAdmin() {
             <label class="field"><span>Volgorde</span><input name="sort_order" type="number" value="${escapeHtml(cartridgeValue('sort_order', 100))}" /></label>
           </div>
           <label class="field"><span>Leverancierlink</span><input name="leverancier_url" inputmode="url" value="${escapeHtml(cartridgeValue('leverancier_url'))}" placeholder="https://www.123inkt.nl/..." /></label>
+          <label class="field"><span>Foto-URL of lokaal afbeeldingspad</span><input name="image_url" value="${escapeHtml(cartridgeValue('image_url'))}" placeholder="/assets/cartridge.jpg" /></label>
         </section>
         <label class="toggle-field">
           <input name="actief" type="checkbox" ${cartridgeActive ? 'checked' : ''} />
@@ -3600,6 +3615,7 @@ async function handlePrinterSave(form) {
     model: String(formData.get('model') ?? '').trim(),
     inventaris_id: String(formData.get('inventaris_id') ?? '').trim(),
     inventaris_url: String(formData.get('inventaris_url') ?? '').trim(),
+    image_url: String(formData.get('image_url') ?? '').trim(),
     sort_order: Number(formData.get('sort_order') || 100),
     actief: formData.get('actief') === 'on',
   };
@@ -3644,6 +3660,7 @@ async function handleInkCartridgeSave(form) {
     artikelnummer: String(formData.get('artikelnummer') ?? '').trim(),
     leverancier: String(formData.get('leverancier') ?? '').trim() || '123inkt.nl',
     leverancier_url: String(formData.get('leverancier_url') ?? '').trim(),
+    image_url: String(formData.get('image_url') ?? '').trim(),
     prijs_incl_btw: roundMoney(parseDecimal(formData.get('prijs_incl_btw'))),
     btw_percentage: roundMoney(parseDecimal(formData.get('btw_percentage'))),
     eenheid: String(formData.get('eenheid') ?? '').trim() || 'stuk',
@@ -3697,6 +3714,7 @@ function copyCartridgeToDraft(cartridge) {
     eenheid: String(cartridge.eenheid || 'stuk'),
     sort_order: String(cartridge.sort_order ?? 100),
     leverancier_url: String(cartridge.leverancier_url || ''),
+    image_url: String(cartridge.image_url || ''),
     actief: cartridge.actief !== false,
   };
   persistInkCartridgeDraft();
@@ -5607,6 +5625,7 @@ function readInkCartridgeDraftFromForm(form) {
     eenheid: String(formData.get('eenheid') ?? ''),
     sort_order: String(formData.get('sort_order') ?? ''),
     leverancier_url: String(formData.get('leverancier_url') ?? ''),
+    image_url: String(formData.get('image_url') ?? ''),
     actief: formData.get('actief') === 'on',
   };
 }
