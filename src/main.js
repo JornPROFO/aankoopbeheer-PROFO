@@ -1156,7 +1156,7 @@ function renderShell() {
         </div>
       </div>
       <div class="header-actions">
-        <a class="header-button" href="https://preventiebeheer-profo.vercel.app/">Mijn toepassingen</a>
+        ${String(state.session.user.email || '').trim().toLowerCase() === 'jorn.neeus@profo.be' ? '<a class="header-button" href="https://preventiebeheer-profo.vercel.app/">Mijn toepassingen</a>' : ''}
         <span class="environment-pill">${escapeHtml(userLabel)}</span>
         ${state.installPrompt ? '<button class="header-button" type="button" data-install-app>Installeren</button>' : ''}
         <button class="header-button" type="button" data-sign-out>Afmelden</button>
