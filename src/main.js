@@ -1,6 +1,10 @@
+import { initializeDialogAccessibility } from './ui/dialog-accessibility.js';
 import '@fontsource-variable/inter';
 import './styles/main.css';
+import { initializeFamilyNavigation } from './ui/family-navigation.js';
+initializeFamilyNavigation();
 import './styles/delivery-status.css';
+import './styles/profo-family.css';
 import {
   getCurrentSession,
   onAuthChange,
@@ -48,6 +52,7 @@ import {
 } from './utils/format.js';
 
 const app = document.querySelector('#app');
+initializeDialogAccessibility(app);
 const cartStorageKey = 'profo-aankoopbeheer-cart';
 const inkCartKeyPrefix = 'ink:';
 const orderDraftStorageKey = 'profo-aankoopbeheer-order-draft';
@@ -205,7 +210,13 @@ window.addEventListener('appinstalled', () => {
 
 app.addEventListener('submit', async (event) => {
   const form = event.target;
-
+  if (form.dataset.familyBusy === 'true') { event.preventDefault(); return; }
+  form.dataset.familyBusy = 'true';
+  form.setAttribute('aria-busy', 'true');
+  const buttons = [...form.querySelectorAll('button[type="submit"]')];
+  const disabled = buttons.map(button => button.disabled);
+  buttons.forEach(button => { button.disabled = true; });
+  try {
   if (form.matches('[data-auth-form]')) {
     event.preventDefault();
     await handleAuth(form);
@@ -244,6 +255,11 @@ app.addEventListener('submit', async (event) => {
   if (form.matches('[data-expected-delivery-form]')) {
     event.preventDefault();
     await handleOrderPlaced(form);
+  }
+  } finally {
+    delete form.dataset.familyBusy;
+    form.removeAttribute('aria-busy');
+    buttons.forEach((button, index) => { button.disabled = disabled[index]; });
   }
 });
 
@@ -687,7 +703,7 @@ function getPushStatusMessage() {
   }
 
   if (!pushPublicKey) {
-    return 'Pushmeldingen zijn technisch voorbereid, maar de publieke VAPID-sleutel is nog niet ingesteld.';
+    return 'Pushmeldingen zijn momenteel niet beschikbaar. Je kunt je meldingen hier raadplegen.';
   }
 
   if (getPushPermission() === 'denied') {
@@ -1147,7 +1163,7 @@ function renderShell() {
   const unreadCount = getUnreadNotifications().length;
 
   return `
-    <header class="app-header">
+    <a class="skip-link" href="#main-content">Naar de inhoud</a><header class="app-header">
       <div class="brand-block">
         <span class="brand-logo-box"><img src="/assets/profo-logo.png" alt="PROFO" /></span>
         <div>
@@ -1163,7 +1179,7 @@ function renderShell() {
       </div>
     </header>
     <div class="app-layout">
-      <nav class="sidebar" aria-label="Hoofdnavigatie">
+      <div class="family-nav"><button type="button" class="family-menu-toggle" data-family-menu aria-expanded="false" aria-controls="family-navigation">Menu openen <span aria-hidden="true">+</span></button><nav class="sidebar" id="family-navigation" aria-label="Hoofdnavigatie">
         <span class="nav-section-label">Werkruimte</span>
         ${navLink('start', 'Start', unreadCount, 'home')}
         ${navLink('bestellen', 'Producten', 0, 'package')}
@@ -1177,8 +1193,8 @@ function renderShell() {
         ${admin ? '<span class="nav-section-label">Beheer</span>' : ''}
         ${admin ? navLink('analyse', 'Analyse', 0, 'chart') : ''}
         ${admin ? navLink('beheer', 'Instellingen', 0, 'settings') : ''}
-      </nav>
-      <main class="content">
+      </nav></div>
+      <main class="content" id="main-content" tabindex="-1">
         ${state.setupError ? renderSetupError() : renderCurrentView(admin, approver)}
       </main>
     </div>
