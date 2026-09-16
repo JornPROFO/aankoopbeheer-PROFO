@@ -3,6 +3,7 @@ import { supabase } from '../config/supabase.js';
 const orderSelect = `
   id,
   created_at,
+  updated_at,
   status,
   locatie_id,
   locatie_naam,
@@ -511,6 +512,21 @@ export async function updateOrderLineDelivery(id, payload) {
     throw new Error('De leverstatus van dit artikel kon niet worden aangepast. Controleer je rechten en probeer opnieuw.');
   }
 
+  return data;
+}
+
+export async function changeOrderLine({ orderId, updatedAt, requestId, action, productId = null, quantity = null, lineId = null }) {
+  const { data, error } = await supabase.rpc('aankoop_bestelregel_wijzigen', {
+    p_bestelling_id: orderId,
+    p_updated_at: updatedAt,
+    p_request_id: requestId,
+    p_actie: action,
+    p_product_id: productId,
+    p_aantal: quantity,
+    p_regel_id: lineId,
+  });
+  if (error) throw error;
+  if (!data?.id || !Array.isArray(data.regels)) throw new Error('De wijziging kon niet worden bevestigd. Vernieuw de bestelling voordat je verdergaat.');
   return data;
 }
 

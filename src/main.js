@@ -5,6 +5,8 @@ import { initializeFamilyNavigation } from './ui/family-navigation.js';
 initializeFamilyNavigation();
 import './styles/delivery-status.css';
 import './styles/profo-family.css';
+import './styles/order-editing.css';
+import { canEditOrderLines, validateOrderLineQuantity } from './utils/orderEditing.js';
 import {
   getCurrentSession,
   onAuthChange,
@@ -16,6 +18,7 @@ import {
 } from './services/authService.js';
 import {
   createOrder,
+  changeOrderLine,
   createApproverNotifications,
   createNotification,
   disablePushSubscription,
@@ -161,6 +164,11 @@ const state = {
   installPrompt: null,
   pushBusy: false,
   expectedDeliveryOrderId: '',
+  editingOrderId: '',
+  orderLineBusy: false,
+  orderLineNotice: '',
+  orderLineError: '',
+  orderLineRequests: new Map(),
 };
 
 onAuthChange(async (session, event) => {
@@ -190,6 +198,7 @@ document.addEventListener('visibilitychange', () => {
 
 window.addEventListener('hashchange', () => {
   state.view = getRoute();
+  state.editingOrderId = '';
   render();
 });
 
@@ -230,6 +239,15 @@ app.addEventListener('submit', async (event) => {
   if (form.matches('[data-order-form]')) {
     event.preventDefault();
     await handleOrder(form);
+  }
+
+  if (form.matches('[data-add-order-line-form]')) {
+    event.preventDefault();
+    const values = new FormData(form);
+    await handleOrderLineChange(form.dataset.orderId, 'toevoegen', {
+      productId: Number(values.get('product_id')),
+      quantity: Number(values.get('aantal')),
+    });
   }
 
   if (form.matches('[data-product-form]')) {
@@ -354,6 +372,23 @@ app.addEventListener('click', async (event) => {
 
   if (target.matches('[data-copy-order]')) {
     copyOrderToCart(target.dataset.copyOrder);
+  }
+
+  if (target.matches('[data-edit-order-lines]')) {
+    state.editingOrderId = state.editingOrderId === target.dataset.editOrderLines ? '' : target.dataset.editOrderLines;
+    state.orderLineNotice = '';
+    state.orderLineError = '';
+    render();
+    app.querySelector('[data-add-order-line-form] select')?.focus();
+  }
+
+  if (target.matches('[data-remove-order-line]')) {
+    await handleOrderLineChange(target.dataset.orderId, 'verwijderen', { lineId: Number(target.dataset.removeOrderLine) });
+  }
+
+  if (target.matches('[data-refresh-order-lines]')) {
+    state.orderLineError = '';
+    await bootstrapData();
   }
 
   if (target.matches('[data-print-external-entry]')) {
@@ -910,7 +945,7 @@ function stopPassiveRefresh() {
 }
 
 async function refreshAankoopDataSilently() {
-  if (!state.session || !state.appUser || state.loading || passiveRefreshRunning || document.hidden) {
+  if (!state.session || !state.appUser || state.loading || passiveRefreshRunning || document.hidden || state.editingOrderId || state.orderLineBusy) {
     return;
   }
 
@@ -945,7 +980,7 @@ function getPassiveRefreshSignature() {
     .sort((a, b) => Number(a) - Number(b))
     .join(',');
   const orderState = state.data.orders
-    .map((order) => `${order.id}:${getNormalizedStatus(order.status)}`)
+    .map((order) => `${order.id}:${getNormalizedStatus(order.status)}:${order.updated_at}:${order.totaal_incl_btw}`)
     .sort()
     .join(',');
 
@@ -2400,6 +2435,10 @@ function renderOrderCard(order, admin, approver) {
           .join('')}
       </div>
       ${freeText ? `<p class="order-note">${escapeHtml(freeText)}</p>` : ''}
+      ${canEditOrderLines(order, admin) ? `
+        <button class="ghost-button" type="button" data-edit-order-lines="${escapeHtml(order.id)}" aria-expanded="${String(state.editingOrderId) === String(order.id)}" ${state.orderLineBusy ? 'disabled' : ''}>${String(state.editingOrderId) === String(order.id) ? 'Bestelregels sluiten' : 'Bestelregels aanpassen'}</button>
+        ${String(state.editingOrderId) === String(order.id) ? renderOrderLineEditor(order) : ''}
+      ` : ''}
       ${renderSupplierDeliveryPanel(order)}
       ${
         actionStatuses.length
@@ -2420,6 +2459,69 @@ function renderOrderCard(order, admin, approver) {
       </details>
     </article>
   `;
+}
+
+function renderOrderLineEditor(order) {
+  const products = state.data.products.filter(isProductOrderable).sort((a, b) => a.naam.localeCompare(b.naam, 'nl'));
+  const disabled = state.orderLineBusy ? 'disabled' : '';
+  return `<section class="order-line-editor" aria-label="Bestelregels aanpassen voor bestelling ${escapeHtml(order.id)}" aria-busy="${state.orderLineBusy}">
+    <h4>Bestelregels aanpassen</h4>
+    <p>Voeg een catalogusproduct toe of verwijder een regel voordat je extern bestelt. Elke wijziging wordt meteen opgeslagen; de totalen en invoerlijst worden bijgewerkt. De goedkeuringsstatus blijft behouden.</p>
+    ${state.orderLineError ? `<p role="alert" class="order-editor-notice">${escapeHtml(state.orderLineError)}</p><button type="button" class="ghost-button" data-refresh-order-lines ${disabled}>Bestelling vernieuwen</button>` : ''}
+    ${state.orderLineNotice ? `<p role="status" class="order-editor-notice">${escapeHtml(state.orderLineNotice)}</p>` : ''}
+    <ul>${order.regels.map(line => `<li>
+      <span>${escapeHtml(line.aantal)} × ${escapeHtml(line.product_naam)}<br><small>${escapeHtml(line.eenheid)} · ${formatCurrency(line.lijn_totaal_incl_btw)}</small></span>
+      <button type="button" class="ghost-button" data-order-id="${escapeHtml(order.id)}" data-remove-order-line="${escapeHtml(line.id)}" aria-label="Verwijder ${escapeHtml(line.product_naam)}" ${disabled} ${order.regels.length <= 1 ? 'disabled title="Behoud minstens één bestelregel"' : ''}>Verwijderen</button>
+    </li>`).join('')}</ul>
+    <form data-add-order-line-form data-order-id="${escapeHtml(order.id)}">
+      <label class="field"><span>Product toevoegen</span><select name="product_id" required ${disabled}>
+        <option value="">Kies een product</option>
+        ${products.map(product => `<option value="${escapeHtml(product.id)}">${escapeHtml(product.naam)} · ${escapeHtml(product.eenheid)} · ${escapeHtml(getProductPriceLabel(product))}${Number(product.minimum_bestelhoeveelheid) > 1 ? ` · bestelstap ${escapeHtml(product.minimum_bestelhoeveelheid)}` : ''}</option>`).join('')}
+      </select></label>
+      <label class="field"><span>Aantal</span><input name="aantal" type="number" min="1" max="10000" step="1" value="1" required ${disabled}></label>
+      <button class="primary-button" type="submit" ${disabled}>Toevoegen en opslaan</button>
+    </form>
+  </section>`;
+}
+
+async function handleOrderLineChange(orderId, action, values) {
+  if (state.orderLineBusy) return;
+  const order = state.data.orders.find(item => String(item.id) === String(orderId));
+  const admin = isAdminUser(state.appUser, state.session?.user?.email);
+  if (!canEditOrderLines(order, admin)) return;
+  state.orderLineError = '';
+  state.orderLineNotice = '';
+  const product = state.data.products.find(item => Number(item.id) === values.productId);
+  const line = order.regels.find(item => Number(item.id) === values.lineId);
+  if (action === 'toevoegen' && (!isProductOrderable(product)
+      || !validateOrderLineQuantity(values.quantity, Number(product.minimum_bestelhoeveelheid)))) {
+    state.orderLineError = 'Kies een bestelbaar product en een geheel aantal volgens de bestelstap.';
+    render();
+    return;
+  }
+  if (action === 'verwijderen') {
+    if (!line || order.regels.length <= 1) return;
+    if (!window.confirm(`Verwijder ${line.aantal} × ${line.product_naam} uit bestelling ${order.id}? Het totaal daalt met ${formatCurrency(line.lijn_totaal_incl_btw)}. De oorspronkelijke regel blijft in de wijzigingshistoriek bewaard.`)) return;
+  }
+  const key = JSON.stringify({ orderId: order.id, action, ...values });
+  const request = state.orderLineRequests.get(key) || { id: crypto.randomUUID(), updatedAt: order.updated_at };
+  state.orderLineRequests.set(key, request);
+  state.orderLineBusy = true;
+  render();
+  try {
+    const updated = await changeOrderLine({ orderId: order.id, updatedAt: request.updatedAt, requestId: request.id, action, ...values });
+    state.data.orders = state.data.orders.map(item => String(item.id) === String(order.id) ? updated : item);
+    state.orderLineRequests.delete(key);
+    state.orderLineNotice = `${action === 'toevoegen' ? 'Product toegevoegd' : 'Bestelregel verwijderd'}. Nieuw totaal: ${formatCurrency(updated.totaal_incl_btw)}. De wijziging is vastgelegd.`;
+  } catch (error) {
+    // Behoud het request-id bij een onzekere netwerkuitkomst: herhalen is veilig.
+    if (error.code === '40001') state.orderLineRequests.delete(key);
+    state.orderLineError = error.message || 'Opslaan kon niet worden bevestigd. Probeer dezelfde wijziging opnieuw of vernieuw de bestelling.';
+  } finally {
+    state.orderLineBusy = false;
+    render();
+    app.querySelector('[data-add-order-line-form] select')?.focus();
+  }
 }
 
 function renderExpectedDeliveryModal() {

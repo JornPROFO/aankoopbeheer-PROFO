@@ -1,0 +1,14 @@
+.order-line-editor { margin: 16px 0; padding: 18px; border: 1px solid #ce5f5a; border-radius: 12px; background: #f9f9f9; }
+.order-line-editor h4 { margin: 0 0 8px; color: #891811; }
+.order-line-editor p { margin: 8px 0 14px; }
+.order-line-editor ul { list-style: none; padding: 0; }
+.order-line-editor li { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid #f5dedd; }
+.order-line-editor li span { min-width: 0; overflow-wrap: anywhere; }
+.order-line-editor form { display: grid; grid-template-columns: minmax(0, 1fr) 110px; gap: 12px; margin-top: 18px; }
+.order-line-editor select { width: 100%; min-width: 0; }
+.order-line-editor form button { grid-column: 1 / -1; justify-self: start; }
+.order-line-editor .order-editor-notice { padding: 10px; background: #f5dedd; border-radius: 8px; }
+@media (max-width: 620px) {
+  .order-line-editor form { grid-template-columns: minmax(0, 1fr); }
+  .order-line-editor li { align-items: flex-start; flex-direction: column; gap: 8px; }
+}
