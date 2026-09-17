@@ -1,0 +1,14 @@
+begin;
+update public.aankoop_producten set image_url='/assets/products/catalogus-2.jpg' where id=2 and image_url='https://www.123schoon.nl/image/Allesreiniger_Limoen_1_liter_123schoon_huismerk_SDR06047_m1_big.jpg';
+update public.aankoop_producten set image_url='/assets/products/catalogus-11.jpg' where id=11 and image_url='https://www.123inkt.be/image/Douwe_Egberts_Lungo_Original_koffiecups_20_stuks_4028222_423908_m2_big.jpg';
+update public.aankoop_producten set image_url='/assets/products/catalogus-13.jpg' where id=13 and image_url='https://www.123inkt.be/image/123inkt_Gold_medium_roast_koffiebonen_1_kg_52207C_300968_m1_big.jpg';
+update public.aankoop_producten set image_url='/assets/products/catalogus-15.jpg' where id=15 and image_url='https://www.123inkt.be/image/123inkt_koffiepads_Regular_36_stuks_52170C_301170_m1_big.jpg';
+update public.aankoop_producten set image_url='/assets/products/catalogus-17.jpg' where id=17 and image_url='https://www.123inkt.be/image/123inkt_suikersticks_500_stuks_62411C_300725_m1_big.jpg';
+update public.aankoop_producten set image_url='/assets/products/catalogus-18.jpg' where id=18 and image_url='https://www.123inkt.be/image/123inkt_creamersticks_500_stuks_61709C_300724_m1_big.jpg';
+update public.aankoop_producten set image_url='/assets/products/catalogus-21.jpg' where id=21 and image_url='https://www.123inkt.be/image/Douwe_Egberts_Aroma_Rood_oploskoffie_200_g_422010_m1_big.jpg';
+update public.aankoop_producten set image_url='/assets/products/catalogus-23.jpg' where id=23 and image_url='https://www.123inkt.be/image/123inkt_Traditional_snelfilterkoffie_1_kg_300974C_300975_52770C_300975_m1_big.jpg';
+update public.aankoop_producten set image_url='/assets/products/catalogus-64.jpg' where id=64 and image_url='https://www.123inkt.be/image/Combideal%3A_123inkt_thee_3_smaken_300_stuks_302060_m1_big.jpg';
+update public.aankoop_producten set image_url='/assets/products/catalogus-65.jpg' where id=65 and image_url='https://www.123schoon.nl/image/Q-Nomic_Power_AA__MN1500__LR6_Alkaline_Batterij_%7C_24_stuks_AQN00010_m2_big.jpg';
+update public.aankoop_producten set image_url='/assets/products/catalogus-66.jpg' where id=66 and image_url='https://www.123inkt.be/image/123inkt_document_lamineerhoes_A4_glanzend_2x80_micron_100_stuks_3740400C_3740489C_5306114C_74780000C_IB585036C_300256_m1_big.jpg';
+update public.aankoop_producten set image_url='/assets/products/catalogus-67.jpg' where id=67 and image_url='https://www.123schoon.nl/image/Q-Nomic_Power_AAA__MN2400__LR03_Alkaline_Batterij_24_stuks_AQN00012_m2_big.jpg';
+commit;
