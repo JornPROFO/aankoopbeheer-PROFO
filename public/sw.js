@@ -1,4 +1,4 @@
-const CACHE_NAME = 'profo-aankoopbeheer-v20260904-light';
+const CACHE_NAME = 'profo-aankoopbeheer-v20260917-productfotos';
 const CORE_ASSETS = [
   '/',
   '/manifest.webmanifest',

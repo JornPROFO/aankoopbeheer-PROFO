@@ -71,10 +71,9 @@ const inkDraftStorageKey = 'profo-aankoopbeheer-ink-draft';
 const inkCartridgeDraftStorageKey = 'profo-aankoopbeheer-ink-cartridge-draft';
 const analysisFiltersStorageKey = 'profo-aankoopbeheer-analysis-filters';
 const orderFiltersStorageKey = 'profo-aankoopbeheer-order-filters';
-const defaultImage = '/assets/gevouwen-handdoeken-voorbeeld.png';
+const defaultImage = '/assets/productfoto-ontbreekt.svg';
 const incompleteProductNamePattern = /(nog te bepalen|ander product)/i;
 const ehboCategory = 'Veiligheid/EHBO';
-const ehboDefaultImage = '/assets/ehbo-koffer-a-aanvulling.svg';
 const defaultDocumentTitle = 'PROFO Aankoopbeheer';
 const supplierDeliveryMetaLabel = 'Leveringen leveranciers';
 const expectedDeliveryMetaLabel = 'Verwachte leverdatum';
@@ -2062,8 +2061,8 @@ function renderProductCatalog(products, options = {}) {
 }
 
 function renderProductCard(product) {
-  const image = product.image_url || (isEhboProduct(product) ? ehboDefaultImage : defaultImage);
-  const fallbackImage = isEhboProduct(product) ? ehboDefaultImage : defaultImage;
+  const image = product.image_url || defaultImage;
+  const fallbackImage = defaultImage;
   const step = Number(product.minimum_bestelhoeveelheid || 1);
 
   return `
@@ -2107,8 +2106,8 @@ function renderProductPreview() {
     return '';
   }
 
-  const image = product.image_url || (isEhboProduct(product) ? ehboDefaultImage : defaultImage);
-  const fallbackImage = isEhboProduct(product) ? ehboDefaultImage : defaultImage;
+  const image = product.image_url || defaultImage;
+  const fallbackImage = defaultImage;
 
   return `
     <div class="image-modal" role="dialog" aria-modal="true" aria-labelledby="product-preview-title">
@@ -2133,8 +2132,8 @@ function renderCartProductImage(product) {
   if (product.source_type === 'ink') {
     return `<span class="color-badge color-${escapeHtml(product.kleur || 'bk').toLowerCase()}" aria-label="Inktkleur ${escapeHtml(product.kleur || 'BK')}">${escapeHtml(product.kleur || 'BK')}</span>`;
   }
-  const image = product.image_url || (isEhboProduct(product) ? ehboDefaultImage : defaultImage);
-  const fallbackImage = isEhboProduct(product) ? ehboDefaultImage : defaultImage;
+  const image = product.image_url || defaultImage;
+  const fallbackImage = defaultImage;
   return `<img class="cart-product-image" src="${escapeHtml(image)}" data-image-fallback="${escapeHtml(fallbackImage)}" alt="${escapeHtml(product.naam)}" width="64" height="64" loading="lazy" decoding="async" />`;
 }
 
@@ -2150,6 +2149,7 @@ function handleCatalogImageError(event) {
   }
 
   image.dataset.fallbackApplied = 'true';
+  image.alt = image.alt ? 'Geen foto beschikbaar voor ' + image.alt : 'Geen productfoto beschikbaar';
   image.src = fallback;
 }
 
