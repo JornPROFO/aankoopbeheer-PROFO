@@ -1,0 +1,8 @@
+.receipt-panel { margin-block: 1rem; padding: 1rem; border: 1px solid #ce5f5a; border-radius: .75rem; background: #f9f9f9; }
+.receipt-panel h4 { margin-top: 0; color: #891811; }
+.receipt-panel p, .receipt-panel li { line-height: 1.5; }
+.receipt-lines { display: grid; gap: .75rem; margin-block: 1rem; }
+.receipt-lines .field { display: grid; grid-template-columns: minmax(0, 1fr) 6rem; gap: 1rem; align-items: center; }
+.receipt-lines small { display: block; }
+.receipt-panel textarea { min-height: 5rem; width: 100%; }
+@media(max-width: 520px) { .receipt-lines .field { grid-template-columns: minmax(0, 1fr) 4.5rem; gap: .5rem; } }

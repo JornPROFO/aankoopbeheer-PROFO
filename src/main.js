@@ -1,3 +1,7 @@
+import './styles/receipt.css';
+import { renderReceiptPanel } from './ui/receipt.js';
+import { receiptLines, validateReceipt, receiptRoute } from './utils/receipt.js';
+import { processReceipt } from './services/aankoopService.js';
 import { initializeDialogAccessibility } from './ui/dialog-accessibility.js';
 import '@fontsource-variable/inter';
 import './styles/main.css';
@@ -54,6 +58,9 @@ import {
   roundMoney,
 } from './utils/format.js';
 
+let receiptBusy = false;
+const receiptAttempts = new Map();
+const receiptDrafts = new Map();
 const app = document.querySelector('#app');
 initializeDialogAccessibility(app);
 const cartStorageKey = 'profo-aankoopbeheer-cart';
@@ -396,12 +403,14 @@ app.addEventListener('click', async (event) => {
   }
 
   if (target.matches('[data-reset-order-filters]')) {
+    if(receiptRoute(window.location.hash)) window.location.hash='#bestellingen';
     state.orderFilters = normalizeOrderFilters({});
     persistOrderFilters();
     render();
   }
 
   if (target.matches('[data-order-segment]')) {
+    if(receiptRoute(window.location.hash)) window.location.hash='#bestellingen';
     state.orderSegment = target.dataset.orderSegment || 'active';
     state.orderFilters.status = '';
     persistOrderFilters();
@@ -945,7 +954,7 @@ function stopPassiveRefresh() {
 }
 
 async function refreshAankoopDataSilently() {
-  if (!state.session || !state.appUser || state.loading || passiveRefreshRunning || document.hidden || state.editingOrderId || state.orderLineBusy) {
+  if (!state.session || !state.appUser || state.loading || passiveRefreshRunning || document.hidden || state.editingOrderId || state.orderLineBusy || receiptBusy || document.querySelector('[data-receipt-form]')) {
     return;
   }
 
@@ -2305,6 +2314,8 @@ function renderOrders(admin, approver) {
     </section>
     ${state.notice ? `<div class="notice-panel">${escapeHtml(state.notice)}</div>` : ''}
     ${state.mailWarning ? `<div class="warning-panel">${escapeHtml(state.mailWarning)}</div>` : ''}
+    ${state.error ? `<div class="warning-panel" role="alert">${escapeHtml(state.error)}</div>` : ''}
+    ${receiptRoute(window.location.hash) ? '<p><a class="text-link" href="#bestellingen">Alle bestellingen bekijken</a></p>' : ''}
     ${renderOrderSegments(admin)}
     ${renderOrderFilters(admin, approver)}
     ${admin ? renderExternalEntryPanel() : ''}
@@ -2439,6 +2450,7 @@ function renderOrderCard(order, admin, approver) {
         <button class="ghost-button" type="button" data-edit-order-lines="${escapeHtml(order.id)}" aria-expanded="${String(state.editingOrderId) === String(order.id)}" ${state.orderLineBusy ? 'disabled' : ''}>${String(state.editingOrderId) === String(order.id) ? 'Bestelregels sluiten' : 'Bestelregels aanpassen'}</button>
         ${String(state.editingOrderId) === String(order.id) ? renderOrderLineEditor(order) : ''}
       ` : ''}
+      ${renderReceiptPanel(order, state.appUser?.id, admin, receiptBusy, receiptDrafts.get(String(order.id)))}
       ${renderSupplierDeliveryPanel(order)}
       ${
         actionStatuses.length
@@ -4135,7 +4147,12 @@ async function notifyOrderStatusChanged(order, status) {
     state.mailWarning = 'De status is aangepast. Voer nog de SQL voor interne meldingen uit zodat de betrokken collega dit ook in de app ziet.';
   }
 
-  return sendOrderMail(order, 'De status is aangepast en de interne melding/pushmelding is verwerkt.');
+  const mailResult = await sendOrderMail(order, 'De status is aangepast en de interne melding/pushmelding is verwerkt.');
+  if (normalizedStatus === 'Besteld') {
+    try { await processReceipt({bestelling_id:order.id, actie:'vragen'}); }
+    catch(error) { state.mailWarning = 'De bestelling is opgeslagen. De ontvangstvraag kon niet volledig worden verstuurd: ' + error.message; }
+  }
+  return mailResult;
 }
 
 async function sendOrderMail(order, fallbackContext, options = {}) {
@@ -4791,6 +4808,7 @@ function notificationStillNeedsAttention(notification) {
   const type = String(notification.type || '').toLowerCase();
   const status = getNormalizedStatus(order.status);
 
+  if (type === 'ontvangst_gevraagd') return ['Besteld','Gedeeltelijk geleverd'].includes(status);
   if (type === 'status_goedgekeurd') {
     return ['Goedgekeurd', 'In behandeling'].includes(status);
   }
@@ -5821,7 +5839,7 @@ function persistAnalysisFilters() {
 }
 
 function getRoute() {
-  const route = window.location.hash.replace('#', '');
+  const route = window.location.hash.replace('#', '').split('?')[0];
   return ['start', 'bestellen', 'ehbo', 'inkt', 'winkelmand', 'bestellingen', 'handleiding', 'privacy', 'analyse', 'beheer'].includes(route) ? route : 'start';
 }
 
@@ -5834,3 +5852,43 @@ function clearPrivateLocalData() {
   state.productDraft = {};
   state.inkCartridgeDraft = {};
 }
+
+app.addEventListener('click', async (event) => {
+  const request = event.target.closest('[data-request-receipt]');
+  if (request && !receiptBusy) {
+    receiptBusy = true; state.error = ''; render();
+    try {
+      await processReceipt({bestelling_id:Number(request.dataset.requestReceipt), actie:'vragen'});
+      state.notice = 'De vraag om ontvangst te bevestigen is per e-mail naar de besteller verstuurd.';
+    } catch(error) { state.error = error.message; }
+    finally { const receiptError = state.error; receiptBusy = false; await bootstrapData(); state.error = receiptError; render(); }
+  }
+  const all = event.target.closest('[data-receipt-all]');
+  if(all && !receiptBusy) {
+    const order = state.data.orders.find(o=>String(o.id)===all.dataset.receiptAll);
+    const form = all.closest('form');
+    for(const line of receiptLines(order)) form.elements.namedItem('receipt-'+line.id).value = line.aantal;
+  }
+});
+app.addEventListener('submit', async (event) => {
+  const form = event.target.closest('[data-receipt-form]');
+  if(!form) return;
+  event.preventDefault();
+  if(receiptBusy) return;
+  const order = state.data.orders.find(o=>String(o.id)===form.dataset.receiptForm);
+  receiptDrafts.set(String(order.id),Object.fromEntries(new FormData(form)));
+  try {
+    const values = new FormData(form);
+    const quantities = validateReceipt(order, Object.fromEntries(receiptLines(order).map(line=>[line.id,Number(values.get('receipt-'+line.id))])));
+    const note = String(values.get('receipt-note')||'').trim();
+    const signature = JSON.stringify([order.id,quantities,note]);
+    if(!receiptAttempts.has(signature)) receiptAttempts.set(signature,crypto.randomUUID());
+    receiptBusy = true; state.error = ''; render();
+    await processReceipt({actie:'bevestigen',bestelling_id:order.id,updated_at:order.updated_at,
+      request_id:receiptAttempts.get(signature),aantallen:quantities,opmerking:note});
+    receiptDrafts.delete(String(order.id));
+    state.notice = 'Je ontvangstbevestiging is opgeslagen. Aankoopbeheer heeft een melding gekregen.';
+    window.location.hash = '#bestellingen?ontvangst=' + order.id;
+  } catch(error) { state.error = error.message; }
+  finally { const receiptError = state.error; receiptBusy = false; await bootstrapData(); state.error = receiptError; render(); }
+});

@@ -141,6 +141,10 @@ export async function getOrders() {
       .range(from, to)));
   }
 
+  const [requests, receipts] = await Promise.all([
+    runPaged((from,to) => supabase.from('aankoop_ontvangstverzoeken').select('*').order('bestelling_id').range(from,to)),
+    runPaged((from,to) => supabase.from('aankoop_ontvangstbevestigingen').select('*').order('created_at', {ascending:false}).order('id').range(from,to)),
+  ]);
   const linesByOrder = lines.reduce((map, line) => {
     const group = map.get(line.bestelling_id) ?? [];
     group.push(line);
@@ -151,6 +155,8 @@ export async function getOrders() {
   return orders.map((order) => ({
     ...order,
     regels: linesByOrder.get(order.id) ?? [],
+    ontvangstverzoek: requests.find((item) => String(item.bestelling_id) === String(order.id)) || null,
+    ontvangst: receipts.find((item) => String(item.bestelling_id) === String(order.id)) || null,
   }));
 }
 
@@ -558,4 +564,10 @@ async function runPaged(buildRequest, pageSize = 1000) {
     rows.push(...page);
     if (page.length < pageSize) return rows;
   }
+}
+
+export async function processReceipt(payload) {
+  const {data,error} = await supabase.functions.invoke('aankoop-ontvangst', {body:payload});
+  if(error) throw new Error(await getFunctionErrorMessage(error));
+  return data;
 }
