@@ -4821,6 +4821,8 @@ function notificationStillNeedsAttention(notification) {
 }
 
 function getFilteredOrders(admin, approver = false) {
+  const receiptId = receiptRoute(window.location.hash);
+  if (receiptId) return getVisibleOrders(admin, approver).filter((order) => String(order.id) === receiptId);
   return getVisibleOrders(admin, approver).filter(
     (order) => orderMatchesOrderSegment(order, state.orderSegment, admin) && orderMatchesOrderFilters(order, state.orderFilters),
   );
@@ -5844,6 +5846,8 @@ function getRoute() {
 }
 
 function clearPrivateLocalData() {
+  receiptDrafts.clear();
+  receiptAttempts.clear();
   [cartStorageKey, orderDraftStorageKey, productDraftStorageKey, inkDraftStorageKey, inkCartridgeDraftStorageKey, analysisFiltersStorageKey, orderFiltersStorageKey]
     .forEach((key) => localStorage.removeItem(key));
   state.cart = {};
