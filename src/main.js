@@ -8,6 +8,8 @@ import './styles/main.css';
 import { initializeFamilyNavigation } from './ui/family-navigation.js';
 initializeFamilyNavigation();
 import './styles/delivery-status.css';
+import { openSupplierCart } from './supplierCartView.js';
+import { canUseSupplierCart, hasSupportedSupplier } from './services/supplierCartModel.js';
 import './styles/profo-family.css';
 import './styles/order-editing.css';
 import { canEditOrderLines, validateOrderLineQuantity } from './utils/orderEditing.js';
@@ -178,6 +180,7 @@ const state = {
 };
 
 onAuthChange(async (session, event) => {
+  if (state.session?.user?.id !== session?.user?.id) document.querySelector('[data-supplier-cart-dialog]')?.remove();
   state.session = session;
 
   if (event === 'PASSWORD_RECOVERY') {
@@ -325,7 +328,15 @@ app.addEventListener('click', async (event) => {
     return;
   }
 
+  if (target.matches('[data-supplier-cart]')) {
+    if (canUseSupplierCart(state.appUser, state.session?.user?.email)) {
+      await openSupplierCart(target.dataset.supplierCart);
+    }
+    return;
+  }
+
   if (target.matches('[data-sign-out]')) {
+    document.querySelector('[data-supplier-cart-dialog]')?.remove();
     await signOut();
     clearPrivateLocalData();
     stopPassiveRefresh();
@@ -2452,6 +2463,7 @@ function renderOrderCard(order, admin, approver) {
       ` : ''}
       ${renderReceiptPanel(order, state.appUser?.id, admin, receiptBusy, receiptDrafts.get(String(order.id)))}
       ${renderSupplierDeliveryPanel(order)}
+      ${canUseSupplierCart(state.appUser, state.session?.user?.email) && ['Goedgekeurd', 'In behandeling'].includes(normalizedStatus) && hasSupportedSupplier(order, state.data.products) ? `<div class="record-actions"><button class="primary-button" type="button" data-supplier-cart="${escapeHtml(order.id)}">Vul winkelwagen bij leverancier</button><small>123inkt.be / 123schoon.nl · begeleide handmatige controle</small></div>` : ''}
       ${
         actionStatuses.length
           ? `<div class="record-actions">

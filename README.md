@@ -44,6 +44,8 @@ docs/mail-en-dns-resend.md
 
 ## Supabase
 
+De begeleide winkelwagenoverdracht naar 123inkt.be en 123schoon.nl, uitsluitend voor Jorn en Kathleen, staat beschreven in [docs/winkelwagenoverdracht.md](docs/winkelwagenoverdracht.md). Activeer hiervoor de aanvullende SQL `supabase/manual-sql/20260928_aankoop_winkelwagenoverdracht.sql`. Deze versie ondersteunt handmatige productcontrole en registratie; er wordt niet automatisch afgerekend of besteld.
+
 Voer eerst dit bestand uit in de Supabase SQL-editor:
 
 ```text

@@ -1,0 +1,16 @@
+<!doctype html><html lang="nl"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Winkelwagen — UI-test</title><body><button id="open">Open testbestelling</button><button id="fail">Test ontbrekende database-uitbreiding</button><script type="module">
+// Test harness uses the production dialog with a fake persistence boundary.
+// No supplier mutation, production data or auth session is used by this fixture.
+import '../src/styles/main.css';
+import { openSupplierCart } from '../src/supplierCartView.js';
+const snapshot = { bestelling_id: 9001, opmerking: 'Test: lever aan het secretariaat.', lines: [
+  {id:1,product_id:1,product_naam:'Stoffer en blik rood',product_omschrijving:'Rode set met rubberrand',aantal:3,eenheid:'set',catalogus_eenheid:'set',leverancier:'123schoon.nl',leverancier_url:'{"artikelnummer":"SDR06503","url":"https://www.123schoon.nl/123schoon-Stoffer-en-blik-kunststof-met-rubberrand-rood-123schoon-huismerk-i19920.html"}'},
+  {id:2,product_id:2,product_naam:'Papier',product_omschrijving:'A4, 80 g/m²',aantal:2,eenheid:'doos',leverancier:'123inkt.be',leverancier_url:'ONBEKEND-999'},
+  {id:3,product_id:3,product_naam:'Afwijkende verpakking',aantal:1,eenheid:'pak 10',catalogus_eenheid:'pak 20',leverancier:'123schoon.nl',leverancier_url:'ABC'},
+]};
+let events = [];
+const run = {id:'test-run',created_at:new Date().toISOString(),actor_id:'test-Jorn',snapshot};
+const api = {previewTransfer:async()=>snapshot,startTransfer:async()=>run,getTransferEvents:async()=>[...events],getTransferHistory:async()=>[run],recordTransferResult:async(id,line,result,reason,qty,exact)=>{ const event={id:events.length+1,regel_id:line,resultaat:result,reden:reason,gecontroleerd_aantal:qty,exact_gecontroleerd:exact,created_at:new Date().toISOString(),actor_id:'test-Jorn'};events.push(event);return event; }};
+document.querySelector('#open').onclick=()=>openSupplierCart(9001,api);
+document.querySelector('#fail').onclick=()=>openSupplierCart(9001,{previewTransfer:async()=>{throw Error('Database-uitbreiding ontbreekt. Er is geen leveranciershandeling uitgevoerd.');}});
+</script></body></html>

@@ -1,0 +1,66 @@
+// Install isolated test runtime: npm install --prefix tmp/cart-test-runtime --cache tmp/npm-cache --no-save --package-lock=false @electric-sql/pglite@0.3.14
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { PGlite } from '../tmp/cart-test-runtime/node_modules/@electric-sql/pglite/dist/index.js';
+
+test('database: identity, authorization, restart, audit, failures and unchanged order status', async () => {
+  const db = new PGlite();
+  await db.exec(`
+    create role anon; create role authenticated; create schema auth;
+    create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('test.uid',true),'')::uuid $$;
+    create function auth.jwt() returns jsonb language sql stable as $$ select jsonb_build_object('email',current_setting('test.email',true)) $$;
+    grant usage on schema auth to authenticated, anon;
+    create table public.gebruikers(id bigint primary key, auth_user_id uuid, email text, actief boolean);
+    create table public.aankoop_bestellingen(id bigint primary key, status text, opmerkingen text);
+    create table public.aankoop_producten(id bigint primary key, naam text, eenheid text, leverancier text, leverancier_url text);
+    create table public.aankoop_bestelregels(id bigint primary key, bestelling_id bigint, product_id bigint, product_naam text, product_omschrijving text, aantal integer, eenheid text);
+    insert into gebruikers values (1,'00000000-0000-0000-0000-000000000001','jorn.neeus@profo.be',true),(2,'00000000-0000-0000-0000-000000000002','kathleen.nerinckx@profo.be',true),(3,'00000000-0000-0000-0000-000000000003','ander@profo.be',true);
+    insert into aankoop_bestellingen values (1,'Goedgekeurd','test'),(2,'Ter goedkeuring','');
+    insert into aankoop_producten values (1,'Test','doos','123inkt.be','ABC');
+    insert into aankoop_bestelregels values (1,1,1,'Test','variant A',3,'doos'),(2,1,1,'Test 2','variant B',2,'doos'),(3,2,1,'Test','',1,'doos');
+    grant select on gebruikers,aankoop_bestellingen,aankoop_bestelregels,aankoop_producten to authenticated;
+    grant update on aankoop_bestellingen to authenticated;
+  `);
+  const sql = await readFile(new URL('../supabase/manual-sql/20260928_aankoop_winkelwagenoverdracht.sql', import.meta.url), 'utf8');
+  await db.exec(sql);
+  await db.exec(sql); // Redeploy must be safe.
+  const login = async (id,email) => { await db.exec('reset role'); await db.query("select set_config('test.uid',$1,false),set_config('test.email',$2,false)",[id,email]); await db.exec('set role authenticated'); };
+  const jorn = '00000000-0000-0000-0000-000000000001';
+  await login(jorn,'jorn.neeus@profo.be');
+  const snapshot = (await db.query('select aankoop_winkelwagen_snapshot(1) as s')).rows[0].s;
+  const start = async () => (await db.query('select (aankoop_winkelwagen_start(1,$1::jsonb)).*',[JSON.stringify(snapshot)])).rows[0];
+  const run = await start();
+  assert.equal((await start()).id,run.id);
+  assert.equal(run.actor_id,jorn);
+  await assert.rejects(db.query("select aankoop_winkelwagen_start(1,'{}')"), /verouderd/);
+  await assert.rejects(db.query('select aankoop_winkelwagen_snapshot(2)'), /niet goedgekeurd/);
+  const result = (regel, status, reden, qty, exact) => db.query('insert into aankoop_winkelwagen_resultaten(overdracht_id,regel_id,resultaat,reden,gecontroleerd_aantal,exact_gecontroleerd) values ($1,$2,$3,$4,$5,$6) returning *',[run.id,regel,status,reden,qty,exact]);
+  await result(1,'toegevoegd','gecontroleerd',3,true);
+  await result(1,'reeds_aanwezig','gecontroleerd',3,true);
+  await result(2,'mislukt','niet_gevonden',null,false);
+  await result(2,'onzeker','verpakking',null,false);
+  await assert.rejects(result(1,'toegevoegd','gecontroleerd',5,true), /gewenst aantal/);
+  await assert.rejects(result(1,'toegevoegd','gecontroleerd',3,false), /gewenst aantal/);
+  await assert.rejects(result(3,'onzeker','identificatie',null,false), /hoort niet/);
+  await assert.rejects(db.query('delete from aankoop_winkelwagen_resultaten'), /permission denied/);
+  await assert.rejects(db.query("update aankoop_winkelwagen_overdrachten set actor_id = null"), /permission denied/);
+  await login('00000000-0000-0000-0000-000000000002','kathleen.nerinckx@profo.be');
+  assert.equal((await result(1,'aantal_aangepast','gecontroleerd',3,true)).rows[0].actor_id,'00000000-0000-0000-0000-000000000002');
+  await login('00000000-0000-0000-0000-000000000003','ander@profo.be');
+  await assert.rejects(start(), /bevoegdheid/);
+  await assert.rejects(result(1,'onzeker','technisch',null,false), /bevoegdheid/);
+  assert.equal((await db.query('select * from aankoop_winkelwagen_overdrachten')).rows.length,0);
+  assert.equal((await db.query('select * from aankoop_winkelwagen_resultaten')).rows.length,0);
+  await login('00000000-0000-0000-0000-000000000003','jorn.neeus@profo.be');
+  await assert.rejects(start(), /bevoegdheid/); // Email claim alone is insufficient.
+  await login(jorn,'jorn.neeus@profo.be');
+  assert.equal((await db.query('select status from aankoop_bestellingen where id=1')).rows[0].status,'Goedgekeurd');
+  await db.exec('reset role; update aankoop_producten set eenheid=\'andere verpakking\' where id=1; set role authenticated');
+  await assert.rejects(result(1,'toegevoegd','gecontroleerd',3,true), /gewijzigd/);
+  await db.exec("reset role; update aankoop_bestellingen set status='Besteld' where id=1; set role authenticated");
+  await assert.rejects(result(1,'toegevoegd','gecontroleerd',3,true), /niet goedgekeurd/);
+  await db.exec('reset role; set role anon');
+  await assert.rejects(db.query('select aankoop_winkelwagen_snapshot(1)'), /permission denied/);
+  await db.close();
+});

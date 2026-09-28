@@ -1,0 +1,60 @@
+# Winkelwagen bij leverancier
+
+Deze uitbreiding maakt deel uit van de bestaande Aankoopbeheer-app. Alleen de actieve, aan hun Supabase Auth-account gekoppelde gebruikers **Jorn Neeus** (`jorn.neeus@profo.be`) en **Kathleen Nerinckx** (`kathleen.nerinckx@profo.be`) mogen ze gebruiken. Een beheer- of goedkeuringsrol alleen geeft geen toegang.
+
+## Wat beschikbaar is
+
+Bij goedgekeurde bestellingen met een herkenbare leverancier 123inkt.be of 123schoon.nl verschijnt **Vul winkelwagen bij leverancier**. Ook de bestaande status *In behandeling* komt in aanmerking. De knop opent een overzicht van de bestelregels en de interne opmerking. Beide leveranciers werken in deze versie **begeleid handmatig**. De app vult geen leverancierswinkelwagen automatisch en presenteert een geopend product nooit als een toegevoegd product.
+
+De registratie bevat het oorspronkelijke overzicht, de ingelogde starter, het tijdstip en afzonderlijke controleresultaten. Herstarten hervat dezelfde registratie zolang de bestel- en catalogusgegevens gelijk zijn. Gewijzigde gegevens vereisen een nieuw overzicht. Resultaten worden toegevoegd aan de geschiedenis, niet overschreven. De aankoopstatus wordt niet veranderd.
+
+## Aanmelden en controleren
+
+1. Open de actie en controleer productnaam, artikelnummer, link, verpakking, variant en aantal. Start daarna bewust de begeleide overdracht.
+2. Open een productlink of kopieer het artikelnummer om op de leverancierssite te zoeken. Meld je rechtstreeks aan bij die leverancier in de browser waarin de link opent. Gebruik diezelfde browser voor alle regels. Aankoopbeheer ontvangt geen leverancierswachtwoord, sessiecookie of betaalgegevens. Los een CAPTCHA of tweestapsverificatie zelf op.
+3. Vergelijk het exacte artikel, de variant en de verpakking met de aanvraag. Een link is een catalogusreferentie, geen actuele productverificatie. Een verkeerd artikelnummer, niet-beschikbaar product of afwijkende verpakking betekent overslaan en de reden registreren. Kies geen alternatief zonder een uitdrukkelijke nieuwe keuze.
+4. Controleer de bestaande winkelwagen. Staat exact het aangevraagde aantal er al voor deze aanvraag, voeg dan niets toe en registreer **Reeds aanwezig**. Tel bij herhaling nooit nogmaals het aangevraagde aantal erbij. Bij een afwijkend aantal stel je eerst vast of dat artikel voor deze of een andere bestelling bestemd is. Bij twijfel: **Onzeker**, met reden *Artikel in winkelwagen behoort mogelijk tot een andere bestelling*. Andere producten blijven staan.
+5. Registreer per regel **Toegevoegd**, **Reeds aanwezig**, **Aantal aangepast**, **Onzeker** of **Mislukt**. Een geslaagd resultaat vereist het daadwerkelijk gecontroleerde aantal en een expliciete bevestiging van product, variant en verpakking. De app benoemt dit als handmatige bevestiging.
+6. Open de winkelwagen via **Controleer winkelwagen**. Controleer zelf producten, aantallen, prijzen en levergegevens en plaats de effectieve bestelling handmatig. Bevestig die pas daarna via de bestaande bestelworkflow van Aankoopbeheer.
+
+Op smartphone wissel je tussen Aankoopbeheer en de leveranciersbrowser. Een geïnstalleerde webapp kan links in een andere browser openen. Er is geen veronderstelde gedeelde aanmelding. Na een onderbreking hervat je de registratie en controleer je de huidige winkelwagen opnieuw; oude resultaten bewijzen niet dat het artikel daar nog staat.
+
+## Onderzoek en afbakening — 28 september 2026
+
+De bestelhulppagina's van [123inkt.be](https://www.123inkt.be/page/info_bestellen.html) en [123schoon.nl](https://www.123schoon.nl/page/info_bestellen.html) beschrijven zoeken op artikelnummer, toevoegen met aantal en controle in de winkelwagen. Beide actuele websites zijn ook via de browser bekeken. Hun zichtbare winkelwagenlink is `/shoppingcart.html`. Er zijn tijdens dit onderzoek geen leveranciersbestellingen geplaatst en geen producten aan een echte winkelwagen toegevoegd.
+
+In de geraadpleegde openbare informatie kon geen officiële API of koppeling voor het vullen én betrouwbaar teruglezen van de winkelwagen worden vastgesteld. Dit is geen bevestiging dat een zakelijke koppeling niet bestaat. De huidige app bestaat uit een Vite-webclient met Supabase; er is geen eigen browserextensie, gekoppelde lokale browserdienst of sessiegebonden browserwerkplek. De Codex-browserbediening tijdens ontwikkeling is geen API die de geïnstalleerde app kan aanroepen.
+
+Daarom zijn voor **beide leveranciers** uitsluitend productnavigatie en begeleide registratie geïmplementeerd. Er worden geen verborgen formulieraanroepen, cookies, sessietokens, zoekresultaten op vergelijkbare namen of veronderstelde winkelwagen-API's gebruikt. Productlinks zijn beperkt tot HTTPS, het exacte leveranciersdomein en de waargenomen productdetailstructuur. Actieroutes, afrekenroutes, queryparameters, gebruikersgegevens in URL's, categoriepagina's en automatische omzetting van .nl naar .be zijn uitgesloten. Bestaande expliciete inktreferenties in de regelomschrijving kunnen worden overgenomen; ontbrekende of afwijkende referenties blijven handmatig.
+
+Voor volledig automatisch vullen is eerst een door de leverancier bevestigde API met een testomgeving nodig, of een expliciet gekoppelde browseromgeving met eigen installatie en sessiebeheer. Die laatste optie vereist afzonderlijke leveranciersadapters, exacte product- en verpakkingscontrole, uitlezen vóór en na elke wijziging, een vastgelegde toewijzing van bestaande aantallen aan aanvragen, een herstartprotocol en een technische blokkering van afrekenen. Een smartphone heeft daarvoor een afzonderlijke gekoppelde browserwerkplek nodig; toegang tot willekeurige andere tabs volstaat niet. Deze onderdelen zijn niet als werkende integratie voorgesteld.
+
+## Installatie in de bestaande omgeving
+
+Voer `supabase/manual-sql/20260928_aankoop_winkelwagenoverdracht.sql` volledig uit in het bestaande aankoopproject, na de bestaande rollen- en goedkeuringsinrichting. De repository gebruikt handmatige SQL-uitbreidingen. Controleer dat Jorn en Kathleen elk een actieve gebruikersrij hebben met hun eigen correcte `auth_user_id`; alleen een gelijk e-mailadres is onvoldoende. Publiceer daarna de normale Vite-build via de bestaande releaseprocedure.
+
+De uitbreiding gebruikt RLS en SECURITY INVOKER. Identiteit en tijdstippen worden door de database ingevuld; de snapshot wordt uit de database afgeleid. Alleen lezen en toevoegen is toegestaan aan de twee bevoegde gebruikers. Er is geen nieuwe algemene beheerbevoegdheid. De scheiding tussen authenticatie en rijtoegang volgt de gecontroleerde [Supabase-documentatie over RLS](https://supabase.com/docs/guides/database/postgres/row-level-security).
+
+Zonder geïnstalleerde database-uitbreiding stopt de actie met een duidelijke foutmelding vóór leveranciersnavigatie. De SQL is lokaal met PostgreSQL via PGlite getest en op 28 september 2026 geïnstalleerd in het live project `rxkffollbimmsvwhucgd`. De accountkoppelingen van Jorn en Kathleen zijn daar gecontroleerd. De live integratietest `tests/supplier-cart-rollback.sql` slaagt: beide accounts kunnen registreren, een andere identiteit krijgt geen toegang, herstarten hervat dezelfde registratie en de aankoopstatus blijft ongewijzigd. Alle testgegevens zijn teruggedraaid.
+
+## Testen
+
+Modeltests: `node --test tests/supplier-cart.test.mjs`.
+
+Databaseproef, geïsoleerd van productie:
+
+```powershell
+npm install --prefix tmp/cart-test-runtime --cache tmp/npm-cache --no-save --package-lock=false @electric-sql/pglite@0.3.14
+node --test tests/supplier-cart.test.mjs tests/supplier-cart-db.test.mjs
+npm run build
+```
+
+De proeven behandelen meerdere artikelen, bestaande winkelwagenregistratie, herhaald starten, fout artikelnummer, afwijkende verpakking, gedeeltelijke mislukking, onjuist gecontroleerd aantal, onbevoegde gebruikers, onjuiste accountkoppeling, gewijzigde gegevens, niet-goedgekeurde of reeds bestelde dossiers, onveranderbare auditregels en afwezigheid van een automatische afrekenroute. Het zijn tests van de begeleide werkwijze, geen bewijs van automatische winkelwagenmutaties bij de leveranciers.
+
+`tests/supplier-cart-ui.html` is uitsluitend een lokale testfixture die de productiecomponent met gesimuleerde opslag opent. Ze wordt niet in de Vite-productiebuild opgenomen. Daarmee worden desktop, mobiel, gedeeltelijke resultaten, hervatten en databasefouten gecontroleerd zonder echte bestellingen te wijzigen.
+
+Uitgevoerd resultaat: alle negen nieuwe geautomatiseerde tests slagen; de productiebuild slaagt. In de browser zijn verkeerde aantallen, verplichte foutredenen, gedeeltelijke resultaten, hervatten en een ontbrekende database-uitbreiding gecontroleerd. De mobiele controle op 390 × 844 pixels toont geen horizontale overloop.
+
+De release is overgezet op GitHub-versie `841154b`, zodat de inmiddels toegevoegde ontvangstworkflow en bewerking van bestelregels behouden blijven. De gezamenlijke testset geeft 19 geslaagde en 2 mislukte tests. Beide mislukkingen zijn afzonderlijk gereproduceerd op de ongewijzigde GitHub-versie: de fototest verwacht nog een oude EHBO-terugvalafbeelding, en de test voor achtergrondverversing mist de inmiddels gebruikte variabele `receiptBusy` in zijn testomgeving. Die bestaande testproblemen zijn buiten deze release gehouden.
+
+De Supabase Security Advisor meldt aandachtspunten voor bestaande SECURITY DEFINER-functies en uitgeschakelde bescherming tegen gelekte wachtwoorden. Deze melding vraagt afzonderlijke beoordeling van de bestaande inrichting; ze betreft geen nieuwe winkelwagenfunctie. De nieuwe functies gebruiken SECURITY INVOKER en weigeren anonieme aanroepen.
