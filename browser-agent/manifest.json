@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "PROFO Winkelwagenagent",
+  "version": "1.0.0",
+  "description": "Vult leverancierswinkelwagens vanuit goedgekeurde PROFO-bestellingen. Rekent nooit af.",
+  "permissions": ["scripting"],
+  "host_permissions": ["https://www.123schoon.nl/*", "https://www.123inkt.be/*", "https://rxkffollbimmsvwhucgd.supabase.co/*"],
+  "background": {"service_worker": "worker.js", "type": "module"},
+  "content_scripts": [{"matches": ["https://aankoopbeheer-profo.vercel.app/*"], "js": ["bridge.js"], "run_at": "document_start"}]
+}

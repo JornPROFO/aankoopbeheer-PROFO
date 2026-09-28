@@ -25,6 +25,9 @@ test('database: identity, authorization, restart, audit, failures and unchanged 
   const sql = await readFile(new URL('../supabase/manual-sql/20260928_aankoop_winkelwagenoverdracht.sql', import.meta.url), 'utf8');
   await db.exec(sql);
   await db.exec(sql); // Redeploy must be safe.
+  const agentSql = await readFile(new URL('../supabase/manual-sql/20260928_winkelwagen_browser_agent.sql', import.meta.url), 'utf8');
+  await db.exec(agentSql);
+  await db.exec(agentSql);
   const login = async (id,email) => { await db.exec('reset role'); await db.query("select set_config('test.uid',$1,false),set_config('test.email',$2,false)",[id,email]); await db.exec('set role authenticated'); };
   const jorn = '00000000-0000-0000-0000-000000000001';
   await login(jorn,'jorn.neeus@profo.be');
@@ -33,6 +36,13 @@ test('database: identity, authorization, restart, audit, failures and unchanged 
   const run = await start();
   assert.equal((await start()).id,run.id);
   assert.equal(run.actor_id,jorn);
+  const autoStart = async () => (await db.query('select * from aankoop_winkelwagen_agent_start(1,$1::jsonb)',[JSON.stringify(snapshot)])).rows[0];
+  const autoRun = await autoStart();
+  assert.equal(autoRun.methode,'browser_agent');
+  assert.equal(autoRun.actor_id,jorn);
+  assert.notEqual((await autoStart()).id,autoRun.id);
+  await db.query("insert into aankoop_winkelwagen_resultaten(overdracht_id,regel_id,resultaat,reden,bron,toelichting) values ($1,1,'onzeker','onderbroken','browser_agent','Controle gestart')",[autoRun.id]);
+  await assert.rejects(db.query("select aankoop_winkelwagen_agent_start(1,'{}')"),/verouderd/);
   await assert.rejects(db.query("select aankoop_winkelwagen_start(1,'{}')"), /verouderd/);
   await assert.rejects(db.query('select aankoop_winkelwagen_snapshot(2)'), /niet goedgekeurd/);
   const result = (regel, status, reden, qty, exact) => db.query('insert into aankoop_winkelwagen_resultaten(overdracht_id,regel_id,resultaat,reden,gecontroleerd_aantal,exact_gecontroleerd) values ($1,$2,$3,$4,$5,$6) returning *',[run.id,regel,status,reden,qty,exact]);
@@ -48,6 +58,7 @@ test('database: identity, authorization, restart, audit, failures and unchanged 
   await login('00000000-0000-0000-0000-000000000002','kathleen.nerinckx@profo.be');
   assert.equal((await result(1,'aantal_aangepast','gecontroleerd',3,true)).rows[0].actor_id,'00000000-0000-0000-0000-000000000002');
   await login('00000000-0000-0000-0000-000000000003','ander@profo.be');
+  await assert.rejects(autoStart(), /bevoegdheid/);
   await assert.rejects(start(), /bevoegdheid/);
   await assert.rejects(result(1,'onzeker','technisch',null,false), /bevoegdheid/);
   assert.equal((await db.query('select * from aankoop_winkelwagen_overdrachten')).rows.length,0);
@@ -62,5 +73,6 @@ test('database: identity, authorization, restart, audit, failures and unchanged 
   await assert.rejects(result(1,'toegevoegd','gecontroleerd',3,true), /niet goedgekeurd/);
   await db.exec('reset role; set role anon');
   await assert.rejects(db.query('select aankoop_winkelwagen_snapshot(1)'), /permission denied/);
+  await assert.rejects(autoStart(), /permission denied/);
   await db.close();
 });

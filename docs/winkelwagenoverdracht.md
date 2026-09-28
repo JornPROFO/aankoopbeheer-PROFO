@@ -1,5 +1,36 @@
 # Winkelwagen bij leverancier
 
+## Browseragent — versie 1.0.0
+
+De knop **Vul winkelwagen bij leverancier** gebruikt nu de lokale PROFO Winkelwagenagent in Chrome of Edge op desktop/laptop. De app controleert de bevoegdheid; de agent vraagt daarnaast zelfstandig via Supabase de actuele goedgekeurde bestelregels op. Alleen Jorn en Kathleen krijgen toegang. Er is geen automatische afrekenhandeling.
+
+De agent staat in `browser-agent/`; het downloadpakket staat in `public/profo-winkelwagenagent.zip`. De installatieprocedure staat in `public/winkelwagenagent-installatie.html` en is vanuit het dialoogvenster bereikbaar. Eenmalig lokaal installeren via het extensiebeheer is noodzakelijk. De extensie is nog niet in een browserwinkel gepubliceerd. Een website kan deze installatie niet zelf uitvoeren.
+
+### Gebruik
+
+1. Installeer de extensie, herlaad Aankoopbeheer en meld je rechtstreeks aan bij de leverancier in hetzelfde browserprofiel.
+2. Open een goedgekeurde bestelling en kies **Vul winkelwagen bij leverancier**. De voorcontrole opent de exacte productpagina's en leest de winkelwagens. Controleer in de app de opgehaalde producttitels en verpakkingen en bevestig de selectie.
+3. **Vul winkelwagen nu** voegt de ontbrekende artikelen met het aangevraagde aantal toe. Een reeds aanwezig exact aantal blijft staan. Een afwijkend bestaand aantal wordt overgeslagen met een concrete reden. Andere artikelen worden niet verwijderd. De agent vergelijkt de overige regels na toevoegen.
+4. De agent leest na iedere toevoeging het artikelnummer, de productlink, titel en het aantal van de winkelwagenregel terug. De resultaten verschijnen in de app en de leverancierswinkelwagens blijven open voor controle. Rond zelf af en gebruik pas daarna de bestaande bevestiging **Besteld bij leverancier**.
+
+Leverancierswachtwoorden, cookies en betaalgegevens worden niet gelezen of opgeslagen. Alleen de Aankoopbeheer-JWT wordt tijdelijk in het extensiegeheugen gebruikt voor bevoegdheidscontrole en resultaatregistratie. Er is geen persistente extensieopslag. CAPTCHA en tweestapsverificatie blijven bij de gebruiker. Gebruik tijdens uitvoering geen andere tab om dezelfde winkelwagen te wijzigen.
+
+### Implementatie en hervatten
+
+`dom.js` bevat de begrensde leveranciershandelingen: productinspectie, exacte toevoeging en winkelwageninspectie. `worker.js` orkestreert de tabbladen, hercontrole van bevoegdheid en actuele bestelgegevens en auditregistratie. Alleen de twee vaste leveranciersdomeinen en exacte product- of winkelwagenroutes zijn toegestaan. De extensie ontvangt alleen berichten vanuit de productieapp, in het bovenste frame. Er is geen generieke URL-, script- of afrekenopdracht.
+
+Het leveranciersartikelnummer moet overeenkomen met het productformulier en de titel bij de bestelknop. Als de catalogus alleen een exacte link bevat, wordt het artikelnummer van diezelfde productpagina gelezen. Gewijzigde of onbekende selectors, doorverwijzingen, ontbrekende beschikbaarheid, dubbele artikelen en afwijkende verpakkingen stoppen de regel. De gebruiker bevestigt de live producttitel en verpakking vóór uitvoering; die titel wordt bij toevoegen opnieuw gecontroleerd.
+
+Installeer na de eerdere winkelwagen-SQL ook `supabase/manual-sql/20260928_winkelwagen_browser_agent.sql`. Deze voegt de methode `browser_agent`, bron en begrensde toelichting toe. Elke bewuste poging heeft een eigen starter, tijdstip en onveranderlijke snapshot. Vóór een mutatie wordt een onzeker resultaat geregistreerd; daarna het teruggelezen resultaat. Bij onderbreking opnieuw voorcontroleren: de huidige winkelwagen bepaalt de actie, nooit alleen een eerder opgeslagen succes. Falen van resultaatopslag stopt verdere mutaties.
+
+### Verificatie en grenzen
+
+De gerichte tests omvatten de DOM-adapter, meerdere producten, bestaande aantallen, herhaling, gedeeltelijke storing, verkeerde SKU, afwijkende verpakking, aanmelding, selectorwijziging, bevoegdheid en ontbreken van afrekenhandelingen. De test van de volledige orkestratie gebruikt een gesimuleerde browser en database; die vervangt geen test van een geïnstalleerde extensie.
+
+Een echte browserproef heeft voor de goedgekeurde bestelling 15 één doos handdoeken SDR02017 toegevoegd aan 123schoon en aantal 1 teruggelezen. Dat gebeurde met de ontwikkelbrowserbediening, vóór de installatie van de nieuwe extensie. Bij 123inkt zijn de productknop en lege winkelwagen gecontroleerd; er is geen willekeurig testartikel toegevoegd. De volledige app-extensie-leverancierproef vereist dat de gebruiker de extensie laadt. Dit onderscheid moet behouden blijven in de oplevering.
+
+<details><summary>Historiek: eerste handmatige tussenstap en herstel productreferenties</summary>
+
 Deze uitbreiding maakt deel uit van de bestaande Aankoopbeheer-app. Alleen de actieve, aan hun Supabase Auth-account gekoppelde gebruikers **Jorn Neeus** (`jorn.neeus@profo.be`) en **Kathleen Nerinckx** (`kathleen.nerinckx@profo.be`) mogen ze gebruiken. Een beheer- of goedkeuringsrol alleen geeft geen toegang.
 
 ## Wat beschikbaar is
@@ -70,3 +101,5 @@ Automatisch vullen is uitsluitend bedoeld voor desktop en laptop, voor Jorn en K
 De gebruikersinterface vermeldt nu vóór elke registratie dat geen winkelwagen wordt gevuld. Een homepage zonder artikelnummer krijgt een specifieke foutmelding. Automatisch vullen blijft onvoltooid en vereist een expliciet gekoppelde browseromgeving; herstelde productlinks alleen lossen dit niet op.
 
 Na dit herstel slagen alle twaalf gerichte model- en databasetests en de productiebuild. De aangepaste dialoog is in de browser gecontroleerd op de waarschuwing, de geblokkeerde regel en het behoud van de overige productregels.
+
+</details>

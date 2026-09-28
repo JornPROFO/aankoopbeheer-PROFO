@@ -8,7 +8,7 @@ import './styles/main.css';
 import { initializeFamilyNavigation } from './ui/family-navigation.js';
 initializeFamilyNavigation();
 import './styles/delivery-status.css';
-import { openSupplierCart } from './supplierCartView.js';
+import { openSupplierAgent as openSupplierCart } from './supplierAgentView.js';
 import { canUseSupplierCart, hasSupportedSupplier } from './services/supplierCartModel.js';
 import './styles/profo-family.css';
 import './styles/order-editing.css';
@@ -2463,7 +2463,7 @@ function renderOrderCard(order, admin, approver) {
       ` : ''}
       ${renderReceiptPanel(order, state.appUser?.id, admin, receiptBusy, receiptDrafts.get(String(order.id)))}
       ${renderSupplierDeliveryPanel(order)}
-      ${canUseSupplierCart(state.appUser, state.session?.user?.email) && ['Goedgekeurd', 'In behandeling'].includes(normalizedStatus) && hasSupportedSupplier(order, state.data.products) ? `<div class="record-actions"><button class="ghost-button" type="button" data-supplier-cart="${escapeHtml(order.id)}">Handmatige controlelijst leverancier</button><small>Automatisch vullen is nog niet beschikbaar.</small></div>` : ''}
+      ${canUseSupplierCart(state.appUser, state.session?.user?.email) && ['Goedgekeurd', 'In behandeling'].includes(normalizedStatus) && hasSupportedSupplier(order, state.data.products) ? `<div class="record-actions"><button class="primary-button" type="button" data-supplier-cart="${escapeHtml(order.id)}">Vul winkelwagen bij leverancier</button><small>Desktop/laptop · gekoppelde browseragent · nooit automatisch afrekenen</small></div>` : ''}
       ${
         actionStatuses.length
           ? `<div class="record-actions">
