@@ -27,7 +27,9 @@ Installeer na de eerdere winkelwagen-SQL ook `supabase/manual-sql/20260928_winke
 
 De gerichte tests omvatten de DOM-adapter, meerdere producten, bestaande aantallen, herhaling, gedeeltelijke storing, verkeerde SKU, afwijkende verpakking, aanmelding, selectorwijziging, bevoegdheid en ontbreken van afrekenhandelingen. De test van de volledige orkestratie gebruikt een gesimuleerde browser en database; die vervangt geen test van een geïnstalleerde extensie.
 
-Een echte browserproef heeft voor de goedgekeurde bestelling 15 één doos handdoeken SDR02017 toegevoegd aan 123schoon en aantal 1 teruggelezen. Dat gebeurde met de ontwikkelbrowserbediening, vóór de installatie van de nieuwe extensie. Bij 123inkt zijn de productknop en lege winkelwagen gecontroleerd; er is geen willekeurig testartikel toegevoegd. De volledige app-extensie-leverancierproef vereist dat de gebruiker de extensie laadt. Dit onderscheid moet behouden blijven in de oplevering.
+Op 28 september 2026 heeft Jorn de extensie geladen. De volledige productieproef via de appknop, de geïnstalleerde extensie en 123schoon is geslaagd voor bestelling 15: eerst **Reeds aanwezig** met aantal 1, daarna — na het terugzetten van uitsluitend de eigen testtoevoeging — **Toegevoegd** met opnieuw teruggelezen aantal 1. Ook de pauze tussen voorcontrole en bevestiging is in de echte browser getest. De database bevestigt methode en bron `browser_agent`, het gecontroleerde aantal 1 en aankoopstatus **Goedgekeurd**. Er is nooit afgerekend. Alle 21 gerichte tests en de productiebuild slagen.
+
+Bij 123inkt zijn de echte productknop en lege winkelwagen gecontroleerd en gebruikt de adapter dezelfde begrensde structuur. Er is nog geen volledige toevoegproef met een goedgekeurde 123inkt-bestelling uitgevoerd; er is geen willekeurig testartikel toegevoegd. De conclusie over de volledige live toevoeging geldt dus voor 123schoon.
 
 <details><summary>Historiek: eerste handmatige tussenstap en herstel productreferenties</summary>
 
