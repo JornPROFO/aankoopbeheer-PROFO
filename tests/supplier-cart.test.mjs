@@ -1,9 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { prepareLines, safeProductUrl, canUseSupplierCart, cartSummary, suppliers } from '../src/services/supplierCartModel.js';
+import { prepareLines, safeProductUrl, canUseSupplierCart, cartSummary, suppliers, transferReadiness } from '../src/services/supplierCartModel.js';
 
 const line = { id: 1, product_naam: 'Stoffer rood', catalogus_naam: 'Stoffer rood', aantal: 3, eenheid: 'set', catalogus_eenheid: 'set', leverancier: '123schoon.nl', leverancier_url: JSON.stringify({ artikelnummer: 'SDR06503', url: 'https://www.123schoon.nl/123schoon-Stoffer-i19920.html' }) };
+test('homepage zonder artikelnummer blokkeert starten met een concrete reden', () => {
+  const result = transferReadiness({lines:[{...line,leverancier_url:'https://www.123schoon.nl/'}]});
+  assert.equal(result.canStart,false);
+  assert.match(result.lines[0].issue,/Alleen de homepage/);
+});
+test('bevestigde handdoekreferentie wordt herkend als 1 doos en geen 20 losse producten', () => {
+  const result = transferReadiness({lines:[{...line,aantal:1,eenheid:'doos van 20 pakken',catalogus_eenheid:'doos van 20 pakken',leverancier_url:JSON.stringify({artikelnummer:'SDR02017',url:'https://www.123schoon.nl/123schoon-Gevouwen-handdoeken-2-laags-20-pakken-123schoon-huismerk-Geschikt-voor-Tork-H2-dispenser-i3737.html'})}]});
+  assert.equal(result.canStart,true);
+  assert.equal(result.lines[0].article,'SDR02017');
+  assert.equal(result.lines[0].aantal,1);
+});
+test('gemengde lijst behoudt de geblokkeerde regel naast de bruikbare regel', () => {
+  const result = transferReadiness({lines:[line,{...line,id:2,leverancier_url:'https://www.123schoon.nl/'}]});
+  assert.deepEqual([result.ready,result.blocked,result.canStart],[1,1,true]);
+});
 test('alleen actieve Jorn en Kathleen, nooit een andere beheerder', () => {
   for (const email of ['jorn.neeus@profo.be', 'kathleen.nerinckx@profo.be']) assert.equal(canUseSupplierCart({ email, actief: true }, email), true);
   assert.equal(canUseSupplierCart({ email: 'ander@profo.be', actief: true, rol: 'Superadmin' }, 'ander@profo.be'), false);

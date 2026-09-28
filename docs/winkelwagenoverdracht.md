@@ -4,13 +4,13 @@ Deze uitbreiding maakt deel uit van de bestaande Aankoopbeheer-app. Alleen de ac
 
 ## Wat beschikbaar is
 
-Bij goedgekeurde bestellingen met een herkenbare leverancier 123inkt.be of 123schoon.nl verschijnt **Vul winkelwagen bij leverancier**. Ook de bestaande status *In behandeling* komt in aanmerking. De knop opent een overzicht van de bestelregels en de interne opmerking. Beide leveranciers werken in deze versie **begeleid handmatig**. De app vult geen leverancierswinkelwagen automatisch en presenteert een geopend product nooit als een toegevoegd product.
+Bij goedgekeurde bestellingen met een herkenbare leverancier 123inkt.be of 123schoon.nl verschijnt **Handmatige controlelijst leverancier**. Ook de bestaande status *In behandeling* komt in aanmerking. De knop opent een overzicht van de bestelregels en de interne opmerking. Beide leveranciers werken in deze versie **begeleid handmatig**. De app vult geen leverancierswinkelwagen automatisch en presenteert een geopend product nooit als een toegevoegd product. De eerdere knoptekst *Vul winkelwagen bij leverancier* is gecorrigeerd omdat deze een werking beloofde die niet beschikbaar was.
 
 De registratie bevat het oorspronkelijke overzicht, de ingelogde starter, het tijdstip en afzonderlijke controleresultaten. Herstarten hervat dezelfde registratie zolang de bestel- en catalogusgegevens gelijk zijn. Gewijzigde gegevens vereisen een nieuw overzicht. Resultaten worden toegevoegd aan de geschiedenis, niet overschreven. De aankoopstatus wordt niet veranderd.
 
 ## Aanmelden en controleren
 
-1. Open de actie en controleer productnaam, artikelnummer, link, verpakking, variant en aantal. Start daarna bewust de begeleide overdracht.
+1. Open de controlelijst en controleer productnaam, artikelnummer, link, verpakking, variant en aantal. Open daarna bewust de handmatige registratie. Wanneer geen enkele regel een bruikbare referentie heeft, is deze actie geblokkeerd.
 2. Open een productlink of kopieer het artikelnummer om op de leverancierssite te zoeken. Meld je rechtstreeks aan bij die leverancier in de browser waarin de link opent. Gebruik diezelfde browser voor alle regels. Aankoopbeheer ontvangt geen leverancierswachtwoord, sessiecookie of betaalgegevens. Los een CAPTCHA of tweestapsverificatie zelf op.
 3. Vergelijk het exacte artikel, de variant en de verpakking met de aanvraag. Een link is een catalogusreferentie, geen actuele productverificatie. Een verkeerd artikelnummer, niet-beschikbaar product of afwijkende verpakking betekent overslaan en de reden registreren. Kies geen alternatief zonder een uitdrukkelijke nieuwe keuze.
 4. Controleer de bestaande winkelwagen. Staat exact het aangevraagde aantal er al voor deze aanvraag, voeg dan niets toe en registreer **Reeds aanwezig**. Tel bij herhaling nooit nogmaals het aangevraagde aantal erbij. Bij een afwijkend aantal stel je eerst vast of dat artikel voor deze of een andere bestelling bestemd is. Bij twijfel: **Onzeker**, met reden *Artikel in winkelwagen behoort mogelijk tot een andere bestelling*. Andere producten blijven staan.
@@ -58,3 +58,13 @@ Uitgevoerd resultaat: alle negen nieuwe geautomatiseerde tests slagen; de produc
 De release is overgezet op GitHub-versie `841154b`, zodat de inmiddels toegevoegde ontvangstworkflow en bewerking van bestelregels behouden blijven. De gezamenlijke testset geeft 19 geslaagde en 2 mislukte tests. Beide mislukkingen zijn afzonderlijk gereproduceerd op de ongewijzigde GitHub-versie: de fototest verwacht nog een oude EHBO-terugvalafbeelding, en de test voor achtergrondverversing mist de inmiddels gebruikte variabele `receiptBusy` in zijn testomgeving. Die bestaande testproblemen zijn buiten deze release gehouden.
 
 De Supabase Security Advisor meldt aandachtspunten voor bestaande SECURITY DEFINER-functies en uitgeschakelde bescherming tegen gelekte wachtwoorden. Deze melding vraagt afzonderlijke beoordeling van de bestaande inrichting; ze betreft geen nieuwe winkelwagenfunctie. De nieuwe functies gebruiken SECURITY INVOKER en weigeren anonieme aanroepen.
+
+## Herstel na gebruikerstest
+
+Op 28 september bleek bij de handdoeken alleen de homepage opgeslagen. Jorn heeft de exacte productlink opnieuw aangeleverd. De productpagina is gecontroleerd: artikel SDR02017, 2-laags huismerk, geschikt voor Tork H2, 20 pakken van 120 vellen. De productreferentie is via `20260928_herstel_handdoeken_productreferentie.sql` hersteld. De bestelde eenheid, prijzen en historische bestelregels zijn behouden. Na opnieuw openen wordt de gewijzigde catalogusreferentie meegenomen; een eerder gemaakte snapshot blijft als geschiedenis bewaard.
+
+Zes andere actieve catalogusartikelen verwijzen nog naar categoriepagina's: Glorix Bleek Original 1 L, 123schoon Schuurspons 10 stuks, At Home Clean Premium Vaatwastabletten 222 stuks, Handzeep aloe vera 500 ml, Toiletpapier Traditioneel 4-laags 8 rollen en Keukenrol 2-laags 4 x 50 vel. Voor automatische verwerking moeten hun exacte referenties eerst worden hersteld en geverifieerd. Er zijn geen vervangende artikelen gekozen.
+
+De gebruikersinterface vermeldt nu vóór elke registratie dat geen winkelwagen wordt gevuld. Een homepage zonder artikelnummer krijgt een specifieke foutmelding. Automatisch vullen blijft onvoltooid en vereist een expliciet gekoppelde browseromgeving; herstelde productlinks alleen lossen dit niet op.
+
+Na dit herstel slagen alle twaalf gerichte model- en databasetests en de productiebuild. De aangepaste dialoog is in de browser gecontroleerd op de waarschuwing, de geblokkeerde regel en het behoud van de overige productregels.

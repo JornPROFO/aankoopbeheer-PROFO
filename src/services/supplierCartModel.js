@@ -45,15 +45,17 @@ export function prepareLines(snapshot) {
         url: description.match(/ - link: (https:\/\/\S+)$/)?.[1] || '',
       };
     }
-    let host = '';
-    try { host = new URL(ref.url).hostname.replace(/^www\./, ''); } catch { /* No link. */ }
+    let host = '', homepage = false;
+    try { const parsed = new URL(ref.url); host = parsed.hostname.replace(/^www\./, ''); homepage = parsed.pathname === '/' && !parsed.search && !parsed.hash; } catch { /* No link. */ }
     const declared = String(line.leverancier || '').trim().toLowerCase().replace(/^www\./, '');
     const supplier = suppliers[declared] ? declared : suppliers[host] ? host : '';
     const url = safeProductUrl(ref.url, supplier);
     const article = /^[a-z0-9][a-z0-9._/-]{0,79}$/i.test(ref.article) ? ref.article : '';
     let issue = '';
     if (!supplier) issue = 'Geen eenduidige koppeling met 123inkt.be of 123schoon.nl.';
-    else if ((declared && declared !== supplier) || (ref.url && !url)) issue = 'Leverancier of productlink wijkt af. Geen landdomeinen of producten automatisch vervangen.';
+    else if (declared && declared !== supplier) issue = 'De opgegeven leverancier komt niet overeen met het leveranciersdomein.';
+    else if (homepage && !article) issue = 'Alleen de homepage van de leverancier is opgeslagen. Het exacte artikelnummer en de productpagina ontbreken; het product is niet herkend.';
+    else if (ref.url && !url && !(homepage && host === supplier && article)) issue = 'Dit is geen toegestane productpagina van deze leverancier. Controleer de exacte productlink; een homepage, categoriepagina of ander landdomein volstaat niet.';
     else if (!article && !url) issue = 'Betrouwbare productidentificatie ontbreekt.';
     else if (!line.eenheid || (line.catalogus_eenheid && line.catalogus_eenheid !== line.eenheid)) issue = 'Verpakking ontbreekt of verschilt van de huidige catalogus.';
     else if (line.catalogus_naam && line.catalogus_naam !== line.product_naam) issue = 'Productnaam is gewijzigd sinds de aanvraag; controleer de productidentiteit.';
@@ -79,4 +81,9 @@ export function cartSummary(lines, events) {
   const latest = latestResults(events);
   const complete = lines.filter(line => ['toegevoegd', 'reeds_aanwezig', 'aantal_aangepast'].includes(latest.get(String(line.id))?.resultaat)).length;
   return { complete, total: lines.length, label: complete === lines.length && complete > 0 ? 'Winkelwagen gevuld — handmatig bevestigd' : complete ? 'Gedeeltelijk verwerkt — controle nodig' : 'Nog niet volledig gecontroleerd' };
+}
+export function transferReadiness(snapshot) {
+  const lines = prepareLines(snapshot);
+  const ready = lines.filter(line => !line.issue).length;
+  return { lines, ready, blocked: lines.length - ready, canStart: ready > 0 };
 }

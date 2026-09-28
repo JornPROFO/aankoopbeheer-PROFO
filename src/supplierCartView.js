@@ -1,5 +1,5 @@
 import { escapeHtml as e, formatDateTime } from './utils/format.js';
-import { suppliers, outcomes, reasons, prepareLines, latestResults, cartSummary } from './services/supplierCartModel.js';
+import { suppliers, outcomes, reasons, prepareLines, latestResults, cartSummary, transferReadiness } from './services/supplierCartModel.js';
 import * as service from './services/supplierCartService.js';
 import './styles/supplier-cart.css';
 
@@ -8,7 +8,7 @@ export async function openSupplierCart(orderId, api = service) {
   const dialog = document.createElement('dialog');
   dialog.dataset.supplierCartDialog = '';
   dialog.className = 'supplier-cart-dialog';
-  dialog.setAttribute('aria-label', `Winkelwagen bij leverancier — bestelling ${orderId}`);
+  dialog.setAttribute('aria-label', `Handmatige controlelijst leverancier — bestelling ${orderId}`);
   document.body.append(dialog);
   let snapshot, run, events = [], history = [], busy = false;
   const close = () => { dialog.close(); dialog.remove(); };
@@ -25,6 +25,7 @@ export async function openSupplierCart(orderId, api = service) {
       catch { message('Kopiëren lukt niet in deze browser. Selecteer de zichtbare tekst om die handmatig te kopiëren.'); }
     }
     if (button.hasAttribute('data-start')) {
+      if (!transferReadiness(snapshot).canStart) { message('Geen bruikbare productreferenties. Vul eerst in Productbeheer het exacte artikelnummer of de productlink aan. Er is niets aan de winkelwagen toegevoegd.'); return; }
       busy = true; button.disabled = true;
       try {
         run = await api.startTransfer(orderId, snapshot);
@@ -54,7 +55,7 @@ export async function openSupplierCart(orderId, api = service) {
       const saved = await api.recordTransferResult(run.id, line.id, result, successful ? 'gecontroleerd' : data.get('reden'), quantity, Boolean(data.get('exact')));
       events.push(saved);
       draw();
-      message('Controleresultaat bewaard. De aankoopstatus is niet gewijzigd.');
+      message('Jouw handmatige registratie is bewaard. Deze actie voegt niets toe aan de leverancierswinkelwagen en wijzigt de aankoopstatus niet.');
     } catch (error) { message(error.message); form.querySelector('button[type="submit"]').disabled = false; }
     finally { busy = false; }
   });
@@ -65,13 +66,15 @@ export async function openSupplierCart(orderId, api = service) {
   function draw() {
     if (!dialog.isConnected) return;
     const lines = prepareLines(snapshot);
+    const readiness = transferReadiness(snapshot);
     const latest = latestResults(events);
     const summary = cartSummary(lines, events);
     const shops = [...new Set(lines.map(line => line.supplier).filter(Boolean))];
     dialog.innerHTML = `
-      <div class="supplier-cart-heading"><h2>Winkelwagen bij leverancier</h2><button class="ghost-button" type="button" data-close>Sluiten</button></div>
+      <div class="supplier-cart-heading"><h2>Handmatige controlelijst leverancier</h2><button class="ghost-button" type="button" data-close>Sluiten</button></div>
       <p><strong>Bestelling ${e(orderId)} · Begeleid handmatig</strong></p>
-      <p>Automatisch vullen en teruglezen is voor deze leveranciers nog niet betrouwbaar gekoppeld. Open de productpagina, controleer het artikel en voeg het zelf toe. Deze app registreert jouw controle.</p>
+      <div class="warning-panel"><strong>Deze functie vult de winkelwagen niet.</strong><p>Er is geen browser gekoppeld waarmee Aankoopbeheer producten bij de leverancier kan toevoegen of teruglezen. De onderstaande controlelijst opent alleen productlinks en bewaart wat jij handmatig controleert. Opslaan voegt geen product toe.</p></div>
+      ${readiness.blocked ? `<p class="warning-panel">${readiness.blocked} van ${lines.length} regels kunnen niet worden voorbereid. Vul ontbrekende productreferenties aan via Producten beheren en open deze lijst opnieuw. Kies geen vervangend product op basis van een vergelijkbare naam.</p>` : ''}
       <details><summary>Aanmelden, bestaande winkelwagen en smartphone</summary>
         <p>Meld je rechtstreeks aan bij de leverancier in de browser waarin de link opent. Gebruik voor alle producten dezelfde browser en hetzelfde leveranciersaccount. De login van Aankoopbeheer staat hier los van. Voer een CAPTCHA of tweestapsverificatie zelf uit. Aankoopbeheer ontvangt geen leverancierswachtwoorden of sessiecookies.</p>
         <p>Controleer vóór toevoegen of hetzelfde artikel al aanwezig is. Staat het juiste aantal er al, kies dan “Reeds aanwezig”. Tel bij herhalen nooit opnieuw het aangevraagde aantal erbij. Pas een afwijkend aantal pas aan nadat je hebt vastgesteld bij welke aanvraag het hoort. Laat andere producten staan. Behoort het artikel mogelijk tot een andere bestelling, sla de regel over en registreer dat als onzeker.</p>
@@ -79,7 +82,7 @@ export async function openSupplierCart(orderId, api = service) {
       </details>
       <div class="${summary.complete === summary.total && summary.total > 0 ? 'notice-panel' : 'warning-panel'}"><strong>${e(summary.label)}</strong><p>${summary.complete} van ${summary.total} regels handmatig bevestigd. Dit is geen bestelling bij de leverancier.</p></div>
       <p role="status" aria-live="polite" data-message></p>
-      ${run ? `<p>Gestart: ${e(formatDateTime(run.created_at))}. Een herstart hervat deze registratie. Controleer de actuele winkelwagen opnieuw; eerdere resultaten zijn geen live verificatie.</p>` : '<button class="primary-button" type="button" data-start>Start of hervat begeleide overdracht</button>'}
+      ${run ? `<p>Registratie gestart: ${e(formatDateTime(run.created_at))}. Hervatten opent eerdere handmatige registraties. Er wordt niets overgedragen. Controleer de actuele winkelwagen opnieuw.</p>` : `<button class="primary-button" type="button" data-start ${readiness.canStart ? '' : 'disabled'}>Open handmatige registratie</button>${readiness.canStart ? '' : '<p>Registratie geblokkeerd: geen enkele regel heeft een bruikbare productreferentie. Er is niets aan de winkelwagen toegevoegd.</p>'}`}
       ${run ? `<div class="record-actions">${shops.map(shop => `<a class="ghost-button" href="${suppliers[shop].home}" target="_blank" rel="noopener noreferrer">Open ${e(shop)} om aan te melden of te zoeken</a>`).join('')}</div>` : ''}
       ${snapshot.opmerking ? `<details><summary>Interne bestelopmerking</summary><p>${e(snapshot.opmerking)}</p></details>` : ''}
       <div class="supplier-cart-lines">${lines.map(line => {
@@ -100,7 +103,7 @@ export async function openSupplierCart(orderId, api = service) {
               <label class="field">Reden bij onzeker of mislukt<select name="reden"><option value="">Kies een concrete reden</option>${Object.entries(reasons).filter(([key]) => key !== 'gecontroleerd').map(([key,label]) => `<option value="${key}">${e(label)}</option>`).join('')}</select></label>
               <label class="field">Aantal daadwerkelijk in winkelwagen<input name="aantal" type="number" min="0" step="1" /></label>
               <label><input name="exact" type="checkbox" /> Ik heb exact artikel, variant, verpakking en aantal in de winkelwagen gecontroleerd.</label>
-              <button type="submit" class="primary-button">Bewaar controleresultaat</button>
+              <button type="submit" class="primary-button">Bewaar mijn handmatige controle</button>
             </form>` : ''}
         </section>`;
       }).join('')}</div>

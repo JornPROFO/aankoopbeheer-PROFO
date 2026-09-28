@@ -2463,7 +2463,7 @@ function renderOrderCard(order, admin, approver) {
       ` : ''}
       ${renderReceiptPanel(order, state.appUser?.id, admin, receiptBusy, receiptDrafts.get(String(order.id)))}
       ${renderSupplierDeliveryPanel(order)}
-      ${canUseSupplierCart(state.appUser, state.session?.user?.email) && ['Goedgekeurd', 'In behandeling'].includes(normalizedStatus) && hasSupportedSupplier(order, state.data.products) ? `<div class="record-actions"><button class="primary-button" type="button" data-supplier-cart="${escapeHtml(order.id)}">Vul winkelwagen bij leverancier</button><small>123inkt.be / 123schoon.nl · begeleide handmatige controle</small></div>` : ''}
+      ${canUseSupplierCart(state.appUser, state.session?.user?.email) && ['Goedgekeurd', 'In behandeling'].includes(normalizedStatus) && hasSupportedSupplier(order, state.data.products) ? `<div class="record-actions"><button class="ghost-button" type="button" data-supplier-cart="${escapeHtml(order.id)}">Handmatige controlelijst leverancier</button><small>Automatisch vullen is nog niet beschikbaar.</small></div>` : ''}
       ${
         actionStatuses.length
           ? `<div class="record-actions">
