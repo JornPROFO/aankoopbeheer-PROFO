@@ -1,6 +1,6 @@
 # Winkelwagen bij leverancier
 
-## Browseragent — versie 1.0.0
+## Browseragent — versie 1.0.1
 
 De knop **Vul winkelwagen bij leverancier** gebruikt nu de lokale PROFO Winkelwagenagent in Chrome of Edge op desktop/laptop. De app controleert de bevoegdheid; de agent vraagt daarnaast zelfstandig via Supabase de actuele goedgekeurde bestelregels op. Alleen Jorn en Kathleen krijgen toegang. Er is geen automatische afrekenhandeling.
 
@@ -13,7 +13,7 @@ De agent staat in `browser-agent/`; het downloadpakket staat in `public/profo-wi
 3. **Vul winkelwagen nu** voegt de ontbrekende artikelen met het aangevraagde aantal toe. Een reeds aanwezig exact aantal blijft staan. Een afwijkend bestaand aantal wordt overgeslagen met een concrete reden. Andere artikelen worden niet verwijderd. De agent vergelijkt de overige regels na toevoegen.
 4. De agent leest na iedere toevoeging het artikelnummer, de productlink, titel en het aantal van de winkelwagenregel terug. De resultaten verschijnen in de app en de leverancierswinkelwagens blijven open voor controle. Rond zelf af en gebruik pas daarna de bestaande bevestiging **Besteld bij leverancier**.
 
-Leverancierswachtwoorden, cookies en betaalgegevens worden niet gelezen of opgeslagen. Alleen de Aankoopbeheer-JWT wordt tijdelijk in het extensiegeheugen gebruikt voor bevoegdheidscontrole en resultaatregistratie. Er is geen persistente extensieopslag. CAPTCHA en tweestapsverificatie blijven bij de gebruiker. Gebruik tijdens uitvoering geen andere tab om dezelfde winkelwagen te wijzigen.
+Leverancierswachtwoorden, cookies en betaalgegevens worden niet gelezen of opgeslagen. Alleen de Aankoopbeheer-JWT wordt tijdelijk in het uitvoeringsgeheugen gebruikt voor bevoegdheidscontrole en resultaatregistratie en nooit opgeslagen. De voorcontrole met bestel- en productgegevens blijft maximaal tien minuten bruikbaar in `chrome.storage.session`, zodat het pauzeren van de Chrome-serviceworker die niet verliest. Deze sessieopslag wordt bij sluiten van de browser gewist; ze bevat geen aanmeldgegevens. CAPTCHA en tweestapsverificatie blijven bij de gebruiker. Gebruik tijdens uitvoering geen andere tab om dezelfde winkelwagen te wijzigen.
 
 ### Implementatie en hervatten
 

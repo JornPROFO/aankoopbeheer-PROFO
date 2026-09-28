@@ -21,3 +21,8 @@ async function credentials() {
 }
 export const prepareAgent = async (orderId,snapshot) => requestAgent('prepare',{orderId,snapshot,credentials:await credentials()});
 export const executeAgent = async planId => requestAgent('execute',{planId,credentials:await credentials()});
+export async function connectAgent() {
+  const agent = await requestAgent('ping',{},10000);
+  if (agent?.version !== '1.0.1') throw Error('Herlaad PROFO Winkelwagenagent naar versie 1.0.1 in het extensiebeheer. Download zo nodig het nieuwe installatiepakket.');
+  return agent;
+}

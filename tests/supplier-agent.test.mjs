@@ -58,9 +58,9 @@ test('gedeeltelijke verwerking behoudt afzonderlijke beslissingen',()=>{
   assert.equal(sameSnapshot({lines:[line],id:1},{id:1,lines:[line]}),true);
   assert.equal(sameSnapshot({lines:[line]},{lines:[{...line,aantal:4}]}),false);
 });
-test('extensie vraagt geen cookies, opslag of algemene webtoegang',async()=>{
+test('extensie vraagt geen cookies of algemene webtoegang',async()=>{
   const manifest=JSON.parse(await readFile(new URL('../browser-agent/manifest.json',import.meta.url)));
-  assert.deepEqual(manifest.permissions,['scripting']);
+  assert.deepEqual(manifest.permissions,['scripting','storage']);
   assert.equal(manifest.host_permissions.length,3);
   assert.equal(manifest.host_permissions.some(p=>p.includes('<all_urls>')),false);
   assert.deepEqual(manifest.content_scripts[0].matches,['https://aankoopbeheer-profo.vercel.app/*']);

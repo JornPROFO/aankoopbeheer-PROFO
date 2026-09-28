@@ -1,7 +1,7 @@
 import { escapeHtml as e } from './utils/format.js';
 import { previewTransfer, getTransferHistory, getTransferEvents } from './services/supplierCartService.js';
 import { prepareLines, suppliers, outcomes } from './services/supplierCartModel.js';
-import { requestAgent, prepareAgent, executeAgent } from './services/supplierAgentService.js';
+import { connectAgent, prepareAgent, executeAgent } from './services/supplierAgentService.js';
 import './styles/supplier-cart.css';
 
 export async function openSupplierAgent(orderId) {
@@ -39,7 +39,7 @@ export async function openSupplierAgent(orderId) {
   dialog.addEventListener('click',async event=>{
     const b=event.target.closest('button');if(!b||busy)return;
     if(b.hasAttribute('data-close')){dialog.close();return;}
-    if(b.hasAttribute('data-connect')){busy=true;draw();message('Browserverbinding controleren…');try{await requestAgent('ping',{},10000);connected=true;busy=false;draw();}catch(error){busy=false;draw();message(error.message);}return;}
+    if(b.hasAttribute('data-connect')){busy=true;draw();message('Browserverbinding controleren…');try{await connectAgent();connected=true;busy=false;draw();}catch(error){busy=false;draw();message(error.message);}return;}
     if(!b.hasAttribute('data-prepare')&&!b.hasAttribute('data-execute'))return;
     busy=true;draw();message('Browseragent werkt. Volg de leverancierspagina’s; keer daarna terug naar dit overzicht.');
     try {
@@ -49,6 +49,6 @@ export async function openSupplierAgent(orderId) {
     } catch(error){busy=false;plan=undefined;draw();message(error.message);}
   });
   draw();message('Bevoegdheid en bestelling controleren…');
-  try {snapshot=await previewTransfer(orderId);const history=await getTransferHistory(orderId);if(history[0])previous=await getTransferEvents(history[0].id);if(!mobile)try {await requestAgent('ping',{},10000);connected=true;}catch(error){draw();message(error.message);return;}draw();}
+  try {snapshot=await previewTransfer(orderId);const history=await getTransferHistory(orderId);if(history[0])previous=await getTransferEvents(history[0].id);if(!mobile)try {await connectAgent();connected=true;}catch(error){draw();message(error.message);return;}draw();}
   catch(error){draw();message(error.message);}
 }

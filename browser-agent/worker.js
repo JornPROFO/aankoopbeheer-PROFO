@@ -2,7 +2,7 @@ import { supplierDOM } from './dom.js';
 import { prepareLines, suppliers } from './model.js';
 import { APP_ORIGIN, DB_ORIGIN, cartDecision, unchangedOthers, sameSnapshot } from './policy.js';
 
-const plans = new Map(), tabs = new Map();
+const tabs = new Map();
 let busy = false;
 const sleep = ms => new Promise(resolve => setTimeout(resolve,ms));
 async function database(credentials, path, body) {
@@ -54,14 +54,19 @@ async function prepare(payload) {
     }
   }
   const id = crypto.randomUUID();
-  // Only public product data in ephemeral memory; never vendor sessions or credentials.
-  plans.clear(); plans.set(id,{snapshot,lines,expires:Date.now()+10*60*1000});
+  // Chrome may suspend the worker between preview and confirmation. Session
+  // storage survives suspension, but not closing the browser. NEVER store JWTs.
+  const stored = await chrome.storage.session.get(null);
+  const expired = Object.entries(stored).filter(([key,value])=>key.startsWith('plan:') && value.expires<Date.now()).map(([key])=>key);
+  if(expired.length) await chrome.storage.session.remove(expired);
+  await chrome.storage.session.set({['plan:'+id]:{snapshot,lines,expires:Date.now()+10*60*1000}});
   return {id,lines};
 }
 async function execute(payload) {
-  const plan = plans.get(payload.planId);
+  const key = 'plan:'+payload.planId;
+  const plan = (await chrome.storage.session.get(key))[key];
   if (!plan || plan.expires < Date.now()) throw Error('Voorcontrole verlopen. Controleer de producten opnieuw.');
-  plans.delete(payload.planId);
+  await chrome.storage.session.remove(key);
   const snapshot = await database(payload.credentials,'rpc/aankoop_winkelwagen_snapshot',{p_bestelling:plan.snapshot.bestelling_id});
   if (!sameSnapshot(snapshot,plan.snapshot)) throw Error('Bestelling gewijzigd. Er is niets toegevoegd.');
   const run = await database(payload.credentials,'rpc/aankoop_winkelwagen_agent_start',{p_bestelling:snapshot.bestelling_id,p_verwacht:snapshot});
@@ -111,7 +116,7 @@ async function execute(payload) {
 }
 chrome.runtime.onMessage.addListener((message,sender,respond) => {
   if (sender.id !== chrome.runtime.id || sender.frameId !== 0 || !sender.url || new URL(sender.url).origin !== APP_ORIGIN) return;
-  if (message.action === 'ping') { respond({data:{version:'1.0.0'}}); return; }
+  if (message.action === 'ping') { respond({data:{version:'1.0.1'}}); return; }
   if (!['prepare','execute'].includes(message.action)) return;
   if (busy) { respond({error:'Er loopt al een overdracht in deze browser.'}); return; }
   busy = true;

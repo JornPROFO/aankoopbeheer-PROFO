@@ -4,7 +4,7 @@ import {APP_ORIGIN} from '../browser-agent/policy.js';
 
 test('agent orchestration: partial failure, repeat, authorization and audit before mutation',async()=>{
   const snapshot={bestelling_id:15,lines:[1,2].map(id=>({id,product_id:id,product_naam:`Product ${id}`,eenheid:'pak',catalogus_eenheid:'pak',aantal:id,leverancier:'123schoon.nl',leverancier_url:JSON.stringify({artikelnummer:`SKU${id}`,url:`https://www.123schoon.nl/Product-i${id}.html`})}))};
-  const events=[],cart=[],tabMap=new Map();let handler,tabId=0,adds=0,failSecond=true,authorized=true;
+  const events=[],cart=[],tabMap=new Map(),session={};let handler,tabId=0,adds=0,failSecond=true,authorized=true;
   const originalTimeout=globalThis.setTimeout;
   // Speed up the mocked browser transport, not a real browser.
   globalThis.setTimeout=(fn,ms,...args)=>originalTimeout(fn,0,...args);
@@ -17,7 +17,7 @@ test('agent orchestration: partial failure, repeat, authorization and audit befo
     else {events.push(body);data=[body];}
     return {ok:true,json:async()=>structuredClone(data)};
   };
-  globalThis.chrome={runtime:{id:'agent',getPlatformInfo:async()=>({}),onMessage:{addListener:fn=>{handler=fn;}}},tabs:{
+  globalThis.chrome={storage:{session:{get:async key=>key?{[key]:session[key]}:{...session},set:async data=>Object.assign(session,data),remove:async keys=>{for(const key of [].concat(keys))delete session[key];}}},runtime:{id:'agent',getPlatformInfo:async()=>({}),onMessage:{addListener:fn=>{handler=fn;}}},tabs:{
     get:async id=>{if(!tabMap.has(id))throw Error('closed');return tabMap.get(id);},
     create:async options=>{const tab={id:++tabId,status:'complete',...options};tabMap.set(tab.id,tab);return tab;},
     update:async(id,options)=>{const tab={id,status:'complete',...options};tabMap.set(id,tab);return tab;},
@@ -36,6 +36,8 @@ test('agent orchestration: partial failure, repeat, authorization and audit befo
     const credentials={token:'test-not-a-real-token',key:'test'};
     const prepare=()=>send('prepare',{orderId:15,snapshot,credentials});
     let plan=await prepare();assert.ok(plan.data?.id);
+    assert.equal(JSON.stringify(session).includes(credentials.token),false);
+    await import('../browser-agent/worker.js?simulated-worker-restart');
     let response=await send('execute',{planId:plan.data.id,credentials});
     assert.deepEqual(response.data.results.map(r=>r.resultaat),['toegevoegd','onzeker']);assert.equal(adds,1);
     failSecond=false;plan=await prepare();response=await send('execute',{planId:plan.data.id,credentials});
