@@ -30,9 +30,13 @@ async function navigate(supplier, url) {
   throw Error('Leverancierspagina reageert niet tijdig.');
 }
 async function dom(tabId, action, expected) {
-  const values = await chrome.scripting.executeScript({target:{tabId},func:supplierDOM,args:[action,expected]});
-  if (values.length !== 1 || values[0].result === undefined) throw Error('Leverancierspagina kon niet worden gecontroleerd.');
-  return values[0].result;
+  const values = await chrome.scripting.executeScript({target:{tabId},func:supplierDOM,args:[action,expected,true]});
+  const result = Array.isArray(values) && values.length === 1 ? values[0]?.result : null;
+  if (!result || typeof result.ok !== 'boolean') throw Error('Leverancierspagina gaf geen geldig controleresultaat. Er is niets bevestigd.');
+  if (!result.ok) throw Error(result.error || 'Leverancierspagina kon niet worden gecontroleerd.');
+  const value = result.value;
+  if (action === 'cart' ? !Array.isArray(value) : !value || typeof value !== 'object') throw Error('Leverancierspagina gaf onvolledige product- of winkelwagengegevens.');
+  return value;
 }
 async function cart(line) { return dom(await navigate(line.supplier,suppliers[line.supplier].cart),'cart',line); }
 async function prepare(payload) {
@@ -116,7 +120,7 @@ async function execute(payload) {
 }
 chrome.runtime.onMessage.addListener((message,sender,respond) => {
   if (sender.id !== chrome.runtime.id || sender.frameId !== 0 || !sender.url || new URL(sender.url).origin !== APP_ORIGIN) return;
-  if (message.action === 'ping') { respond({data:{version:'1.0.1'}}); return; }
+  if (message.action === 'ping') { respond({data:{version:'1.0.2'}}); return; }
   if (!['prepare','execute'].includes(message.action)) return;
   if (busy) { respond({error:'Er loopt al een overdracht in deze browser.'}); return; }
   busy = true;

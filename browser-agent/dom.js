@@ -1,6 +1,16 @@
 // This self-contained function runs in Chrome's isolated world. It only inspects
 // public page DOM and clicks the exact product's add button. No checkout primitive.
-export function supplierDOM(action, expected) {
+export function supplierDOM(action, expected, reportErrors = false) {
+  // Chrome can serialize an uncaught injected-script exception as a null result.
+  // Always send an explicit envelope to the worker, including on page errors.
+  try {
+    const value = inspectPage();
+    return reportErrors ? { ok: true, value } : value;
+  } catch (error) {
+    if (!reportErrors) throw error;
+    return { ok: false, error: error?.message || 'Leverancierspagina kon niet worden gecontroleerd.' };
+  }
+  function inspectPage() {
   const fail = reason => { throw new Error(reason); };
   const url = new URL(location.href);
   if (url.origin !== `https://www.${expected.supplier}`) fail('Leveranciersdomein gewijzigd.');
@@ -24,11 +34,22 @@ export function supplierDOM(action, expected) {
     });
   }
   if (url.href !== expected.url) fail('Productlink is gewijzigd of doorverwezen.');
+  // Explicitly verified 123inkt house-brand aliases; original HP or similar
+  // products must not pass this check just because they share an HP number.
+  const hpAliases = {
+    W2030X: ['HP-123inkt-huismerk-vervangt-HP-415X-W2030X-toner-zwart-hoge-capaciteit-W2030XC-i56518.html', '055437'],
+    W2031X: ['HP-123inkt-huismerk-vervangt-HP-415X-W2031X-toner-cyaan-hoge-capaciteit-W2031XC-i56519.html', '055441'],
+    W2032X: ['HP-123inkt-huismerk-vervangt-HP-415X-W2032X-toner-geel-hoge-capaciteit-W2032XC-i56520.html', '055445'],
+    W2033X: ['HP-123inkt-huismerk-vervangt-HP-415X-W2033X-toner-magenta-hoge-capaciteit-W2033XC-i56521.html', '055449'],
+  };
+  const alias = hpAliases[expected.article];
+  const expectedArticle = expected.supplier === '123inkt.be' && alias
+    && url.href === `https://www.123inkt.be/${alias[0]}` ? alias[1] : expected.article;
   const forms = [...document.querySelectorAll('form.prodform')].filter(f => {
     const a = f.getAttribute('action');
     if (!a) return false;
     const target = new URL(a,location.href);
-    return target.origin === url.origin && target.pathname === url.pathname && /^#p[a-z0-9._/-]+$/i.test(target.hash) && (!expected.article || target.hash === `#p${expected.article}`);
+    return target.origin === url.origin && target.pathname === url.pathname && /^#p[a-z0-9._/-]+$/i.test(target.hash) && (!expectedArticle || target.hash === `#p${expectedArticle}`);
   });
   if (forms.length !== 1) fail('Exact artikelnummer niet gevonden bij de bestelknop.');
   const form = forms[0];
@@ -40,7 +61,7 @@ export function supplierDOM(action, expected) {
   const button = buttons[0], input = inputs[0];
   let measurement;
   try { measurement = JSON.parse(button.getAttribute('data-measure')); } catch { fail('Artikelcontrole bij bestelknop ontbreekt.'); }
-  if (norm(measurement.label) !== `${title} - ${article}`) fail('Producttitel en artikelnummer spreken elkaar tegen.');
+  if (!measurement || norm(measurement.label) !== `${title} - ${article}`) fail('Producttitel en artikelnummer spreken elkaar tegen.');
   if (button.disabled || input.disabled || !button.getClientRects().length || !/Direct leverbaar/i.test(main.innerText)) fail('Product niet aantoonbaar direct beschikbaar.');
   if (action === 'inspect') return {title,article,url:url.href};
   if (action !== 'add' || title !== expected.title) fail('Product of verpakking is gewijzigd sinds de voorcontrole.');
@@ -51,4 +72,6 @@ export function supplierDOM(action, expected) {
   if (input.value !== String(expected.quantity)) fail('Aantalveld accepteert het aantal niet.');
   button.click();
   return {submitted:true};
+}
+
 }

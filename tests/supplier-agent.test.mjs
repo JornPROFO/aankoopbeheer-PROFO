@@ -4,6 +4,7 @@ import { parseHTML } from '../tmp/cart-test-runtime/node_modules/linkedom/esm/in
 import { supplierDOM } from '../browser-agent/dom.js';
 import { cartDecision,unchangedOthers,sameSnapshot } from '../browser-agent/policy.js';
 import { readFile } from 'node:fs/promises';
+import { hp415xSingles } from '../src/services/inkBundles.js';
 
 const url='https://www.123schoon.nl/Handdoeken-i3737.html';
 const line={supplier:'123schoon.nl',url,article:'SDR02017',title:'Handdoeken | 20 pakken',aantal:3};
@@ -64,4 +65,35 @@ test('extensie vraagt geen cookies of algemene webtoegang',async()=>{
   assert.equal(manifest.host_permissions.length,3);
   assert.equal(manifest.host_permissions.some(p=>p.includes('<all_urls>')),false);
   assert.deepEqual(manifest.content_scripts[0].matches,['https://aankoopbeheer-profo.vercel.app/*']);
+});
+
+test('HP-modelnummers worden uitsluitend op de vier exacte huismerkpagina’s vertaald',()=>{
+  const codes={W2030X:'055437',W2031X:'055441',W2032X:'055445',W2033X:'055449'};
+  for(const [hp,url] of Object.entries(hp415xSingles)) {
+    const code=codes[hp], title=`123inkt huismerk vervangt HP 415X (${hp})`;
+    const html=`<h1>${title}</h1><p>Direct leverbaar</p><form class="prodform" action="${url}#p${code}"><input name="amount" value="1"><button data-test="add-to-cart" data-measure='${JSON.stringify({label:title+' - '+code})}'>Bestellen</button></form>`;
+    const doc=page(html,url);let clicks=0;
+    doc.querySelector('form button').addEventListener('click',()=>clicks++);
+    const expected={supplier:'123inkt.be',article:hp,url};
+    const product=supplierDOM('inspect',expected);
+    assert.equal(product.article,code);
+    supplierDOM('add',{...expected,...product,quantity:1});
+    assert.equal(clicks,1);
+    assert.throws(()=>supplierDOM('inspect',{...expected,article:'W2039X'}),/artikelnummer/);
+    const originalUrl='https://www.123inkt.be/Original-i123.html';
+    page(html.replaceAll(url,originalUrl),originalUrl);
+    assert.throws(()=>supplierDOM('inspect',{...expected,url:originalUrl}),/artikelnummer/);
+  }
+});
+
+test('scriptfouten worden serialiseerbaar doorgegeven, nooit als een lege winkelwagen',()=>{
+  page('<p>Storing</p>','https://www.123schoon.nl/shoppingcart.html');
+  const error=supplierDOM('cart',line,true);
+  assert.equal(error.ok,false);assert.match(error.error,/betrouwbaar/);
+  page('<p>Uw winkelwagentje is leeg</p>','https://www.123schoon.nl/shoppingcart.html');
+  assert.deepEqual(supplierDOM('cart',line,true),{ok:true,value:[]});
+  assert.throws(()=>cartDecision(null,line),/betrouwbaar/);
+  assert.equal(unchangedOthers([],null,line.article),false);
+  page(product().replace(/data-measure='[^']*'/,"data-measure='null'"));
+  assert.equal(supplierDOM('inspect',line,true).ok,false);
 });

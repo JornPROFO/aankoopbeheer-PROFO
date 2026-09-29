@@ -23,6 +23,6 @@ export const prepareAgent = async (orderId,snapshot) => requestAgent('prepare',{
 export const executeAgent = async planId => requestAgent('execute',{planId,credentials:await credentials()});
 export async function connectAgent() {
   const agent = await requestAgent('ping',{},10000);
-  if (agent?.version !== '1.0.1') throw Error('Herlaad PROFO Winkelwagenagent naar versie 1.0.1 in het extensiebeheer. Download zo nodig het nieuwe installatiepakket.');
+  if (agent?.version !== '1.0.2') throw Error('Werk PROFO Winkelwagenagent bij naar versie 1.0.2: download het nieuwe pakket, vervang de bestanden in de bestaande extensiemap en klik in het extensiebeheer op opnieuw laden. Herlaad daarna Aankoopbeheer.');
   return agent;
 }
