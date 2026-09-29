@@ -5,6 +5,7 @@ import { processReceipt } from './services/aankoopService.js';
 import { initializeDialogAccessibility } from './ui/dialog-accessibility.js';
 import '@fontsource-variable/inter';
 import './styles/main.css';
+import { bundleInkCart, hp415xSetUrl } from './services/inkBundles.js';
 import { initializeFamilyNavigation } from './ui/family-navigation.js';
 initializeFamilyNavigation();
 import './styles/delivery-status.css';
@@ -932,6 +933,7 @@ async function bootstrapData() {
 
     const admin = isAdminUser(state.appUser, state.session.user.email);
     state.data = await loadAankoopData({ includeInactiveProducts: admin });
+    persistCart();
     state.error = '';
     syncAppBadge();
     syncExistingPushSubscription();
@@ -980,6 +982,7 @@ async function refreshAankoopDataSilently() {
     const beforeSignature = getPassiveRefreshSignature();
     const admin = isAdminUser(state.appUser, state.session.user.email);
     state.data = await loadAankoopData({ includeInactiveProducts: admin });
+    persistCart();
     const afterSignature = getPassiveRefreshSignature();
     syncAppBadge();
 
@@ -2187,6 +2190,7 @@ function renderCart(cartItems) {
 
   return `
     <form data-order-form data-order-review="${state.orderReview ? 'true' : 'false'}">
+      ${cartItems.some(({ product }) => product.leverancier_url?.includes(hp415xSetUrl)) ? '<p class="muted">HP 415X: één zwart, cyaan, magenta en geel voor dezelfde printer worden samengevoegd tot een set van 4 toners. Extra toners blijven apart vermeld. De setprijs is in het totaal verwerkt.</p>' : ''}
       <div class="cart-lines">
         ${cartItems
           .map(
@@ -5629,6 +5633,7 @@ function readCart() {
 }
 
 function persistCart() {
+  state.cart = bundleInkCart(state.cart, state.data.cartridges);
   localStorage.setItem(cartStorageKey, JSON.stringify(state.cart));
 }
 

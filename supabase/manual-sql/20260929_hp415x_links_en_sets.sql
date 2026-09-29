@@ -1,0 +1,25 @@
+-- Verified at 123inkt.be on 2026-09-29. Data only; no permissions or schema changes.
+begin;
+set local lock_timeout = '5s';
+do $$ begin
+ perform 1 from public.aankoop_bestellingen where id=17 and status='Goedgekeurd' and totaal_incl_btw=570.98 for update;
+ if not found then raise exception 'Bestelling 17 gewijzigd; controleer opnieuw'; end if;
+ if (select count(*) from public.aankoop_bestelregels where bestelling_id=17 and id in (147,148,149,150) and product_id is null and aantal=1 and product_naam like '%123inkt huismerk alternatief voor HP 415X%') <> 4 then raise exception 'Tonerregels gewijzigd'; end if;
+end $$;
+update public.aankoop_printer_cartridges set leverancier_url='https://www.123inkt.be/HP-123inkt-huismerk-vervangt-HP-415X-W2030X-toner-zwart-hoge-capaciteit-W2030XC-i56518.html', updated_at=now() where artikelnummer='W2030X' and leverancier='123inkt.be' and naam like '123inkt huismerk alternatief voor HP 415X%';
+update public.aankoop_bestelregels set product_omschrijving=regexp_replace(product_omschrijving, ' - link: https://[^ ]+$', ' - link: https://www.123inkt.be/HP-123inkt-huismerk-vervangt-HP-415X-W2030X-toner-zwart-hoge-capaciteit-W2030XC-i56518.html') where bestelling_id=17 and id in (147,148,149,150) and product_omschrijving like '% - art. W2030X - link: %';
+update public.aankoop_printer_cartridges set leverancier_url='https://www.123inkt.be/HP-123inkt-huismerk-vervangt-HP-415X-W2031X-toner-cyaan-hoge-capaciteit-W2031XC-i56519.html', updated_at=now() where artikelnummer='W2031X' and leverancier='123inkt.be' and naam like '123inkt huismerk alternatief voor HP 415X%';
+update public.aankoop_bestelregels set product_omschrijving=regexp_replace(product_omschrijving, ' - link: https://[^ ]+$', ' - link: https://www.123inkt.be/HP-123inkt-huismerk-vervangt-HP-415X-W2031X-toner-cyaan-hoge-capaciteit-W2031XC-i56519.html') where bestelling_id=17 and id in (147,148,149,150) and product_omschrijving like '% - art. W2031X - link: %';
+update public.aankoop_printer_cartridges set leverancier_url='https://www.123inkt.be/HP-123inkt-huismerk-vervangt-HP-415X-W2032X-toner-geel-hoge-capaciteit-W2032XC-i56520.html', updated_at=now() where artikelnummer='W2032X' and leverancier='123inkt.be' and naam like '123inkt huismerk alternatief voor HP 415X%';
+update public.aankoop_bestelregels set product_omschrijving=regexp_replace(product_omschrijving, ' - link: https://[^ ]+$', ' - link: https://www.123inkt.be/HP-123inkt-huismerk-vervangt-HP-415X-W2032X-toner-geel-hoge-capaciteit-W2032XC-i56520.html') where bestelling_id=17 and id in (147,148,149,150) and product_omschrijving like '% - art. W2032X - link: %';
+update public.aankoop_printer_cartridges set leverancier_url='https://www.123inkt.be/HP-123inkt-huismerk-vervangt-HP-415X-W2033X-toner-magenta-hoge-capaciteit-W2033XC-i56521.html', updated_at=now() where artikelnummer='W2033X' and leverancier='123inkt.be' and naam like '123inkt huismerk alternatief voor HP 415X%';
+update public.aankoop_bestelregels set product_omschrijving=regexp_replace(product_omschrijving, ' - link: https://[^ ]+$', ' - link: https://www.123inkt.be/HP-123inkt-huismerk-vervangt-HP-415X-W2033X-toner-magenta-hoge-capaciteit-W2033XC-i56521.html') where bestelling_id=17 and id in (147,148,149,150) and product_omschrijving like '% - art. W2033X - link: %';
+insert into public.aankoop_printer_cartridges (printer_id,kleur,naam,artikelnummer,leverancier,leverancier_url,prijs_incl_btw,btw_percentage,eenheid,actief,sort_order)
+select p.printer_id,'SET','123inkt huismerk set voor HP 415X - zwart + 3 kleuren','132198','123inkt.be','https://www.123inkt.be/HP-Aanbieding-123inkt-huismerk-set-voor-HP-415X-HP-W2030X-W2031X-W2032X-W2033X-zwart-3-kleuren-i73734.html',532.50,21,'set van 4 toners',true,50
+from (select printer_id from public.aankoop_printer_cartridges where actief=true and leverancier='123inkt.be' and artikelnummer in ('W2030X','W2031X','W2032X','W2033X') and naam like '123inkt huismerk alternatief voor HP 415X%' group by printer_id having count(distinct artikelnummer)=4) p
+where not exists (select 1 from public.aankoop_printer_cartridges s where s.printer_id=p.printer_id and s.leverancier_url='https://www.123inkt.be/HP-Aanbieding-123inkt-huismerk-set-voor-HP-415X-HP-W2030X-W2031X-W2032X-W2033X-zwart-3-kleuren-i73734.html');
+update public.aankoop_bestellingen set updated_at=now() where id=17;
+commit;
+select 'tonerlinks' as controle,count(*) as aantal from public.aankoop_printer_cartridges where naam like '123inkt huismerk alternatief voor HP 415X%' and leverancier_url like '%-i565%.html'
+union all select 'sets',count(*) from public.aankoop_printer_cartridges where leverancier_url='https://www.123inkt.be/HP-Aanbieding-123inkt-huismerk-set-voor-HP-415X-HP-W2030X-W2031X-W2032X-W2033X-zwart-3-kleuren-i73734.html'
+union all select 'bestelling17_links',count(*) from public.aankoop_bestelregels where bestelling_id=17 and id in (147,148,149,150) and product_omschrijving like '%-i565%.html';
