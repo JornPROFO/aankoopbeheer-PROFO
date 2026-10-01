@@ -1,0 +1,32 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { runInNewContext } from 'node:vm';
+import { parseHTML } from '../tmp/cart-test-runtime/node_modules/linkedom/esm/index.js';
+
+test('help survives route and dialog rerenders and remains within the modal focus scope', async () => {
+  const {document,window}=parseHTML('<html><body><main id="app"></main></body></html>');
+  const source=await readFile(new URL('../src/ui/guide-helper.js',import.meta.url),'utf8');
+  runInNewContext(source.replace('export function','function')+'; initializeGuideHelper(document.querySelector("#app"));', {document,MutationObserver:window.MutationObserver});
+  const root=document.querySelector('#app');
+  const helper=document.querySelector('.guide-pet');
+  assert.equal(helper.target,'_blank');
+  assert.equal(helper.getAttribute('rel'),'noopener');
+  root.innerHTML='<section role="dialog" aria-modal="true"><button>Sluiten</button></section>';
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(helper.parentElement,root.firstElementChild);
+  root.innerHTML='<h1>Volgende pagina</h1>';
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(helper.parentElement,document.body);
+  const dialog=document.createElement('dialog');
+  document.body.append(dialog); dialog.setAttribute('open','');
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(helper.parentElement,dialog);
+  dialog.innerHTML='<p>Nieuwe controleresultaten</p>';
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(helper.parentElement,dialog);
+  dialog.removeAttribute('open');
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(helper.parentElement,document.body);
+  assert.equal(document.querySelectorAll('.guide-pet').length,1);
+});

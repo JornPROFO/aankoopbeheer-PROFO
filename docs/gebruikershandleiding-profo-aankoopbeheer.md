@@ -1,109 +1,69 @@
 # PROFO Aankoopbeheer - gebruikershandleiding
 
-Laatste bijwerking: 20/08/2026
+Laatste bijwerking: 01/10/2026
 
-## Waarvoor dient Aankoopbeheer?
+Van aanvraag tot ontvangst: voor bestellers, goedkeurders en aankoopbeheer. Welke acties je ziet, hangt af van je rol en de status van de bestelling.
 
-PROFO Aankoopbeheer is het interne bestelportaal voor terugkerende materialen. Via de app kan je producten aanvragen voor je locatie of team. Denk aan onderhoudsproducten, EHBO-materiaal, inkt en toner, koffie- en vergadermateriaal en andere verbruiksgoederen.
+Open de app: https://aankoopbeheer-profo.vercel.app/
 
-De app vervangt niet de externe webshops. Aankoopbeheer verzamelt de interne aanvragen, laat ze waar nodig goedkeuren en helpt aankoopbeheer om ze daarna correct in te voeren bij de leverancier.
+## 1. De app openen
 
-Open de app via: https://aankoopbeheer-profo.vercel.app/
+Open de app via https://aankoopbeheer-profo.vercel.app/. Gebruik bij voorkeur Chrome of Edge op laptop en Chrome of Safari op smartphone.
 
-## 1. Account aanmaken
+## 2. Account aanmaken
 
-1. Open de app.
-2. Kies op het aanmeldscherm voor Registreren.
-3. Vul je volledige PROFO-mailadres in. Alleen je naam is niet voldoende.
-4. Kies een wachtwoord en bewaar dit zorgvuldig.
-5. Meld daarna aan via Inloggen.
+1. Kies op het aanmeldscherm voor Registreren.
+2. Vul je volledige PROFO-mailadres in. Alleen je naam is niet voldoende.
+3. Kies een wachtwoord en bewaar dit zorgvuldig.
+4. Meld daarna aan via Inloggen.
 
 Lukt aanmelden niet of krijg je geen toegang, contacteer aankoopbeheer. Je account moet gekoppeld zijn aan een actieve PROFO-gebruiker.
 
-De privacyverklaring is zonder aanmelding bereikbaar via de link onderaan het aanmeldscherm. Na aanmelding staat **Privacy** ook in de hoofdnavigatie.
-
-## 2. Wachtwoord vergeten
-
-Kies op het aanmeldscherm voor Wachtwoord vergeten en vul je PROFO-mailadres in. Volg daarna de instructies om een nieuw wachtwoord in te stellen.
-
 ## 3. Installeren op laptop
 
-1. Open https://aankoopbeheer-profo.vercel.app/ in Chrome of Edge.
+1. Open de app in Chrome of Edge.
 2. Klik op Installeren wanneer de knop zichtbaar is.
 3. Zie je geen knop, open dan het browsermenu en kies App installeren of Deze site installeren als app.
 
-Na installatie opent Aankoopbeheer als een gewone app. Je blijft aanmelden met je PROFO-account.
+Na installatie opent Aankoopbeheer als een gewone app, maar je blijft aanmelden met je PROFO-account.
 
 ## 4. Installeren op smartphone
 
-Android:
+Android: open de app in Chrome, kies het menu en daarna App installeren of Toevoegen aan startscherm.
 
-1. Open de app in Chrome.
-2. Kies het browsermenu.
-3. Kies App installeren of Toevoegen aan startscherm.
-
-iPhone of iPad:
-
-1. Open de app in Safari.
-2. Tik op de deelknop.
-3. Kies Zet op beginscherm.
+iPhone of iPad: open de app in Safari, tik op de deelknop en kies Zet op beginscherm.
 
 Op iPhone werken sommige meldingen alleen goed wanneer de app op het beginscherm staat.
 
 ## 5. Een bestelling plaatsen
 
-1. Kies Onderhoud en algemene producten voor de gewone catalogus.
-2. Gebruik EHBO voor EHBO-materiaal.
-3. Zoek het product en klik op In winkelmand.
-4. Controleer je winkelmand.
-5. Kies de locatie en controleer de besteller.
-6. Klik op Bestelling controleren.
-7. Controleer de samenvatting.
-8. Stuur de bestelling door.
+1. Kies Onderhoud en algemene producten voor de gewone catalogus of EHBO voor EHBO-materiaal.
+2. Zoek het product en klik op In winkelmand.
+3. Controleer je winkelmand, kies de locatie en controleer de besteller.
+4. Klik op Bestelling controleren.
+5. Controleer de samenvatting en stuur de bestelling door.
 
 De productcategorie wordt automatisch meegenomen. Je hoeft die dus niet zelf te kiezen.
 
 ## 6. Inkt of toner bestellen
 
 1. Kies Inkt.
-2. Kies de locatie.
-3. Kies de juiste printer.
-4. Selecteer de nodige kleur of toner.
-5. Klik op Toevoegen aan winkelmand.
-6. Rond de bestelling af via Mijn winkelmand, samen met eventuele andere producten.
+2. Kies de locatie en daarna de juiste printer.
+3. Selecteer de nodige kleur of toner.
+4. Klik op Toevoegen aan winkelmand.
+5. Rond de bestelling af via Mijn winkelmand, samen met eventuele andere producten.
 
-Inkt en toner komen dus mee in dezelfde winkelmand. Zo kan aankoopbeheer nadien zien welke externe leveranciers nodig zijn.
+Voor de ingestelde HP 415X-producten kan de app vier kleuren voor dezelfde printer bundelen tot de actieve set, wanneer die niet duurder is dan de losse producten. Extra aantallen blijven afzonderlijk staan. Controleer de samenstelling en aantallen in je winkelmand.
 
 ## 7. Bestellingen opvolgen
 
-Via Bestellingen zie je je eigen bestellingen en hun status. De bevoegde directeur kiest alleen tussen goedkeuren, extra informatie vragen of weigeren. Na goedkeuring bevestigt aankoopbeheer met één knop dat de bestelling bij de leverancier is geplaatst.
-
-Een melding telt alleen als nieuwe actie zolang er werkelijk nog iets moet gebeuren. Zodra een goedgekeurde bestelling bij de leverancier is geplaatst, verdwijnt de bijbehorende goedkeuringsmelding automatisch van het startscherm en uit de rode teller.
-
-Een ouder dossier dat nog op **In behandeling** stond, verschijnt als **Goedgekeurd - nog te bestellen**. Aankoopbeheer kan dit rechtstreeks afronden met **Besteld bij leverancier**.
-
-Wanneer een regiodirecteur zelf een bestelling indient, is geen eigen goedkeuring nodig. De bestelling wordt onmiddellijk goedgekeurd doorgestuurd naar aankoopbeheer.
-
-Dezelfde uitzondering geldt wanneer Jorn of Kathleen zelf als besteller vermeld staat. Omdat zij aankoopbeheer uitvoeren, wordt hun bestelling onmiddellijk goedgekeurd en kan ze zonder tussenkomst van Timothy of een regiodirecteur bij de leverancier worden ingevoerd. Wanneer zij een bestelling op naam van een andere medewerker invoeren, blijft de normale goedkeuringsroute van die medewerker van toepassing.
-
-Mogelijke statussen zijn onder meer:
-
-- Ter goedkeuring: de bestelling wacht op controle.
-- Goedgekeurd: aankoopbeheer mag de bestelling verwerken.
-- In behandeling: aankoopbeheer is ermee bezig.
-- Besteld: de bestelling is ingevoerd bij de leverancier.
-- Gedeeltelijk geleverd: minstens een deel van de leveranciers heeft geleverd.
-- Geleverd: de bestelling is geleverd.
-- Geweigerd: de bestelling werd niet goedgekeurd.
-- Extra informatie gevraagd: er is nog verduidelijking nodig.
-
-Wanneer aankoopbeheer op **Besteld bij leverancier** klikt, wordt eerst de verwachte leverdatum gevraagd die de leverancier heeft bevestigd. De app berekent of voorspelt deze datum niet zelf. Na bevestiging ontvangt de besteller automatisch de status **Besteld** met de manueel ingevoerde, niet-gegarandeerde leverdatum. De datum blijft zichtbaar bij de bestelling en kan later via **Meer > Leverdatum wijzigen** worden aangepast.
-
-De bestellingenpagina is voor aankoopbeheer verdeeld in **Te verwerken**, **Onderweg** en **Afgewerkt**. Alleen goedgekeurde bestellingen die nog bij een leverancier moeten worden ingevoerd, verschijnen in de afdrukbare invoerlijst. Zodra een bestelling op **Besteld** staat, verhuist ze naar **Onderweg** en kan ze niet opnieuw via de leveranciers-PDF worden afgedrukt. Na volledige levering verhuist ze naar **Afgewerkt**. Gewone bestellers zien hun eigen dossiers onder **Lopend** en **Afgewerkt**.
-
-De pagina **Analyse** gebruikt standaard alleen effectief bestelde dossiers: **Besteld**, **Gedeeltelijk geleverd**, **Geleverd** en **Afgesloten**. Aankoopbeheer kan per periode, product, locatie en status analyseren hoeveel eenheden en welk bedrag werd besteld. De kruistabel **Producten per locatie** toont welke locaties de grootste afnemers van een product zijn en, omgekeerd, welke producten binnen een locatie het meest worden besteld. Voor beleids- of boekhoudkundige controle kan de volledige analyse worden afgedrukt. De rapportage haalt alle bestellingen op die de ingelogde beheerder volgens de toegangsregels mag zien en is niet beperkt tot alleen de recentste dossiers.
+Via Bestellingen zie je je eigen bestellingen en hun status. Een bestelling kan onder meer ter goedkeuring staan, goedgekeurd zijn, in behandeling zijn, besteld zijn of geleverd zijn.
 
 Gelezen meldingen verdwijnen uit de meldingenlijst op het startscherm.
+
+Bestellers zien Lopend en Afgewerkt. Aankoopbeheer werkt met Te verwerken, Onderweg en Afgewerkt. Een goedgekeurde aanvraag is nog niet bij de leverancier besteld.
+
+Via Meer > Opnieuw gebruiken zet je producten uit een eerdere bestelling opnieuw in je winkelmand. Controleer de producten, aantallen en locatie voor je opnieuw indient.
 
 ## 8. Meldingen inschakelen
 
@@ -111,27 +71,64 @@ Op het startscherm kan je pushmeldingen inschakelen. Dan krijg je een korte meld
 
 Pushmeldingen zijn aanvullend. De betrouwbare opvolging blijft altijd zichtbaar in de app zelf.
 
-## 9. Bestelling opnieuw gebruiken
+## 9. Wachtwoord vergeten
 
-Bij recente of bestaande bestellingen kan je onder **Meer** voor **Opnieuw gebruiken** kiezen. De producten worden dan opnieuw in je winkelmand geplaatst. Controleer altijd nog even of de aantallen en producten kloppen voordat je de bestelling opnieuw doorstuurt.
+Kies op het aanmeldscherm voor Wachtwoord vergeten en vul je PROFO-mailadres in. Volg daarna de instructies om een nieuw wachtwoord in te stellen.
 
-## 10. Praktische afspraken
+## 10. Geleverde producten bevestigen — voor bestellers
 
-Plaats alleen bestellingen die nodig zijn voor de werking van je locatie of team.
+1. Open de bestelling via de ontvangstmail of via Bestellingen. Meld aan met het account van de besteller op wiens naam de bestelling staat.
+2. Ga naar Ontvangst door de besteller. Ontvangst bevestigen is mogelijk zodra de bestelling op Besteld of Gedeeltelijk geleverd staat.
+3. Vul per product het totaal ontvangen aantal verpakkingen in. Laat nog niet ontvangen producten op 0 staan. Tel verpakkingen volgens de bestelregel: één doos met 20 koffiecups telt als 1, niet als 20.
+4. Is alles aangekomen? Kies Alles is ontvangen: aantallen invullen. Dit vult de velden in, maar verstuurt nog niets.
+5. Voeg eventueel een praktische opmerking toe en klik op Ontvangst bevestigen. Daarmee meld je de ontvangst aan aankoopbeheer.
 
-Twijfel je of een product in de app hoort, geef dit door aan aankoopbeheer. Dan kan het artikel correct worden toegevoegd met de juiste leverancier, prijs en afbeelding.
+Bij een nalevering: werk het totaal bij. Ontving je eerst 2 van 5 dozen en daarna nog 3, vul dan 5 in. Een eerder bevestigd aantal kan je niet verlagen; meld een vergissing aan aankoopbeheer.
 
-Gebruik het opmerkingenveld alleen voor praktische informatie die nodig is voor de verwerking van de bestelling.
+Bij gedeeltelijke ontvangst blijft de bestelling Gedeeltelijk geleverd; zodra alle niet-geannuleerde artikelen ontvangen zijn, wordt ze Geleverd. Een verwachte leverdatum is geen ontvangstbevestiging. Zie je het invulvak niet, controleer de status en het account en contacteer aankoopbeheer met het bestelnummer.
 
-## 11. Hulp nodig?
+## 11. Goedkeuren en aanpassen — voor bevoegde medewerkers
 
-Contacteer aankoopbeheer wanneer:
+De bevoegde goedkeurder kan een aanvraag goedkeuren, extra informatie vragen of weigeren. Voor eigen aanvragen van een regiodirecteur en voor aanvragen op naam van Jorn of Kathleen geldt de ingestelde automatische goedkeuring. Voor aanvragen op naam van een andere medewerker blijft diens goedkeuringsroute gelden.
 
-- je niet kan aanmelden;
-- je account geen toegang krijgt;
-- je een product niet vindt;
-- een prijs of afbeelding fout lijkt;
-- een bestelling verkeerd werd doorgestuurd;
-- meldingen niet goed werken.
+Aankoopbeheer kan vóór de externe bestelling via Bestelregels aanpassen regels toevoegen of verwijderen. Controleer daarna opnieuw de samenstelling en het bedrag. Na de status Besteld is deze bewerking niet beschikbaar.
 
-Gebruik bij voorkeur de link naar de app in je bericht, samen met het nummer van de bestelling als het over een bestaande bestelling gaat.
+## 12. Winkelwagen bij de leverancier — voor aankoopbeheer
+
+De winkelwagenoverdracht is beschikbaar voor de daarvoor ingestelde medewerkers en leveranciers. Gebruik de winkelwagenextensie in de desktopbrowser en meld je bij de leverancier aan in dezelfde browser.
+
+1. Open een goedgekeurde bestelling die nog extern moet worden besteld en start de leveranciersoverdracht.
+2. Controleer de gevonden leveranciersproducten, verpakkingen en aantallen. Er is een exacte productlink nodig; een zoekpagina volstaat niet.
+3. Vink de controleverklaring aan en kies Vul winkelwagen nu. Bestaande overeenkomende aantallen kunnen worden hergebruikt.
+4. Controleer de winkelwagen bij de leverancier en rond daar zelf de bestelling af. De app rekent niet voor jou af.
+5. Kies pas daarna Besteld bij leverancier in de app en vul de door de leverancier meegedeelde verwachte leverdatum in.
+
+Blijft de knop uitgeschakeld? Het vinkje alleen volstaat niet. Lees de melding bij elk overgeslagen artikel: bijvoorbeeld aanmelden bij de leverancier, ontbrekende productgegevens of afwijkende aantallen in de externe winkelwagen. Los dit op en kies Opnieuw controleren. Is alles overgeslagen, dan kan niets worden overgedragen. Vermijd opnieuw toevoegen wanneer je de bestelling al manueel hebt ingevoerd.
+
+De verwachte leverdatum is geen garantie. Je kan die later aanpassen via Meer > Leverdatum wijzigen. De afdrukbare invoerlijst bevat alleen nog extern te bestellen, goedgekeurde aanvragen.
+
+## 13. Leveringen opvolgen — voor aankoopbeheer
+
+Onder Levering per leverancier volg je de afzonderlijke bestelregels op: nog niet geleverd, backorder, gedeeltelijk geleverd, geleverd of geannuleerd. Vul waar nodig een verwachte leverdatum en toelichting in en kies Bewaren en melden.
+
+Bij de statuswijziging naar Besteld wordt ook een ontvangstverzoek voor de besteller aangevraagd. Voor bestaande bestellingen kan je Ontvangstbevestiging vragen per mail gebruiken. Mislukt de verzending, dan kan je Ontvangstmail opnieuw proberen kiezen.
+
+De bevestiging van de besteller toont het tijdstip, de ontvangen aantallen en wat nog ontbreekt. Aankoopbeheerders krijgen hierover een interne melding. Volg ontbrekende of foutief bevestigde producten verder op; de app verstuurt geen periodieke ontvangstherinneringen.
+
+## 14. Analyse en catalogus — voor aankoopbeheer
+
+Gebruik Analyse om aankopen per periode, product, locatie en status te bekijken. Standaard telt de analyse dossiers met status Besteld, Gedeeltelijk geleverd, Geleverd en Afgesloten mee. De kruistabel Producten per locatie en de afdrukfunctie ondersteunen de controle.
+
+Bevoegde beheerders onderhouden de productcatalogus, printers en cartridges. Controleer bij wijzigingen ook de verpakkingseenheid, prijs, afbeelding, leverancier en exacte productlink. Een fout in een bestaande bestelling meld je met het bestelnummer.
+
+## 15. Weergave en hulp
+
+Met Dynamisch of Rustig kies je of de kleine animaties actief zijn. Met Donker of Licht wissel je de weergave. De app bewaart je keuze in deze browser. Op smartphone open en sluit je de navigatie met de menuknop.
+
+Het vosje met het boek opent deze handleiding in een nieuw tabblad, zodat je huidige scherm behouden blijft. Ook via het menu kan je de handleiding raadplegen. Contacteer aankoopbeheer bij toegangsproblemen, foutieve producten of vragen over een bestelling. Vermeld daarbij het bestelnummer.
+
+## 16. Praktische afspraken
+
+Plaats alleen bestellingen die nodig zijn voor de werking van je locatie of team. Twijfel je of een product in de app hoort, geef dit door aan aankoopbeheer zodat het artikel correct kan worden toegevoegd.
+
+Gebruik opmerkingen alleen voor de praktische verwerking. Noteer geen medische gegevens of andere vertrouwelijke informatie over medewerkers of cliënten.

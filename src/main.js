@@ -14,6 +14,8 @@ import { canUseSupplierCart, hasSupportedSupplier } from './services/supplierCar
 import './styles/profo-family.css';
 import './styles/order-editing.css';
 import './styles/warm-workplace.css';
+import './styles/guide-helper.css';
+import { initializeGuideHelper } from './ui/guide-helper.js';
 import { canEditOrderLines, validateOrderLineQuantity } from './utils/orderEditing.js';
 import {
   getCurrentSession,
@@ -91,6 +93,7 @@ let passiveRefreshRunning = false;
 let lastPassiveRefreshAt = 0;
 
 initializeTheme();
+initializeGuideHelper(app);
 
 const productCategories = [
   'Kantoorbenodigdheden',
@@ -1479,11 +1482,17 @@ function renderUserGuide(inApp = true) {
       </div>
       <div class="privacy-heading-actions">
         <p class="page-intro">
-          Deze korte handleiding helpt je om de app te openen, te installeren en een bestelling correct door te sturen.
+          Van aanvraag tot ontvangst: de stappen voor bestellers, goedkeurders en aankoopbeheer. Bijgewerkt op 1 oktober 2026. Welke acties je ziet, hangt af van je rol en de status van de bestelling.
         </p>
         ${inApp ? '' : '<a class="ghost-button" href="#start">Terug naar aanmelden</a>'}
       </div>
     </section>
+    <nav class="guide-index" aria-label="Snel naar een onderwerp">
+      <button type="button" class="ghost-button" data-guide-jump="5">Bestellen</button>
+      <button type="button" class="ghost-button" data-guide-jump="10">Ontvangst bevestigen</button>
+      <button type="button" class="ghost-button" data-guide-jump="12">Winkelwagen bij leverancier</button>
+      <button type="button" class="ghost-button" data-guide-jump="15">Weergave en hulp</button>
+    </nav>
     <section class="guide-layout">
       <article class="panel guide-card">
         <h3>1. De app openen</h3>
@@ -1534,11 +1543,14 @@ function renderUserGuide(inApp = true) {
           <li>Klik op <strong>Toevoegen aan winkelmand</strong>.</li>
           <li>Rond de bestelling af via <strong>Mijn winkelmand</strong>, samen met eventuele andere producten.</li>
         </ol>
+        <p>Voor de ingestelde HP 415X-producten kan de app vier kleuren voor dezelfde printer bundelen tot de actieve set, wanneer die niet duurder is dan de losse producten. Extra aantallen blijven afzonderlijk staan. Controleer de samenstelling en aantallen in je winkelmand.</p>
       </article>
       <article class="panel guide-card">
         <h3>7. Bestellingen opvolgen</h3>
         <p>Via <strong>Bestellingen</strong> zie je je eigen bestellingen en hun status. Een bestelling kan onder meer ter goedkeuring staan, goedgekeurd zijn, in behandeling zijn, besteld zijn of geleverd zijn.</p>
         <p>Gelezen meldingen verdwijnen uit de meldingenlijst op het startscherm.</p>
+        <p>Bestellers zien <strong>Lopend</strong> en <strong>Afgewerkt</strong>. Aankoopbeheer werkt met <strong>Te verwerken</strong>, <strong>Onderweg</strong> en <strong>Afgewerkt</strong>. Een goedgekeurde aanvraag is nog niet bij de leverancier besteld.</p>
+        <p>Via <strong>Meer > Opnieuw gebruiken</strong> zet je producten uit een eerdere bestelling opnieuw in je winkelmand. Controleer de producten, aantallen en locatie voor je opnieuw indient.</p>
       </article>
       <article class="panel guide-card">
         <h3>8. Meldingen inschakelen</h3>
@@ -1550,8 +1562,55 @@ function renderUserGuide(inApp = true) {
         <p>Kies op het aanmeldscherm voor <strong>Wachtwoord vergeten</strong> en vul je PROFO-mailadres in. Volg daarna de instructies om een nieuw wachtwoord in te stellen.</p>
       </article>
       <article class="panel guide-card">
-        <h3>10. Praktische afspraak</h3>
+        <h3>10. Geleverde producten bevestigen — voor bestellers</h3>
+        <ol>
+          <li>Open de bestelling via de ontvangstmail of via <strong>Bestellingen</strong>. Meld aan met het account van de besteller op wiens naam de bestelling staat.</li>
+          <li>Ga naar <strong>Ontvangst door de besteller</strong>. Ontvangst bevestigen is mogelijk zodra de bestelling op <strong>Besteld</strong> of <strong>Gedeeltelijk geleverd</strong> staat.</li>
+          <li>Vul per product het <strong>totaal ontvangen aantal verpakkingen</strong> in. Laat nog niet ontvangen producten op 0 staan. Tel verpakkingen volgens de bestelregel: één doos met 20 koffiecups telt als 1, niet als 20.</li>
+          <li>Is alles aangekomen? Kies <strong>Alles is ontvangen: aantallen invullen</strong>. Dit vult de velden in, maar verstuurt nog niets.</li>
+          <li>Voeg eventueel een praktische opmerking toe en klik op <strong>Ontvangst bevestigen</strong>. Daarmee meld je de ontvangst aan aankoopbeheer.</li>
+        </ol>
+        <p><strong>Bij een nalevering:</strong> werk het totaal bij. Ontving je eerst 2 van 5 dozen en daarna nog 3, vul dan 5 in. Een eerder bevestigd aantal kan je niet verlagen; meld een vergissing aan aankoopbeheer.</p>
+        <p>Bij gedeeltelijke ontvangst blijft de bestelling <strong>Gedeeltelijk geleverd</strong>; zodra alle niet-geannuleerde artikelen ontvangen zijn, wordt ze <strong>Geleverd</strong>. Een verwachte leverdatum is geen ontvangstbevestiging. Zie je het invulvak niet, controleer de status en het account en contacteer aankoopbeheer met het bestelnummer.</p>
+      </article>
+      <article class="panel guide-card">
+        <h3>11. Goedkeuren en aanpassen — voor bevoegde medewerkers</h3>
+        <p>De bevoegde goedkeurder kan een aanvraag goedkeuren, extra informatie vragen of weigeren. Voor eigen aanvragen van een regiodirecteur en voor aanvragen op naam van Jorn of Kathleen geldt de ingestelde automatische goedkeuring. Voor aanvragen op naam van een andere medewerker blijft diens goedkeuringsroute gelden.</p>
+        <p>Aankoopbeheer kan vóór de externe bestelling via <strong>Bestelregels aanpassen</strong> regels toevoegen of verwijderen. Controleer daarna opnieuw de samenstelling en het bedrag. Na de status <strong>Besteld</strong> is deze bewerking niet beschikbaar.</p>
+      </article>
+      <article class="panel guide-card">
+        <h3>12. Winkelwagen bij de leverancier — voor aankoopbeheer</h3>
+        <p>De winkelwagenoverdracht is beschikbaar voor de daarvoor ingestelde medewerkers en leveranciers. Gebruik de winkelwagenextensie in de desktopbrowser en meld je bij de leverancier aan in dezelfde browser.</p>
+        <ol>
+          <li>Open een goedgekeurde bestelling die nog extern moet worden besteld en start de leveranciersoverdracht.</li>
+          <li>Controleer de gevonden leveranciersproducten, verpakkingen en aantallen. Er is een exacte productlink nodig; een zoekpagina volstaat niet.</li>
+          <li>Vink de controleverklaring aan en kies <strong>Vul winkelwagen nu</strong>. Bestaande overeenkomende aantallen kunnen worden hergebruikt.</li>
+          <li>Controleer de winkelwagen bij de leverancier en rond daar zelf de bestelling af. De app rekent niet voor jou af.</li>
+          <li>Kies pas daarna <strong>Besteld bij leverancier</strong> in de app en vul de door de leverancier meegedeelde verwachte leverdatum in.</li>
+        </ol>
+        <p><strong>Blijft de knop uitgeschakeld?</strong> Het vinkje alleen volstaat niet. Lees de melding bij elk overgeslagen artikel: bijvoorbeeld aanmelden bij de leverancier, ontbrekende productgegevens of afwijkende aantallen in de externe winkelwagen. Los dit op en kies <strong>Opnieuw controleren</strong>. Is alles overgeslagen, dan kan niets worden overgedragen. Vermijd opnieuw toevoegen wanneer je de bestelling al manueel hebt ingevoerd.</p>
+        <p>De verwachte leverdatum is geen garantie. Je kan die later aanpassen via <strong>Meer > Leverdatum wijzigen</strong>. De afdrukbare invoerlijst bevat alleen nog extern te bestellen, goedgekeurde aanvragen.</p>
+      </article>
+      <article class="panel guide-card">
+        <h3>13. Leveringen opvolgen — voor aankoopbeheer</h3>
+        <p>Onder <strong>Levering per leverancier</strong> volg je de afzonderlijke bestelregels op: nog niet geleverd, backorder, gedeeltelijk geleverd, geleverd of geannuleerd. Vul waar nodig een verwachte leverdatum en toelichting in en kies <strong>Bewaren en melden</strong>.</p>
+        <p>Bij de statuswijziging naar <strong>Besteld</strong> wordt ook een ontvangstverzoek voor de besteller aangevraagd. Voor bestaande bestellingen kan je <strong>Ontvangstbevestiging vragen per mail</strong> gebruiken. Mislukt de verzending, dan kan je <strong>Ontvangstmail opnieuw proberen</strong> kiezen.</p>
+        <p>De bevestiging van de besteller toont het tijdstip, de ontvangen aantallen en wat nog ontbreekt. Aankoopbeheerders krijgen hierover een interne melding. Volg ontbrekende of foutief bevestigde producten verder op; de app verstuurt geen periodieke ontvangstherinneringen.</p>
+      </article>
+      <article class="panel guide-card">
+        <h3>14. Analyse en catalogus — voor aankoopbeheer</h3>
+        <p>Gebruik <strong>Analyse</strong> om aankopen per periode, product, locatie en status te bekijken. Standaard telt de analyse dossiers met status Besteld, Gedeeltelijk geleverd, Geleverd en Afgesloten mee. De kruistabel <strong>Producten per locatie</strong> en de afdrukfunctie ondersteunen de controle.</p>
+        <p>Bevoegde beheerders onderhouden de productcatalogus, printers en cartridges. Controleer bij wijzigingen ook de verpakkingseenheid, prijs, afbeelding, leverancier en exacte productlink. Een fout in een bestaande bestelling meld je met het bestelnummer.</p>
+      </article>
+      <article class="panel guide-card">
+        <h3>15. Weergave en hulp</h3>
+        <p>Met <strong>Dynamisch</strong> of <strong>Rustig</strong> kies je of de kleine animaties actief zijn. Met <strong>Donker</strong> of <strong>Licht</strong> wissel je de weergave. De app bewaart je keuze in deze browser. Op smartphone open en sluit je de navigatie met de menuknop.</p>
+        <p>Het vosje met het boek opent deze handleiding in een nieuw tabblad, zodat je huidige scherm behouden blijft. Ook via het menu kan je de handleiding raadplegen. Contacteer aankoopbeheer bij toegangsproblemen, foutieve producten of vragen over een bestelling. Vermeld daarbij het bestelnummer.</p>
+      </article>
+      <article class="panel guide-card">
+        <h3>16. Praktische afspraken</h3>
         <p>Plaats alleen bestellingen die nodig zijn voor de werking van je locatie of team. Twijfel je of een product in de app hoort, geef dit door aan aankoopbeheer zodat het artikel correct kan worden toegevoegd.</p>
+        <p>Gebruik opmerkingen alleen voor de praktische verwerking. Noteer geen medische gegevens of andere vertrouwelijke informatie over medewerkers of cliënten.</p>
       </article>
     </section>
   `;
