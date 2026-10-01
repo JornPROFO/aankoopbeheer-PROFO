@@ -1,27 +1,29 @@
 /* Reserve space so the help control never covers the final page action. */
-body { padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)); }
+body { padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px)); }
 .guide-pet {
   position: fixed; right: max(20px, env(safe-area-inset-right)); bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-  z-index: 90; display: flex; align-items: center; gap: 4px;
-  min-height: 64px; padding: 0 15px 0 3px; border: 1px solid #e1c6b8; border-top-color: #fff;
-  border-radius: 24px; background: #fff8ee; color: #743c33; text-decoration: none; font-weight: 650; font-size: .82rem;
-  box-shadow: 0 4px 0 #d6b6a5, 0 8px 22px #68412b18;
+  z-index: 90; display: flex; align-items: center; gap: 2px;
+  border-radius: 24px; color: #891811; text-decoration: none; font-weight: 650; font-size: .9rem;
 }
-.guide-pet svg { width: 70px; height: 70px; flex: none; margin-top: -12px; }
+.guide-pet-portrait { width:96px; height:96px; object-fit:contain; flex:none; filter:drop-shadow(0 5px 5px #60382720); transform-origin:50% 90%; }
+.guide-pet-label { display:flex; align-items:center; gap:9px; min-height:52px; padding:0 18px; border:1px solid #e1c6b8; border-top-color:#fff; border-radius:30px; background:linear-gradient(#fffdf8,#f2e5d7); box-shadow:0 4px 0 #d6b6a5,0 8px 22px #68412b18; }
+.guide-pet-label svg { flex:none; }
 .guide-pet:focus-visible { outline: 3px solid #b61917; outline-offset: 5px; }
-.guide-pet:hover { color: #891811; background: #fff1e2; }
+.guide-pet:hover .guide-pet-label { background:#fff1e2; }
 .guide-pet-in-dialog { position: relative; right: auto; bottom: auto; width: fit-content; margin: 24px 0 8px auto; }
-.guide-pet-tail { transform-origin: 59px 77px; }
-@keyframes guide-tail { 0%,100% {transform:rotate(-5deg)} 50% {transform:rotate(9deg)} }
+@keyframes guide-greeting { 0%,100% {transform:translateY(0) rotate(0)} 50% {transform:translateY(-3px) rotate(-3deg)} }
 @media (prefers-reduced-motion: no-preference) {
-  :root[data-motion="dynamic"] .guide-pet:is(:hover,:focus-visible) .guide-pet-tail { animation: guide-tail 1.4s ease-in-out infinite; }
+  :root[data-motion="dynamic"] .guide-pet:is(:hover,:focus-visible) .guide-pet-portrait { animation: guide-greeting 1.8s ease-in-out infinite; }
 }
-:root[data-theme="dark"] .guide-pet { background:#392b25; color:#ffddca; border-color:#785444; box-shadow:0 4px 0 #170f0c,0 8px 22px #0003; }
-:root[data-theme="dark"] .guide-pet:hover { background:#493229; }
+:root[data-theme="dark"] .guide-pet { color:#ffddca; }
+:root[data-theme="dark"] .guide-pet-label { background:#392b25; border-color:#785444; box-shadow:0 4px 0 #170f0c,0 8px 22px #0003; }
+:root[data-theme="dark"] .guide-pet:hover .guide-pet-label { background:#493229; }
 .guide-index { display:flex; flex-wrap:wrap; gap:8px 18px; padding:16px 0 24px; }
 .guide-card { scroll-margin-top:24px; }
 @media (max-width:600px) {
-  .guide-pet { right:12px; bottom:calc(12px + env(safe-area-inset-bottom, 0px)); min-height:52px; border-radius:19px; font-size:.75rem; }
-  .guide-pet svg { width:56px; height:56px; margin-top:-8px; }
+  body { padding-bottom:calc(94px + env(safe-area-inset-bottom, 0px)); }
+  .guide-pet { right:12px; bottom:calc(12px + env(safe-area-inset-bottom, 0px)); font-size:.75rem; }
+  .guide-pet-portrait { width:68px; height:68px; }
+  .guide-pet-label { min-height:44px; padding:0 12px; gap:6px; }
 }
 @media print { .guide-pet,.guide-index {display:none!important;} body {padding-bottom:0;} }

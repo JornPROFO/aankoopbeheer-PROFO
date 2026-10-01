@@ -1605,7 +1605,7 @@ function renderUserGuide(inApp = true) {
       <article class="panel guide-card">
         <h3>15. Weergave en hulp</h3>
         <p>Met <strong>Dynamisch</strong> of <strong>Rustig</strong> kies je of de kleine animaties actief zijn. Met <strong>Donker</strong> of <strong>Licht</strong> wissel je de weergave. De app bewaart je keuze in deze browser. Op smartphone open en sluit je de navigatie met de menuknop.</p>
-        <p>Het vosje met het boek opent deze handleiding in een nieuw tabblad, zodat je huidige scherm behouden blijft. Ook via het menu kan je de handleiding raadplegen. Contacteer aankoopbeheer bij toegangsproblemen, foutieve producten of vragen over een bestelling. Vermeld daarbij het bestelnummer.</p>
+        <p>Het vosje bij de handleidingknop opent deze handleiding in een nieuw tabblad, zodat je huidige scherm behouden blijft. Ook via het menu kan je de handleiding raadplegen. Contacteer aankoopbeheer bij toegangsproblemen, foutieve producten of vragen over een bestelling. Vermeld daarbij het bestelnummer.</p>
       </article>
       <article class="panel guide-card">
         <h3>16. Praktische afspraken</h3>
