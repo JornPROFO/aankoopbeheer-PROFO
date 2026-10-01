@@ -15,6 +15,8 @@ export async function openSupplierAgent(orderId) {
   const message = text => {dialog.querySelector('[data-message]').textContent=text;};
   const draw = () => {
     const lines=prepareLines(snapshot || {lines:[]});
+    const actionable = plan?.lines.some(line => ['add','keep'].includes(line.action));
+    const blocked = plan?.lines.filter(line => line.action === 'skip') || [];
     dialog.innerHTML=`<div class="supplier-cart-heading"><h2>Vul winkelwagen bij leverancier</h2><button type="button" data-close ${busy?'disabled':''}>Sluiten</button></div>
       <p>Bestelling ${e(orderId)} · Alleen desktop en laptop · Controle en afrekenen doe je zelf.</p>
       <p role="status" aria-live="polite" data-message></p>
@@ -30,12 +32,12 @@ export async function openSupplierAgent(orderId) {
       }).join('')}</div>
       ${previous.length?`<details><summary>Resultaten vorige poging — geen actuele winkelwagencontrole</summary>${previous.map(r=>`<p>Regel ${e(r.regel_id)} · ${e(outcomes[r.resultaat])} · ${e(r.toelichting || r.reden)} · ${e(r.created_at)}</p>`).join('')}</details>`:''}
       ${connected&&!mobile&&!results?`<button type="button" data-prepare ${busy?'disabled':''}>${plan?'Opnieuw controleren':'Controleer producten en huidige winkelwagen'}</button>`:''}
-      ${plan&&!results?`<p><label><input type="checkbox" data-confirm ${busy?'disabled':''}> Ik heb de getoonde leveranciersproducten en verpakkingen gecontroleerd. De bestaande overeenkomende aantallen mogen voor deze bestelling worden gebruikt.</label></p><button class="primary-button" type="button" data-execute disabled>Vul winkelwagen nu</button>`:''}
+      ${plan&&!results?`${blocked.length ? `<div class="warning-panel" role="status"><strong>${actionable ? 'Niet alle producten kunnen worden toegevoegd.' : 'Winkelwagen vullen is geblokkeerd.'}</strong><p>${actionable ? 'Alleen de goedgekeurde regels worden verwerkt.' : 'Geen enkel product is door de controle gekomen. Het aanvinken van de bevestiging heft deze blokkering niet op.'}</p><ul>${blocked.map(line => `<li><strong>${e(line.product_naam)}</strong>: ${e(line.reason || 'Productcontrole niet geslaagd.')}</li>`).join('')}</ul><p>Los de vermelde oorzaak op en klik daarna op ‘Opnieuw controleren’.</p>${blocked.some(line => /aanmeld|aan bij de leverancier/i.test(line.reason || '')) ? [...new Set(blocked.map(line => line.supplier).filter(s => suppliers[s]))].map(s => `<a href="${suppliers[s].home}" target="_blank" rel="noopener">Aanmelden bij ${e(s)}</a>`).join(' · ') : ''}</div>` : ''}<p><label><input type="checkbox" data-confirm ${busy||!actionable?'disabled':''}> Ik heb de getoonde leveranciersproducten en verpakkingen gecontroleerd. De bestaande overeenkomende aantallen mogen voor deze bestelling worden gebruikt.</label></p><button class="primary-button" type="button" data-execute disabled>Vul winkelwagen nu</button>`:''}
       ${results?`<p class="${results.every(r=>['toegevoegd','reeds_aanwezig','aantal_aangepast'].includes(r.resultaat))?'notice-panel':'warning-panel'}">${results.every(r=>['toegevoegd','reeds_aanwezig','aantal_aangepast'].includes(r.resultaat))?'Winkelwagen gevuld en gecontroleerd.':'Gedeeltelijk of niet verwerkt: controleer de resultaten per regel.'} De aankoop is nog niet als besteld geregistreerd.</p>${[...new Set(lines.map(l=>l.supplier).filter(s=>suppliers[s]))].map(s=>`<a class="primary-button" href="${suppliers[s].cart}" target="_blank" rel="noopener">Controleer winkelwagen ${e(s)}</a>`).join(' ')}`:''}`;
   };
   dialog.addEventListener('cancel',event=>{if(busy) event.preventDefault();});
   dialog.addEventListener('close',()=>dialog.remove());
-  dialog.addEventListener('change',()=>{const b=dialog.querySelector('[data-execute]');if(b)b.disabled=busy||!dialog.querySelector('[data-confirm]')?.checked||!plan.lines.some(l=>l.action!=='skip');});
+  dialog.addEventListener('change',()=>{const b=dialog.querySelector('[data-execute]');if(b)b.disabled=busy||!dialog.querySelector('[data-confirm]')?.checked||!plan?.lines.some(l=>['add','keep'].includes(l.action));});
   dialog.addEventListener('click',async event=>{
     const b=event.target.closest('button');if(!b||busy)return;
     if(b.hasAttribute('data-close')){dialog.close();return;}
