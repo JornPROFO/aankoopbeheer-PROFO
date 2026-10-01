@@ -13,6 +13,7 @@ import { openSupplierAgent as openSupplierCart } from './supplierAgentView.js';
 import { canUseSupplierCart, hasSupportedSupplier } from './services/supplierCartModel.js';
 import './styles/profo-family.css';
 import './styles/order-editing.css';
+import './styles/warm-workplace.css';
 import { canEditOrderLines, validateOrderLineQuantity } from './utils/orderEditing.js';
 import {
   getCurrentSession,
