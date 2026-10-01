@@ -182,6 +182,8 @@ input:not([type=checkbox]):not([type=radio]), select, textarea {
 :root[data-theme="dark"] .notice-panel {background:#293a2b;border-color:#526b49;color:#d5eacb;}
 :root[data-theme="dark"] .warning-panel {background:#443521;border-color:#785d37;color:#f3debb;}
 :root[data-theme="dark"] .supplier-cart-dialog {background:#211d1c;border-color:#51443d;color:#f3eae3;}
+:root[data-theme="dark"] .catalog-search {background:#362d28;border-color:#51443d;color:#e4d4c7;}
+:root[data-theme="dark"] input::placeholder,:root[data-theme="dark"] textarea::placeholder {color:#bba89a;opacity:1;}
 :root[data-theme="dark"] .motion-choice button[aria-pressed="true"] {background:#51312e;color:#ffd0c4;border-color:#805048;box-shadow:0 2px 0 #130d0b;}
 button:disabled {transform:none;box-shadow:none;opacity:.55;}
 @media(prefers-reduced-motion:reduce) {
