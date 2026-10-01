@@ -1230,6 +1230,13 @@ function renderShell() {
         </div>
       </div>
       <div class="header-actions">
+        <div class="appearance-controls" role="group" aria-label="Weergave en beweging">
+          <div class="motion-choice" role="group" aria-label="Beweging">
+            <button type="button" data-motion="dynamic" aria-pressed="${document.documentElement.dataset.motion === 'dynamic'}">✧ Dynamisch</button>
+            <button type="button" data-motion="calm" aria-pressed="${document.documentElement.dataset.motion === 'calm'}">Rustig</button>
+          </div>
+          <button type="button" class="appearance-theme" data-appearance-theme aria-label="${document.documentElement.dataset.theme === 'dark' ? 'Lichte' : 'Donkere'} weergave" aria-pressed="${document.documentElement.dataset.theme === 'dark'}">${renderIcon('theme')}<span>${document.documentElement.dataset.theme === 'dark' ? 'Licht' : 'Donker'}</span></button>
+        </div>
         ${String(state.session.user.email || '').trim().toLowerCase() === 'jorn.neeus@profo.be' ? '<a class="header-button" href="https://preventiebeheer-profo.vercel.app/">Mijn toepassingen</a>' : ''}
         <span class="environment-pill">${escapeHtml(userLabel)}</span>
         ${state.installPrompt ? '<button class="header-button" type="button" data-install-app>Installeren</button>' : ''}
@@ -1264,6 +1271,16 @@ function renderShell() {
 function navLink(id, label, badge = 0, icon = 'dot') {
   const active = state.view === id ? 'is-active' : '';
   return `<a class="nav-link ${active}" href="#${id}" ${active ? 'aria-current="page"' : ''}>${renderIcon(icon)}<span>${escapeHtml(label)}</span>${badge ? `<strong class="nav-badge">${escapeHtml(badge)}</strong>` : ''}</a>`;
+}
+
+function renderCardArt(kind, number) {
+  const drawings = {
+    rings: '<circle cx="100" cy="55" r="36"/><circle cx="65" cy="98" r="36"/><circle cx="134" cy="139" r="19"/>',
+    sheets: '<rect x="69" y="20" width="62" height="46" rx="12"/><rect x="54" y="66" width="62" height="46" rx="12"/><rect x="39" y="112" width="62" height="46" rx="12"/>',
+    orbit: '<ellipse cx="88" cy="84" rx="65" ry="25" transform="rotate(45 88 84)"/><ellipse cx="88" cy="84" rx="65" ry="25" transform="rotate(-45 88 84)"/><circle cx="88" cy="84" r="13"/>',
+    steps: '<path d="M25 140h35v-35h35V70h35V35h25"/><circle cx="130" cy="35" r="17"/><circle cx="60" cy="105" r="10"/>',
+  };
+  return `<span class="card-number" aria-hidden="true">${number}</span><svg class="card-art card-art-${kind}" viewBox="0 0 180 180" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">${drawings[kind]}</svg>`;
 }
 
 function renderKpi(label, value, detail, icon, tone) {
@@ -1301,8 +1318,24 @@ function renderIcon(name) {
 }
 
 function initializeTheme() {
-  // De vaste lichte huisstijl is onafhankelijk van toestel- en oude thema-instellingen.
-  document.documentElement.dataset.theme = 'light';
+  let preferences = {};
+  try { preferences = JSON.parse(localStorage.getItem('profo-aankoop-appearance') || '{}') || {}; } catch { /* Keep usable defaults if storage is unavailable. */ }
+  const root = document.documentElement;
+  root.dataset.theme = preferences.theme === 'dark' ? 'dark' : 'light';
+  root.dataset.motion = preferences.motion === 'calm' || (!preferences.motion && matchMedia('(prefers-reduced-motion: reduce)').matches) ? 'calm' : 'dynamic';
+  document.addEventListener('click', event => {
+    const button = event.target.closest('[data-motion], [data-appearance-theme]');
+    if (!button) return;
+    if (button.hasAttribute('data-motion')) root.dataset.motion = button.dataset.motion;
+    else root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+    try { localStorage.setItem('profo-aankoop-appearance', JSON.stringify({ theme: root.dataset.theme, motion: root.dataset.motion })); } catch { /* Current page still works. */ }
+    document.querySelectorAll('[data-motion]').forEach(control => control.setAttribute('aria-pressed', String(control.dataset.motion === root.dataset.motion)));
+    document.querySelectorAll('[data-appearance-theme]').forEach(control => {
+      control.setAttribute('aria-pressed', String(root.dataset.theme === 'dark'));
+      control.setAttribute('aria-label', `${root.dataset.theme === 'dark' ? 'Lichte' : 'Donkere'} weergave`);
+      control.querySelector('span').textContent = root.dataset.theme === 'dark' ? 'Licht' : 'Donker';
+    });
+  });
 }
 
 function renderSetupError() {
@@ -1389,24 +1422,28 @@ function renderStart(admin, approver) {
     </section>
     <section class="start-actions">
       <a class="action-card is-primary" href="#bestellen">
+        ${renderCardArt('rings', '01')}
         ${renderIcon('package')}
         <span>Onderhoud en algemene producten</span>
         <strong>Nieuwe aanvraag samenstellen</strong>
         <small>${cartItems.length ? `${cartItems.length} product(en) staan al klaar in je winkelmand.` : 'Kies producten, controleer en dien in.'}</small>
       </a>
       <a class="action-card" href="#inkt">
+        ${renderCardArt('sheets', '02')}
         ${renderIcon('printer')}
         <span>Inkt en toner</span>
         <strong>Bestellen per printer</strong>
         <small>Kies locatie, printer en de nodige kleuren of set.</small>
       </a>
       <a class="action-card" href="#ehbo">
+        ${renderCardArt('orbit', '03')}
         ${renderIcon('shield')}
         <span>EHBO</span>
         <strong>Koffer A aanvullen</strong>
         <small>Bestel verbandmiddelen en EHBO-materiaal per locatie.</small>
       </a>
       <a class="action-card" href="#bestellingen">
+        ${renderCardArt('steps', '04')}
         ${renderIcon('orders')}
         <span>Opvolging</span>
         <strong>${approver && !admin ? 'Goed te keuren' : 'Mijn bestellingen'}</strong>
