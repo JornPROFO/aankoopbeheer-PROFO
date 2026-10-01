@@ -125,7 +125,7 @@ input:not([type=checkbox]):not([type=radio]), select, textarea {
 .action-card small {padding-right:24px;}
 .action-card .card-number {position:absolute;right:23px;top:20px;font-size:.7rem;letter-spacing:.17em;opacity:.65;}
 .card-art {position:absolute;right:-20px;top:20px;width:150px;height:150px;color:#fff;opacity:.25;pointer-events:none;transform-origin:center;}
-.card-art > * {transform-box:fill-box;transform-origin:center;}
+.card-art > :not(ellipse) {transform-box:fill-box;transform-origin:center;}
 .action-card > :not(.card-art):not(.card-number) {position:relative;z-index:1;}
 .appearance-controls {display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .motion-choice {display:flex;gap:3px;padding:4px;border:1px solid var(--profo-border);border-radius:13px;background:var(--saas-surface-subtle);}
