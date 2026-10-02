@@ -6,12 +6,14 @@ import { parseHTML } from '../tmp/cart-test-runtime/node_modules/linkedom/esm/in
 
 test('help survives route and dialog rerenders and remains within the modal focus scope', async () => {
   const {document,window}=parseHTML('<html><body><main id="app"></main></body></html>');
+  window.location = {hash:'#bestellingen'};
   const source=await readFile(new URL('../src/ui/guide-helper.js',import.meta.url),'utf8');
-  runInNewContext(source.replace('export function','function')+'; initializeGuideHelper(document.querySelector("#app"));', {document,MutationObserver:window.MutationObserver});
+  runInNewContext(source.replace('export function','function')+'; initializeGuideHelper(document.querySelector("#app"));', {document,window,URLSearchParams,requestAnimationFrame:fn=>fn(),MutationObserver:window.MutationObserver});
   const root=document.querySelector('#app');
   const helper=document.querySelector('.guide-pet');
   assert.equal(helper.target,'_blank');
   assert.equal(helper.getAttribute('rel'),'noopener');
+  assert.equal(helper.getAttribute('href'),'#handleiding?onderwerp=bestellingen');
   root.innerHTML='<section role="dialog" aria-modal="true"><button>Sluiten</button></section>';
   await new Promise(resolve=>setImmediate(resolve));
   assert.equal(helper.parentElement,root.firstElementChild);
@@ -19,9 +21,11 @@ test('help survives route and dialog rerenders and remains within the modal focu
   await new Promise(resolve=>setImmediate(resolve));
   assert.equal(helper.parentElement,document.body);
   const dialog=document.createElement('dialog');
+  dialog.setAttribute('data-supplier-cart-dialog','');
   document.body.append(dialog); dialog.setAttribute('open','');
   await new Promise(resolve=>setImmediate(resolve));
   assert.equal(helper.parentElement,dialog);
+  assert.equal(helper.getAttribute('href'),'#handleiding?onderwerp=leverancier');
   dialog.innerHTML='<p>Nieuwe controleresultaten</p>';
   await new Promise(resolve=>setImmediate(resolve));
   assert.equal(helper.parentElement,dialog);

@@ -28,3 +28,28 @@ export function receiptRoute(hash) {
   const id = new URLSearchParams(query || '').get('ontvangst');
   return route === 'bestellingen' && /^\d+$/.test(id || '') ? id : null;
 }
+
+// Keep the baseline and version frozen while editing/retrying a receipt.
+// A lost response must never turn the same delivery into another increment.
+export function receiptDraft(order, values = {}, previous = {}) {
+  return { ...previous, ...values,
+    __baseline: previous.__baseline || { ...order.ontvangst?.aantallen },
+    __version: previous.__version ?? order.updated_at,
+  };
+}
+
+export function receiptTotals(order, draft) {
+  const baseline = draft.__baseline || order.ontvangst?.aantallen || {};
+  let added = 0;
+  const totals = Object.fromEntries(receiptLines(order).map(line => {
+    const raw = draft['receipt-' + line.id];
+    const amount = raw === '' || raw == null ? NaN : Number(raw);
+    const before = Number(baseline[line.id] || 0);
+    if (!Number.isSafeInteger(amount) || amount < 0 || amount > Number(line.aantal) - before)
+      throw new Error(`Vul voor ${line.product_naam} het vandaag ontvangen aantal in, tussen 0 en ${Number(line.aantal) - before}.`);
+    added += amount;
+    return [line.id, before + amount];
+  }));
+  if (!added) throw new Error('Er zijn geen nieuwe verpakkingen ingevuld. Bevestig zodra er iets geleverd is.');
+  return validateReceipt({ ...order, ontvangst: { aantallen: baseline } }, totals);
+}

@@ -4,7 +4,9 @@ Zodra aankoopbeheer een bestelling via de app op **Besteld** zet, krijgt de best
 
 Bij bestaande bestellingen met status Besteld of Gedeeltelijk geleverd kan aankoopbeheer **Ontvangstbevestiging vragen per mail** kiezen. De aanvraag verschijnt ook in de app van de besteller. Een reeds verzonden aanvraag wordt niet opnieuw verstuurd bij herhaalde klikken. Als de mail niet kon worden verzonden, blijft de aanvraag zichtbaar en kan aankoopbeheer de verzending opnieuw proberen.
 
-De besteller vult per artikel het totaal ontvangen aantal verpakkingen in. **Alles is ontvangen: aantallen invullen** vult alle aantallen; de besteller moet daarna nog **Ontvangst bevestigen** kiezen. Bij een nalevering vult de besteller de nieuwe cumulatieve aantallen in. Eerdere ontvangen aantallen kunnen niet worden verminderd. Een foutieve eerdere bevestiging moet aan aankoopbeheer worden gemeld; deze versie heeft geen correctieknop voor ontvangsthistoriek.
+De besteller kiest **Een deel ontvangen** of **Alles ontvangen** en vult per artikel alleen het **vandaag ontvangen aantal verpakkingen** in. De app telt eerdere leveringen mee en toont het nieuwe totaal. **Alles ontvangen** vult de nog ontbrekende aantallen in. Via **Ontvangst controleren** bekijkt de besteller eerst de samenvatting; pas **Ontvangst melden** slaat de levering op. Een foutieve eerdere bevestiging moet aan aankoopbeheer worden gemeld; deze versie heeft geen correctieknop voor ontvangsthistoriek.
+
+Tijdens invoer en een herhaalde poging bewaart de app het oorspronkelijke totaal en de versie van de bestelling. Daardoor telt een herhaling na een verloren antwoord dezelfde levering niet opnieuw op. **Invoer opnieuw beginnen** wist de conceptinvoer en gebruikt de recent geladen gegevens.
 
 Bij gedeeltelijke ontvangst krijgt de bestelling de status Gedeeltelijk geleverd. Bij volledige ontvangst wordt dit Geleverd. Geannuleerde regels tellen niet mee. Prijzen, bestelregels en betaalgegevens worden niet gewijzigd. Opmerkingen zijn optioneel; er worden geen vertrouwelijke persoonsgegevens gevraagd.
 

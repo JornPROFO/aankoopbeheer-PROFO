@@ -1,6 +1,6 @@
 import './styles/receipt.css';
 import { renderReceiptPanel } from './ui/receipt.js';
-import { receiptLines, validateReceipt, receiptRoute } from './utils/receipt.js';
+import { receiptLines, receiptDraft, receiptTotals, canConfirmReceipt, receiptRoute } from './utils/receipt.js';
 import { processReceipt } from './services/aankoopService.js';
 import { initializeDialogAccessibility } from './ui/dialog-accessibility.js';
 import '@fontsource-variable/inter';
@@ -15,6 +15,7 @@ import './styles/profo-family.css';
 import './styles/order-editing.css';
 import './styles/warm-workplace.css';
 import './styles/guide-helper.css';
+import './styles/ux-refinements.css';
 import { initializeGuideHelper } from './ui/guide-helper.js';
 import { canEditOrderLines, validateOrderLineQuantity } from './utils/orderEditing.js';
 import {
@@ -67,6 +68,7 @@ import {
 let receiptBusy = false;
 const receiptAttempts = new Map();
 const receiptDrafts = new Map();
+const expandedOrders = new Set();
 const app = document.querySelector('#app');
 initializeDialogAccessibility(app);
 const cartStorageKey = 'profo-aankoopbeheer-cart';
@@ -233,6 +235,7 @@ window.addEventListener('appinstalled', () => {
 
 app.addEventListener('submit', async (event) => {
   const form = event.target;
+  if (form.matches('[data-receipt-form]')) return;
   if (form.dataset.familyBusy === 'true') { event.preventDefault(); return; }
   form.dataset.familyBusy = 'true';
   form.setAttribute('aria-busy', 'true');
@@ -335,7 +338,10 @@ app.addEventListener('click', async (event) => {
 
   if (target.matches('[data-supplier-cart]')) {
     if (canUseSupplierCart(state.appUser, state.session?.user?.email)) {
-      await openSupplierCart(target.dataset.supplierCart);
+      await openSupplierCart(target.dataset.supplierCart, { onOrdered: () => {
+        state.expectedDeliveryOrderId = target.dataset.supplierCart;
+        render();
+      } });
     }
     return;
   }
@@ -1232,7 +1238,7 @@ function renderShell() {
           <h1>Bestelportaal</h1>
         </div>
       </div>
-      <div class="header-actions">
+      <details class="account-menu"><summary aria-label="Account en weergave">${escapeHtml(userLabel)} <span aria-hidden="true">⌄</span></summary><div class="header-actions">
         <div class="appearance-controls" role="group" aria-label="Weergave en beweging">
           <div class="motion-choice" role="group" aria-label="Beweging">
             <button type="button" data-motion="dynamic" aria-pressed="${document.documentElement.dataset.motion === 'dynamic'}">✧ Dynamisch</button>
@@ -1244,7 +1250,7 @@ function renderShell() {
         <span class="environment-pill">${escapeHtml(userLabel)}</span>
         ${state.installPrompt ? '<button class="header-button" type="button" data-install-app>Installeren</button>' : ''}
         <button class="header-button" type="button" data-sign-out>Afmelden</button>
-      </div>
+      </div></details>
     </header>
     <div class="app-layout">
       <div class="family-nav"><button type="button" class="family-menu-toggle" data-family-menu aria-expanded="false" aria-controls="family-navigation">Menu openen <span aria-hidden="true">+</span></button><nav class="sidebar" id="family-navigation" aria-label="Hoofdnavigatie">
@@ -1266,9 +1272,17 @@ function renderShell() {
         ${state.setupError ? renderSetupError() : renderCurrentView(admin, approver)}
       </main>
     </div>
+    ${renderMobileCartBar()}
     ${renderProductPreview()}
     ${renderExpectedDeliveryModal()}
   `;
+}
+
+function renderMobileCartBar() {
+  const items = getCartItems();
+  if (!['bestellen', 'ehbo', 'inkt'].includes(state.view) || !items.length) return '';
+  return `<a class="mobile-cart-bar" href="#winkelmand" aria-label="Winkelmand bekijken: ${items.length} producten, ${escapeHtml(formatCurrency(calculateTotals(items).incl))}">
+    ${renderIcon('cart')}<span><strong>${items.length} product${items.length === 1 ? '' : 'en'} · ${formatCurrency(calculateTotals(items).incl)}</strong><span>Winkelmand bekijken →</span></span></a>`;
 }
 
 function navLink(id, label, badge = 0, icon = 'dot') {
@@ -1402,7 +1416,9 @@ function renderStart(admin, approver) {
   const todayKey = new Date().toISOString().slice(0, 10);
   const todayOrders = ownOrders.filter((order) => String(order.created_at || '').slice(0, 10) === todayKey);
   const pendingOrders = ownOrders.filter((order) => ['Ter goedkeuring', 'Extra informatie gevraagd'].includes(getNormalizedStatus(order.status)));
-  const openEhbo = openOrders.filter((order) => (order.regels || []).some((line) => /ehbo|verband|wond|pleister/i.test(String(line.product_naam || ''))));
+  const toOrder = ownOrders.filter(order => ['Goedgekeurd', 'In behandeling'].includes(getNormalizedStatus(order.status)));
+  const toReceive = ownOrders.filter(order => canConfirmReceipt(order, state.appUser?.id));
+  const inTransit = ownOrders.filter(order => ['Besteld', 'Gedeeltelijk geleverd'].includes(getNormalizedStatus(order.status)));
 
   return `
     <section class="page-heading">
@@ -1421,8 +1437,12 @@ function renderStart(admin, approver) {
       ${renderKpi('Open bestellingen', openOrders.length, 'Actieve opvolging', 'orders', 'red')}
       ${renderKpi('Bestellingen vandaag', todayOrders.length, 'Sinds 00.00 uur', 'calendar', 'blue')}
       ${renderKpi('Open aanvragen', pendingOrders.length, 'Wacht op actie', 'inbox', 'amber')}
-      ${renderKpi('EHBO-status', openEhbo.length ? `${openEhbo.length} actief` : 'Op peil', openEhbo.length ? 'Aanvulling in behandeling' : 'Geen open aanvulling', 'shield', 'green')}
+      ${renderKpi(admin ? 'Bij leverancier te bestellen' : 'Ontvangst op te volgen', admin ? toOrder.length : toReceive.length, admin ? 'Goedgekeurd voor aankoop' : 'Eigen bestellingen onderweg', 'package', 'green')}
     </section>
+    <section class="panel next-steps" aria-label="Nu te doen"><h3>Nu te doen</h3><div class="record-actions">
+      ${admin ? `<button class="primary-button" data-dashboard-orders="work">${toOrder.length} bestelling(en) bij leverancier te plaatsen</button><button class="ghost-button" data-dashboard-orders="transit">${inTransit.length} bestelling(en) onderweg opvolgen</button>` : approver ? `<button class="primary-button" data-dashboard-orders="active" data-dashboard-status="Ter goedkeuring">${pendingOrders.filter(o => getNormalizedStatus(o.status) === 'Ter goedkeuring').length} aanvraag/aanvragen beoordelen</button>` : ''}
+      ${toReceive.length ? toReceive.slice(0, 3).map(order => `<a class="ghost-button" href="#bestellingen?ontvangst=${escapeHtml(order.id)}">Ontvangst bestelling ${escapeHtml(order.id)} bevestigen</a>`).join('') : !admin && !approver ? '<p>Er wacht geen ontvangstbevestiging. Je kunt een nieuwe aanvraag maken of je bestellingen opvolgen.</p>' : ''}
+    </div></section>
     <section class="start-actions">
       <a class="action-card is-primary" href="#bestellen">
         ${renderCardArt('rings', '01')}
@@ -1482,7 +1502,7 @@ function renderUserGuide(inApp = true) {
       </div>
       <div class="privacy-heading-actions">
         <p class="page-intro">
-          Van aanvraag tot ontvangst: de stappen voor bestellers, goedkeurders en aankoopbeheer. Bijgewerkt op 1 oktober 2026. Welke acties je ziet, hangt af van je rol en de status van de bestelling.
+          Van aanvraag tot ontvangst: de stappen voor bestellers, goedkeurders en aankoopbeheer. Bijgewerkt op 2 oktober 2026. Welke acties je ziet, hangt af van je rol en de status van de bestelling.
         </p>
         ${inApp ? '' : '<a class="ghost-button" href="#start">Terug naar aanmelden</a>'}
       </div>
@@ -1532,6 +1552,7 @@ function renderUserGuide(inApp = true) {
           <li>Klik op <strong>Bestelling controleren</strong>.</li>
           <li>Controleer de samenvatting en stuur de bestelling door.</li>
         </ol>
+        <p>Na toevoegen zie je het aantal op de productkaart. Met plus en min pas je dit aan. Op smartphone verschijnt onderaan een vaste knop naar je winkelmand, met het aantal verschillende producten en het bedrag.</p>
         <p>De productcategorie wordt automatisch meegenomen. Je hoeft die dus niet zelf te kiezen.</p>
       </article>
       <article class="panel guide-card">
@@ -1550,6 +1571,7 @@ function renderUserGuide(inApp = true) {
         <p>Via <strong>Bestellingen</strong> zie je je eigen bestellingen en hun status. Een bestelling kan onder meer ter goedkeuring staan, goedgekeurd zijn, in behandeling zijn, besteld zijn of geleverd zijn.</p>
         <p>Gelezen meldingen verdwijnen uit de meldingenlijst op het startscherm.</p>
         <p>Bestellers zien <strong>Lopend</strong> en <strong>Afgewerkt</strong>. Aankoopbeheer werkt met <strong>Te verwerken</strong>, <strong>Onderweg</strong> en <strong>Afgewerkt</strong>. Een goedgekeurde aanvraag is nog niet bij de leverancier besteld.</p>
+        <p>De bestelkaart toont eerst het nummer, de locatie, de besteller, het bedrag en de voortgang. Klik op de actie onderaan de kaart om details en knoppen te openen. Het zoekveld blijft zichtbaar; extra filters open je apart.</p>
         <p>Via <strong>Meer > Opnieuw gebruiken</strong> zet je producten uit een eerdere bestelling opnieuw in je winkelmand. Controleer de producten, aantallen en locatie voor je opnieuw indient.</p>
       </article>
       <article class="panel guide-card">
@@ -1565,12 +1587,12 @@ function renderUserGuide(inApp = true) {
         <h3>10. Geleverde producten bevestigen — voor bestellers</h3>
         <ol>
           <li>Open de bestelling via de ontvangstmail of via <strong>Bestellingen</strong>. Meld aan met het account van de besteller op wiens naam de bestelling staat.</li>
-          <li>Ga naar <strong>Ontvangst door de besteller</strong>. Ontvangst bevestigen is mogelijk zodra de bestelling op <strong>Besteld</strong> of <strong>Gedeeltelijk geleverd</strong> staat.</li>
-          <li>Vul per product het <strong>totaal ontvangen aantal verpakkingen</strong> in. Laat nog niet ontvangen producten op 0 staan. Tel verpakkingen volgens de bestelregel: één doos met 20 koffiecups telt als 1, niet als 20.</li>
-          <li>Is alles aangekomen? Kies <strong>Alles is ontvangen: aantallen invullen</strong>. Dit vult de velden in, maar verstuurt nog niets.</li>
-          <li>Voeg eventueel een praktische opmerking toe en klik op <strong>Ontvangst bevestigen</strong>. Daarmee meld je de ontvangst aan aankoopbeheer.</li>
+          <li>Open <strong>Ontvangst bevestigen</strong> op de bestelkaart. Ontvangst bevestigen is mogelijk zodra de bestelling op <strong>Besteld</strong> of <strong>Gedeeltelijk geleverd</strong> staat.</li>
+          <li>Vul per product het <strong>vandaag ontvangen aantal verpakkingen</strong> in. Laat nog niet ontvangen producten op 0 staan. Tel verpakkingen volgens de bestelregel: één doos met 20 koffiecups telt als 1, niet als 20.</li>
+          <li>Is alles aangekomen? Kies <strong>Alles ontvangen</strong>. Dit vult de velden in, maar verstuurt nog niets.</li>
+          <li>Voeg eventueel een praktische opmerking toe en kies <strong>Ontvangst controleren</strong>. Controleer de aantallen en kies daarna <strong>Ontvangst melden</strong>. Pas dan wordt de levering opgeslagen en krijgt aankoopbeheer een melding.</li>
         </ol>
-        <p><strong>Bij een nalevering:</strong> werk het totaal bij. Ontving je eerst 2 van 5 dozen en daarna nog 3, vul dan 5 in. Een eerder bevestigd aantal kan je niet verlagen; meld een vergissing aan aankoopbeheer.</p>
+        <p><strong>Bij een nalevering:</strong> vul alleen de nieuwe levering in. Ontving je eerst 2 van 5 dozen en daarna nog 3, vul dan 3 in. De app toont automatisch een totaal van 5 ontvangen dozen. Een eerder bevestigd aantal kan je niet verlagen; meld een vergissing aan aankoopbeheer.</p>
         <p>Bij gedeeltelijke ontvangst blijft de bestelling <strong>Gedeeltelijk geleverd</strong>; zodra alle niet-geannuleerde artikelen ontvangen zijn, wordt ze <strong>Geleverd</strong>. Een verwachte leverdatum is geen ontvangstbevestiging. Zie je het invulvak niet, controleer de status en het account en contacteer aankoopbeheer met het bestelnummer.</p>
       </article>
       <article class="panel guide-card">
@@ -1586,7 +1608,7 @@ function renderUserGuide(inApp = true) {
           <li>Controleer de gevonden leveranciersproducten, verpakkingen en aantallen. Er is een exacte productlink nodig; een zoekpagina volstaat niet.</li>
           <li>Vink de controleverklaring aan en kies <strong>Vul winkelwagen nu</strong>. Bestaande overeenkomende aantallen kunnen worden hergebruikt.</li>
           <li>Controleer de winkelwagen bij de leverancier en rond daar zelf de bestelling af. De app rekent niet voor jou af.</li>
-          <li>Kies pas daarna <strong>Besteld bij leverancier</strong> in de app en vul de door de leverancier meegedeelde verwachte leverdatum in.</li>
+          <li>Bevestig daarna in het overdrachtsvenster dat je alle producten zelf besteld hebt en kies <strong>Verder: als besteld registreren</strong>. Je kunt ook <strong>Besteld bij leverancier</strong> op de bestelkaart gebruiken en vul de door de leverancier meegedeelde verwachte leverdatum in.</li>
         </ol>
         <p><strong>Blijft de knop uitgeschakeld?</strong> Het vinkje alleen volstaat niet. Lees de melding bij elk overgeslagen artikel: bijvoorbeeld aanmelden bij de leverancier, ontbrekende productgegevens of afwijkende aantallen in de externe winkelwagen. Los dit op en kies <strong>Opnieuw controleren</strong>. Is alles overgeslagen, dan kan niets worden overgedragen. Vermijd opnieuw toevoegen wanneer je de bestelling al manueel hebt ingevoerd.</p>
         <p>De verwachte leverdatum is geen garantie. Je kan die later aanpassen via <strong>Meer > Leverdatum wijzigen</strong>. De afdrukbare invoerlijst bevat alleen nog extern te bestellen, goedgekeurde aanvragen.</p>
@@ -1604,8 +1626,8 @@ function renderUserGuide(inApp = true) {
       </article>
       <article class="panel guide-card">
         <h3>15. Weergave en hulp</h3>
-        <p>Met <strong>Dynamisch</strong> of <strong>Rustig</strong> kies je of de kleine animaties actief zijn. Met <strong>Donker</strong> of <strong>Licht</strong> wissel je de weergave. De app bewaart je keuze in deze browser. Op smartphone open en sluit je de navigatie met de menuknop.</p>
-        <p>Het vosje bij de handleidingknop opent deze handleiding in een nieuw tabblad, zodat je huidige scherm behouden blijft. Ook via het menu kan je de handleiding raadplegen. Contacteer aankoopbeheer bij toegangsproblemen, foutieve producten of vragen over een bestelling. Vermeld daarbij het bestelnummer.</p>
+        <p>Open bovenaan het menu met je naam. Met <strong>Dynamisch</strong> of <strong>Rustig</strong> kies je of de kleine animaties actief zijn. Met <strong>Donker</strong> of <strong>Licht</strong> wissel je de weergave. De app bewaart je keuze in deze browser. Op smartphone open en sluit je de navigatie met de menuknop.</p>
+        <p>Het vosje bij de handleidingknop opent het relevante hoofdstuk in een nieuw tabblad, zodat je huidige scherm behouden blijft. Bij de ontvangstvelden krijg je bijvoorbeeld hulp over leveringen; in de leveranciersoverdracht over extern bestellen. Ook via het menu kan je de handleiding raadplegen. Contacteer aankoopbeheer bij toegangsproblemen, foutieve producten of vragen over een bestelling. Vermeld daarbij het bestelnummer.</p>
       </article>
       <article class="panel guide-card">
         <h3>16. Praktische afspraken</h3>
@@ -2175,6 +2197,7 @@ function renderProductCard(product) {
   const image = product.image_url || defaultImage;
   const fallbackImage = defaultImage;
   const step = Number(product.minimum_bestelhoeveelheid || 1);
+  const quantity = Number(state.cart[String(product.id)] || 0);
 
   return `
     <article class="product-card">
@@ -2198,9 +2221,10 @@ function renderProductCard(product) {
           <div><dt>Prijs</dt><dd>${escapeHtml(getProductPriceLabel(product))}</dd></div>
           <div><dt>Btw</dt><dd>${escapeHtml(getProductVatLabel(product))}</dd></div>
         </dl>
-        <button class="primary-button product-button" type="button" data-add-product="${escapeHtml(product.id)}" data-step="${escapeHtml(step)}">
-          In winkelmand
-        </button>
+        ${quantity ? `<div class="product-cart-controls"><span role="status">✓ ${quantity} × ${escapeHtml(product.eenheid || 'stuk')} in winkelmand</span><div class="quantity-control">
+          <button type="button" data-cart-action="decrease" data-cart-key="${escapeHtml(product.id)}" aria-label="Minder ${escapeHtml(product.naam)}">−</button><strong>${quantity}</strong>
+          <button type="button" data-cart-action="increase" data-cart-key="${escapeHtml(product.id)}" aria-label="Meer ${escapeHtml(product.naam)}">+</button>
+        </div></div>` : `<button class="primary-button product-button" type="button" data-add-product="${escapeHtml(product.id)}" data-step="${escapeHtml(step)}">In winkelmand</button>`}
       </div>
     </article>
   `;
@@ -2430,7 +2454,7 @@ function renderOrders(admin, approver) {
     ${receiptRoute(window.location.hash) ? '<p><a class="text-link" href="#bestellingen">Alle bestellingen bekijken</a></p>' : ''}
     ${renderOrderSegments(admin)}
     ${renderOrderFilters(admin, approver)}
-    ${admin ? renderExternalEntryPanel() : ''}
+    ${admin && state.orderSegment === 'work' && getExternalEntryRows().length ? renderExternalEntryPanel() : ''}
     <div data-order-results aria-live="polite">${renderOrderResults(admin, approver)}</div>
   `;
 }
@@ -2519,9 +2543,14 @@ function renderOrderCard(order, admin, approver) {
   const actionStatuses = getOrderActionStatuses(order, admin, approver);
   const createdByUser = findUserById(order.aangemaakt_door_id);
   const createdByLabel = createdByUser ? getUserLabel(createdByUser) : order.aangemaakt_door_email || 'Niet gekend';
+  const nextAction = canConfirmReceipt(order, state.appUser?.id) ? 'Ontvangst bevestigen'
+    : admin && ['Goedgekeurd', 'In behandeling'].includes(normalizedStatus) ? 'Bij leverancier bestellen'
+    : (admin || approver) && normalizedStatus === 'Ter goedkeuring' ? 'Aanvraag beoordelen'
+    : admin && ['Besteld', 'Gedeeltelijk geleverd'].includes(normalizedStatus) ? 'Levering opvolgen' : 'Details bekijken';
+  const isOpen = expandedOrders.has(String(order.id)) || receiptRoute(window.location.hash) === String(order.id) || String(state.editingOrderId) === String(order.id);
 
   return `
-    <article class="order-card">
+    <article class="order-card" data-order-card="${escapeHtml(order.id)}">
       <div class="order-card-header">
         <div>
           <span>${formatDateTime(order.created_at)}</span>
@@ -2529,6 +2558,12 @@ function renderOrderCard(order, admin, approver) {
         </div>
         <span class="status-badge ${getStatusClass(normalizedStatus)}">${escapeHtml(getStatusLabel(order.status))}</span>
       </div>
+      <dl class="order-summary"><div><dt>Locatie</dt><dd>${escapeHtml(order.locatie_naam)}</dd></div><div><dt>Besteller</dt><dd>${escapeHtml(order.besteller_naam)}</dd></div><div><dt>Totaal</dt><dd>${formatCurrency(order.totaal_incl_btw)}</dd></div></dl>
+      ${renderStatusTrail(normalizedStatus)}
+      <details class="order-details" data-order-details="${escapeHtml(order.id)}" ${isOpen ? 'open' : ''}>
+      <summary>${nextAction}<span class="order-details-cue" aria-hidden="true"></span></summary>
+      ${canConfirmReceipt(order, state.appUser?.id) ? renderReceiptPanel(order, state.appUser?.id, admin, receiptBusy, receiptDrafts.get(String(order.id))) : ''}
+      <details class="order-context"><summary>Bestelgegevens</summary>
       <dl class="order-meta">
         <div><dt>Locatie</dt><dd>${escapeHtml(order.locatie_naam)}</dd></div>
         <div><dt>Besteller</dt><dd>${escapeHtml(order.besteller_naam)}<br /><span>${escapeHtml(order.besteller_email)}</span></dd></div>
@@ -2541,7 +2576,7 @@ function renderOrderCard(order, admin, approver) {
         <div><dt>Totaal</dt><dd>${formatCurrency(order.totaal_incl_btw)}</dd></div>
         <div><dt>Melding</dt><dd>${escapeHtml(order.mail_status || 'Interne opvolging')}</dd></div>
       </dl>
-      ${renderStatusTrail(normalizedStatus)}
+      </details>
       <div class="line-table">
         ${order.regels
           .map(
@@ -2562,8 +2597,8 @@ function renderOrderCard(order, admin, approver) {
         <button class="ghost-button" type="button" data-edit-order-lines="${escapeHtml(order.id)}" aria-expanded="${String(state.editingOrderId) === String(order.id)}" ${state.orderLineBusy ? 'disabled' : ''}>${String(state.editingOrderId) === String(order.id) ? 'Bestelregels sluiten' : 'Bestelregels aanpassen'}</button>
         ${String(state.editingOrderId) === String(order.id) ? renderOrderLineEditor(order) : ''}
       ` : ''}
-      ${renderReceiptPanel(order, state.appUser?.id, admin, receiptBusy, receiptDrafts.get(String(order.id)))}
-      ${renderSupplierDeliveryPanel(order)}
+      ${canConfirmReceipt(order, state.appUser?.id) ? '' : renderReceiptPanel(order, state.appUser?.id, admin, receiptBusy, receiptDrafts.get(String(order.id)))}
+      ${admin && ['Besteld', 'Gedeeltelijk geleverd', 'Geleverd'].includes(normalizedStatus) ? `<details class="supplier-delivery-details"><summary>Levering per leverancier beheren</summary>${renderSupplierDeliveryPanel(order)}</details>` : ''}
       ${canUseSupplierCart(state.appUser, state.session?.user?.email) && ['Goedgekeurd', 'In behandeling'].includes(normalizedStatus) && hasSupportedSupplier(order, state.data.products) ? `<div class="record-actions"><button class="primary-button" type="button" data-supplier-cart="${escapeHtml(order.id)}">Vul winkelwagen bij leverancier</button><small>Desktop/laptop · gekoppelde browseragent · nooit automatisch afrekenen</small></div>` : ''}
       ${
         actionStatuses.length
@@ -2581,6 +2616,7 @@ function renderOrderCard(order, admin, approver) {
           ${admin && ['Besteld', 'Gedeeltelijk geleverd', 'Geleverd'].includes(normalizedStatus) ? `<button class="ghost-button" type="button" data-expected-delivery="${escapeHtml(order.id)}">${meta.verwachte_leverdatum ? 'Leverdatum wijzigen' : 'Leverdatum toevoegen'}</button>` : ''}
           ${admin ? `<button class="ghost-button" type="button" data-resend-order-mail="${escapeHtml(order.id)}">E-mail opnieuw sturen</button>` : ''}
         </div>
+      </details>
       </details>
     </article>
   `;
@@ -2785,11 +2821,15 @@ function renderOrderFilters(admin, approver) {
         <h3>Zoeken en filteren</h3>
         <span>${scopeLabel}</span>
       </div>
-      <div class="form-grid order-filter-grid">
+      <div class="order-search">
         <label class="field">
           <span>Zoeken</span>
           <input name="search" type="search" value="${escapeHtml(filters.search)}" placeholder="Product, locatie, aanvrager of status" />
         </label>
+      </div>
+      <details class="order-filter-options" ${Object.entries(filters).some(([key, value]) => key !== 'search' && value) ? 'open' : ''}>
+        <summary>Extra filters: status, locatie en datum</summary>
+        <div class="form-grid order-filter-grid">
         <label class="field">
           <span>Status</span>
           <select name="status">
@@ -2834,7 +2874,8 @@ function renderOrderFilters(admin, approver) {
           <span>Tot</span>
           <input name="date_to" type="date" value="${escapeHtml(filters.date_to)}" />
         </label>
-      </div>
+        </div>
+      </details>
     </form>
   `;
 }
@@ -2842,7 +2883,7 @@ function renderOrderFilters(admin, approver) {
 function renderStatusTrail(status) {
   const normalizedStatus = getNormalizedStatus(status);
 
-  if (['Extra informatie gevraagd', 'Geweigerd'].includes(normalizedStatus)) {
+  if (['Extra informatie gevraagd', 'Geweigerd', 'Afgesloten'].includes(normalizedStatus)) {
     return `
       <div class="status-trail" aria-label="Status">
         <span class="is-current">${escapeHtml(getStatusLabel(normalizedStatus))}</span>
@@ -2850,12 +2891,11 @@ function renderStatusTrail(status) {
     `;
   }
 
-  const visibleStatuses = ['Ter goedkeuring', 'Goedgekeurd', 'Besteld'];
+  const visibleStatuses = ['Ter goedkeuring', 'Goedgekeurd', 'Besteld', normalizedStatus === 'Gedeeltelijk geleverd' ? 'Deels ontvangen' : 'Ontvangen'];
   const progressStatus = normalizedStatus === 'In behandeling'
     ? 'Goedgekeurd'
-    : ['Gedeeltelijk geleverd', 'Geleverd', 'Afgesloten'].includes(normalizedStatus)
-      ? 'Besteld'
-      : normalizedStatus;
+    : normalizedStatus === 'Gedeeltelijk geleverd' ? 'Deels ontvangen'
+    : normalizedStatus === 'Geleverd' ? 'Ontvangen' : normalizedStatus;
   const currentIndex = visibleStatuses.indexOf(progressStatus);
 
   return `
@@ -2864,7 +2904,7 @@ function renderStatusTrail(status) {
         .map((item, index) => {
           const isDone = currentIndex >= 0 && index <= currentIndex;
           const isCurrent = item === progressStatus;
-          return `<span class="${isDone ? 'is-done' : ''} ${isCurrent ? 'is-current' : ''}">${escapeHtml(getStatusLabel(item))}</span>`;
+          return `<span ${isCurrent ? 'aria-current="step"' : ''} class="${isDone ? 'is-done' : ''} ${isCurrent ? 'is-current' : ''}">${escapeHtml(getStatusLabel(item))}</span>`;
         })
         .join('')}
     </div>
@@ -4408,6 +4448,14 @@ function addToCart(productId, step = 1) {
   state.error = '';
   persistCart();
   render();
+  focusCartControl(productId, "increase");
+}
+
+function focusCartControl(key, action) {
+  const controls = [...app.querySelectorAll('[data-cart-key], [data-add-product]')];
+  const target = controls.find(el => el.dataset.cartKey === String(key) && el.dataset.cartAction === action)
+    || controls.find(el => el.dataset.addProduct === String(key));
+  target?.focus({preventScroll:true});
 }
 
 function updateCart(cartKey, action) {
@@ -4442,6 +4490,7 @@ function updateCart(cartKey, action) {
   state.error = '';
   persistCart();
   render();
+  focusCartControl(cartKey, action);
 }
 
 function updateInkQuantity(cartridgeId, action) {
@@ -5981,32 +6030,90 @@ app.addEventListener('click', async (event) => {
     } catch(error) { state.error = error.message; }
     finally { const receiptError = state.error; receiptBusy = false; await bootstrapData(); state.error = receiptError; render(); }
   }
-  const all = event.target.closest('[data-receipt-all]');
-  if(all && !receiptBusy) {
-    const order = state.data.orders.find(o=>String(o.id)===all.dataset.receiptAll);
-    const form = all.closest('form');
-    for(const line of receiptLines(order)) form.elements.namedItem('receipt-'+line.id).value = line.aantal;
+  const edit = event.target.closest('[data-receipt-edit], [data-receipt-reset]');
+  if (edit && !receiptBusy) {
+    const id = edit.closest('form').dataset.receiptForm;
+    if (edit.hasAttribute('data-receipt-reset')) receiptDrafts.delete(id);
+    else receiptDrafts.get(id).__review = false;
+    expandedOrders.add(id); state.error = ''; render();
+    app.querySelector(`[data-receipt-form="${id}"] input[type="number"]`)?.focus();
+  }
+});
+app.addEventListener('input', event => {
+  const form = event.target.closest('[data-receipt-form]');
+  if (!form || receiptBusy) return;
+  const id = form.dataset.receiptForm;
+  const order = state.data.orders.find(o => String(o.id) === id);
+  if (event.target.name === 'receipt-mode' && event.target.value === 'all') {
+    for (const input of form.querySelectorAll('[data-receipt-base]'))
+      input.value = Number(input.dataset.receiptOrdered) - Number(input.dataset.receiptBase);
+  } else if (event.target.matches('[data-receipt-base]')) {
+    form.querySelector('[name="receipt-mode"][value="partial"]').checked = true;
+  }
+  for (const input of form.querySelectorAll('[data-receipt-base]')) {
+    const total = Number(input.dataset.receiptBase) + Number(input.value || 0);
+    input.closest('.receipt-line').querySelector('output').textContent = `Totaal na deze levering: ${total} van ${input.dataset.receiptOrdered}`;
+  }
+  receiptDrafts.set(id, receiptDraft(order, Object.fromEntries(new FormData(form)), receiptDrafts.get(id)));
+});
+app.addEventListener('toggle', event => {
+  const details = event.target;
+  if (!details.isConnected || !details.matches('[data-order-details]')) return;
+  if (details.open) expandedOrders.add(details.dataset.orderDetails);
+  else expandedOrders.delete(details.dataset.orderDetails);
+}, true);
+app.addEventListener('click', event => {
+  const button = event.target.closest('[data-dashboard-orders]');
+  if (!button) return;
+  state.orderSegment = button.dataset.dashboardOrders;
+  state.orderFilters = normalizeOrderFilters({status: button.dataset.dashboardStatus || ''});
+  persistOrderFilters();
+  window.location.hash = '#bestellingen';
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape') {
+    const menu = app.querySelector('.account-menu[open]');
+    if (menu) { menu.open = false; menu.querySelector('summary').focus(); }
+  }
+});
+document.addEventListener('click', event => {
+  if (!event.target.closest('.account-menu')) {
+    const menu = app.querySelector('.account-menu[open]');
+    if (menu) menu.open = false;
   }
 });
 app.addEventListener('submit', async (event) => {
   const form = event.target.closest('[data-receipt-form]');
-  if(!form) return;
+  if (!form) return;
   event.preventDefault();
-  if(receiptBusy) return;
-  const order = state.data.orders.find(o=>String(o.id)===form.dataset.receiptForm);
-  receiptDrafts.set(String(order.id),Object.fromEntries(new FormData(form)));
+  if (receiptBusy) return;
+  const id = form.dataset.receiptForm;
+  const order = state.data.orders.find(o => String(o.id) === id);
+  const draft = receiptDraft(order, Object.fromEntries(new FormData(form)), receiptDrafts.get(id));
+  receiptDrafts.set(id, draft); expandedOrders.add(id);
+  let saving = false;
   try {
-    const values = new FormData(form);
-    const quantities = validateReceipt(order, Object.fromEntries(receiptLines(order).map(line=>[line.id,Number(values.get('receipt-'+line.id))])));
-    const note = String(values.get('receipt-note')||'').trim();
-    const signature = JSON.stringify([order.id,quantities,note]);
-    if(!receiptAttempts.has(signature)) receiptAttempts.set(signature,crypto.randomUUID());
-    receiptBusy = true; state.error = ''; render();
-    await processReceipt({actie:'bevestigen',bestelling_id:order.id,updated_at:order.updated_at,
-      request_id:receiptAttempts.get(signature),aantallen:quantities,opmerking:note});
-    receiptDrafts.delete(String(order.id));
+    const quantities = receiptTotals(order, draft);
+    if (!draft.__review) {
+      draft.__review = true; state.error = ''; render();
+      app.querySelector(`[data-receipt-form="${id}"] button[type="submit"]`)?.focus();
+      return;
+    }
+    const note = String(draft['receipt-note'] || '').trim();
+    const signature = JSON.stringify([order.id, draft.__version, quantities, note]);
+    if (!receiptAttempts.has(signature)) receiptAttempts.set(signature, crypto.randomUUID());
+    saving = true; receiptBusy = true; state.error = ''; render();
+    await processReceipt({actie:'bevestigen', bestelling_id:order.id, updated_at:draft.__version,
+      request_id:receiptAttempts.get(signature), aantallen:quantities, opmerking:note});
+    receiptDrafts.delete(id);
     state.notice = 'Je ontvangstbevestiging is opgeslagen. Aankoopbeheer heeft een melding gekregen.';
     window.location.hash = '#bestellingen?ontvangst=' + order.id;
   } catch(error) { state.error = error.message; }
-  finally { const receiptError = state.error; receiptBusy = false; await bootstrapData(); state.error = receiptError; render(); }
+  finally {
+    if (saving) {
+      const receiptError = state.error; receiptBusy = false;
+      await bootstrapData(); state.error = receiptError; render();
+      app.querySelector('[role="alert"]')?.scrollIntoView({block:'center'});
+    } else if (state.error) { render(); app.querySelector('[role="alert"]')?.scrollIntoView({block:'center'}); }
+  }
 });

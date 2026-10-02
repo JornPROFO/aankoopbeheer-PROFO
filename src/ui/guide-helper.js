@@ -1,5 +1,7 @@
 /** Keep help available across route renders, including keyboard-trapped dialogs. */
 export function initializeGuideHelper(root) {
+  const topics = {start:5, bestellen:5, ehbo:5, inkt:6, winkelmand:5, bestellingen:7, ontvangst:10, goedkeuren:11, leverancier:12, beheer:14, analyse:14, weergave:15};
+  let focusedTopic = '', lastGuideHeading;
   root.addEventListener('click', event => {
     const jump = event.target.closest('[data-guide-jump]');
     if (!jump) return;
@@ -20,7 +22,31 @@ export function initializeGuideHelper(root) {
     const parent = modal || document.body;
     helper.classList.toggle('guide-pet-in-dialog', Boolean(modal));
     if (helper.parentElement !== parent) parent.append(helper);
+    const route = window.location.hash.slice(1).split('?')[0] || 'start';
+    const topic = modal?.hasAttribute('data-supplier-cart-dialog') ? 'leverancier' : focusedTopic || route;
+    const href = '#handleiding?onderwerp=' + (topics[topic] ? topic : 'start');
+    if (helper.getAttribute('href') !== href) helper.setAttribute('href', href);
+    helper.setAttribute('aria-label', 'Handleiding voor deze stap openen in een nieuw tabblad');
+    if (route === 'handleiding') {
+      const section = topics[new URLSearchParams(window.location.hash.split('?')[1] || '').get('onderwerp')];
+      const heading = [...root.querySelectorAll('.guide-card h3')].find(el => el.textContent.startsWith(`${section}.`));
+      if (heading && heading !== lastGuideHeading) {
+        lastGuideHeading = heading;
+        requestAnimationFrame(() => { heading.tabIndex = -1; heading.focus({preventScroll:true}); heading.scrollIntoView({block:'start'}); });
+      }
+    }
   };
+  document.addEventListener('focusin', event => {
+    if (event.target.closest('.guide-pet')) return;
+    focusedTopic = event.target.closest('[data-help-topic]')?.dataset.helpTopic || '';
+    sync();
+    // The fixed mobile controls must not cover a keyboard-focused field or action.
+    if (!event.target.closest('.mobile-cart-bar') && !document.querySelector('dialog[open], [role="dialog"][aria-modal="true"]')) {
+      const rect = event.target.getBoundingClientRect();
+      if (rect.bottom > window.innerHeight - 100) event.target.scrollIntoView({block:'center'});
+    }
+  });
+  window.addEventListener('hashchange', () => { focusedTopic = ''; sync(); });
   sync();
   new MutationObserver(sync).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['open'] });
 }
