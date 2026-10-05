@@ -88,7 +88,7 @@ const expectedDeliveryMetaLabel = 'Verwachte leverdatum';
 const orderedAtMetaLabel = 'Besteld op';
 const appPublicUrl = 'https://aankoopbeheer-profo.vercel.app/';
 const passiveRefreshMs = 60000;
-const passiveRefreshViews = new Set(['start', 'bestellingen', 'analyse', 'beheer']);
+const passiveRefreshViews = new Set(['start', 'meldingen', 'bestellingen', 'analyse', 'beheer']);
 const pushPublicKey = import.meta.env.VITE_PUSH_PUBLIC_KEY ?? '';
 let passiveRefreshTimer = null;
 let passiveRefreshRunning = false;
@@ -1255,12 +1255,13 @@ function renderShell() {
     <div class="app-layout">
       <div class="family-nav"><button type="button" class="family-menu-toggle" data-family-menu aria-expanded="false" aria-controls="family-navigation">Menu openen <span aria-hidden="true">+</span></button><nav class="sidebar" id="family-navigation" aria-label="Hoofdnavigatie">
         <span class="nav-section-label">Werkruimte</span>
-        ${navLink('start', 'Start', unreadCount, 'home')}
+        ${navLink('start', 'Start', 0, 'home')}
+        ${navLink('meldingen', 'Meldingen', unreadCount, 'bell', 'ongelezen meldingen')}
         ${navLink('bestellen', 'Producten', 0, 'package')}
         ${navLink('ehbo', 'EHBO', 0, 'shield')}
         ${navLink('inkt', 'Inkt', 0, 'printer')}
         ${navLink('winkelmand', 'Mijn winkelmand', getCartItems().length, 'cart')}
-        ${navLink('bestellingen', 'Bestellingen', 0, 'orders')}
+        ${navLink('bestellingen', 'Bestellingen', getOpenOrders(admin, approver).length, 'orders', 'open bestellingen')}
         <span class="nav-section-label">Informatie</span>
         ${navLink('handleiding', 'Handleiding', 0, 'book')}
         ${navLink('privacy', 'Privacy', 0, 'lock')}
@@ -1285,9 +1286,10 @@ function renderMobileCartBar() {
     ${renderIcon('cart')}<span><strong>${items.length} product${items.length === 1 ? '' : 'en'} · ${formatCurrency(calculateTotals(items).incl)}</strong><span>Winkelmand bekijken →</span></span></a>`;
 }
 
-function navLink(id, label, badge = 0, icon = 'dot') {
+function navLink(id, label, badge = 0, icon = 'dot', badgeLabel = '') {
   const active = state.view === id ? 'is-active' : '';
-  return `<a class="nav-link ${active}" href="#${id}" ${active ? 'aria-current="page"' : ''}>${renderIcon(icon)}<span>${escapeHtml(label)}</span>${badge ? `<strong class="nav-badge">${escapeHtml(badge)}</strong>` : ''}</a>`;
+  const description = badgeLabel ? `${label}: ${badge} ${badgeLabel}` : '';
+  return `<a class="nav-link ${active}" href="#${id}" ${active ? 'aria-current="page"' : ''} ${description ? `aria-label="${escapeHtml(description)}" title="${escapeHtml(description)}"` : ''}>${renderIcon(icon)}<span>${escapeHtml(label)}</span>${badge ? `<strong class="nav-badge">${escapeHtml(badge)}</strong>` : ''}</a>`;
 }
 
 function renderCardArt(kind, number) {
@@ -1316,6 +1318,7 @@ function renderKpi(label, value, detail, icon, tone) {
 function renderIcon(name) {
   const paths = {
     home: '<path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5M9.5 20v-6h5v6"/>',
+    bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',
     package: '<path d="m4 7 8-4 8 4-8 4-8-4Z"/><path d="M4 7v10l8 4 8-4V7M12 11v10"/>',
     shield: '<path d="M12 3 20 6v5c0 5-3.4 8.3-8 10-4.6-1.7-8-5-8-10V6l8-3Z"/><path d="M12 8v7M8.5 11.5h7"/>',
     printer: '<path d="M7 8V3h10v5M7 17H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M7 14h10v7H7z"/>',
@@ -1368,6 +1371,9 @@ function renderSetupError() {
 }
 
 function renderCurrentView(admin, approver) {
+  if (state.view === 'meldingen') {
+    return `<section class="page-heading"><div><p class="eyebrow">Opvolging</p><h2>Meldingen</h2></div><p class="page-intro">Hier staan je ongelezen meldingen. Het aantal open bestellingen vind je bij Bestellingen.</p></section>${state.error ? `<div class="warning-panel">${escapeHtml(state.error)}</div>` : ''}${renderNotificationsPanel(true)}`;
+  }
   if (state.view === 'start') {
     return renderStart(admin, approver);
   }
@@ -1412,7 +1418,7 @@ function renderStart(admin, approver) {
   const ownOrders = getVisibleOrders(admin, approver);
   const recentOrders = ownOrders.slice(0, 3);
   const cartItems = getCartItems();
-  const openOrders = ownOrders.filter((order) => !['Geleverd', 'Afgesloten', 'Geweigerd'].includes(getNormalizedStatus(order.status)));
+  const openOrders = getOpenOrders(admin, approver);
   const todayKey = new Date().toISOString().slice(0, 10);
   const todayOrders = ownOrders.filter((order) => String(order.created_at || '').slice(0, 10) === todayKey);
   const pendingOrders = ownOrders.filter((order) => ['Ter goedkeuring', 'Extra informatie gevraagd'].includes(getNormalizedStatus(order.status)));
@@ -1708,15 +1714,15 @@ function renderCompactOrder(order) {
   `;
 }
 
-function renderNotificationsPanel() {
+function renderNotificationsPanel(showAll = false) {
   const unreadNotifications = getUnreadNotifications();
-  const notifications = unreadNotifications.slice(0, 6);
+  const notifications = showAll ? unreadNotifications : unreadNotifications.slice(0, 6);
   const unreadCount = unreadNotifications.length;
 
   return `
     <div class="panel notification-panel">
       <div class="panel-header">
-        <h3>Meldingen</h3>
+        <h3>${renderIcon('bell')} Meldingen</h3>
         <span>${unreadCount} ongelezen</span>
       </div>
       ${renderPushControls()}
@@ -4940,6 +4946,10 @@ function getVisibleOrders(admin, approver = false) {
   });
 }
 
+function getOpenOrders(admin, approver = false) {
+  return getVisibleOrders(admin, approver).filter((order) => !['Geleverd', 'Afgesloten', 'Geweigerd'].includes(getNormalizedStatus(order.status)));
+}
+
 function getVisibleNotifications() {
   const currentUserId = String(state.appUser?.id ?? '');
 
@@ -6005,7 +6015,7 @@ function persistAnalysisFilters() {
 
 function getRoute() {
   const route = window.location.hash.replace('#', '').split('?')[0];
-  return ['start', 'bestellen', 'ehbo', 'inkt', 'winkelmand', 'bestellingen', 'handleiding', 'privacy', 'analyse', 'beheer'].includes(route) ? route : 'start';
+  return ['start', 'meldingen', 'bestellen', 'ehbo', 'inkt', 'winkelmand', 'bestellingen', 'handleiding', 'privacy', 'analyse', 'beheer'].includes(route) ? route : 'start';
 }
 
 function clearPrivateLocalData() {
