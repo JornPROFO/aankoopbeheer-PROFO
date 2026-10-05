@@ -27,3 +27,9 @@ body { padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px)); }
   .guide-pet-label { min-height:44px; padding:0 12px; gap:6px; }
 }
 @media print { .guide-pet,.guide-index {display:none!important;} body {padding-bottom:0;} }
+
+/* Keep the guide inside a compact, opaque help control. */
+.guide-pet {gap:6px;background:var(--surface,#fffcf8);border:1px solid #e1c6b8;border-radius:16px;padding:4px;}
+.guide-pet-portrait {width:76px;height:64px;object-fit:contain;filter:none;animation:none!important;}
+:root[data-theme="dark"] .guide-pet {background:#302923;}
+@media(max-width:600px){.guide-pet-portrait{width:60px;height:52px;}}

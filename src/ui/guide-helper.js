@@ -15,7 +15,7 @@ export function initializeGuideHelper(root) {
   helper.rel = 'noopener';
   helper.setAttribute('aria-label', 'Handleiding openen in een nieuw tabblad');
   helper.title = 'Hulp nodig? Open de handleiding';
-  helper.innerHTML = `<img class="guide-pet-portrait" src="/assets/handleiding-vosje.webp" width="96" height="96" alt="" draggable="false" />
+  helper.innerHTML = `<img class="guide-pet-portrait" src="/assets/profo-begeleider-help.webp" width="96" height="96" alt="" draggable="false" />
     <span class="guide-pet-label"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 7v14m0-14C9 4 5 4 2 5v15c3-1 7-1 10 1 3-2 7-2 10-1V5c-3-1-7-1-10 2Z"/></svg><span>Handleiding</span><span aria-hidden="true">↗</span></span>`;
   const sync = () => {
     const modal = document.querySelector('dialog[open], [role="dialog"][aria-modal="true"]');
