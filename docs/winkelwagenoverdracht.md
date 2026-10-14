@@ -1,6 +1,12 @@
 # Winkelwagen bij leverancier
 
-## Browseragent — versie 1.0.1
+## Browseragent — versie 1.0.3
+
+### Voorraadcontrole — 14 oktober 2026
+
+De exacte productpagina van Cristaline plat water 0,5 liter (12 stuks), artikel 422783, publiceert `InStock` in het Schema.org-aanbod bij de bestelknop, maar toont geen tekst ‘Direct leverbaar’. Versie 1.0.3 herkent die artikelgebonden voorraadstatus. Het artikelnummer, de productidentiteit en de aanbiedings-URL moeten overeenkomen. De zichtbare voorraadmelding wordt uitsluitend in het bestelblok gelezen; meldingen bij andere producten tellen niet mee. Een onbekende, negatieve, dubbele of tegenstrijdige voorraadstatus blokkeert de regel. De agent controleert dit opnieuw vóór toevoegen. De bevestiging door de gebruiker en de bestaande controles op de winkelwagen blijven behouden.
+
+Het bijgewerkte pakket moet lokaal worden uitgepakt en de bestaande extensie moet opnieuw worden geladen. Het publiceren van het downloadpakket werkt een reeds geladen extensie niet automatisch bij.
 
 De knop **Vul winkelwagen bij leverancier** gebruikt nu de lokale PROFO Winkelwagenagent in Chrome of Edge op desktop/laptop. De app controleert de bevoegdheid; de agent vraagt daarnaast zelfstandig via Supabase de actuele goedgekeurde bestelregels op. Alleen Jorn en Kathleen krijgen toegang. Er is geen automatische afrekenhandeling.
 

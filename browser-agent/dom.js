@@ -62,7 +62,37 @@ export function supplierDOM(action, expected, reportErrors = false) {
   let measurement;
   try { measurement = JSON.parse(button.getAttribute('data-measure')); } catch { fail('Artikelcontrole bij bestelknop ontbreekt.'); }
   if (!measurement || norm(measurement.label) !== `${title} - ${article}`) fail('Producttitel en artikelnummer spreken elkaar tegen.');
-  if (button.disabled || input.disabled || !button.getClientRects().length || !/Direct leverbaar/i.test(main.innerText)) fail('Product niet aantoonbaar direct beschikbaar.');
+  // Availability belongs to the exact order block, never a recommendation or
+  // sidebar. Clearance products may publish InStock without a visible badge.
+  const orderBlock = form.closest('.block');
+  const unavailable = () => fail('Product niet aantoonbaar direct beschikbaar.');
+  if (!orderBlock || orderBlock.querySelectorAll('form.prodform').length !== 1) unavailable();
+  const stockLabels = [...orderBlock.querySelectorAll('.stock-text')].filter(e => e.getClientRects().length);
+  const directlyAvailable = stockLabels.length === 1 && /^Direct leverbaar$/i.test(norm(stockLabels[0].textContent));
+  if (stockLabels.length && !directlyAvailable) unavailable();
+
+  const productSelector = '[itemscope][itemtype="http://schema.org/Product"], [itemscope][itemtype="https://schema.org/Product"]';
+  const product = form.closest(productSelector);
+  const offers = [...orderBlock.querySelectorAll('[itemprop="offers"][itemscope]')];
+  let inStock = false;
+  if (offers.length) {
+    const offer = offers[0];
+    const skus = product ? [...product.querySelectorAll('[itemprop="sku"]')].filter(e => e.closest(productSelector) === product) : [];
+    const availability = offer.querySelectorAll('[itemprop="availability"]');
+    const offerUrls = offer.querySelectorAll('[itemprop="url"]');
+    if (offers.length !== 1 || !product || product.getAttribute('itemid') !== `${url.href}#product`
+      || skus.length !== 1 || skus[0].getAttribute('content') !== article
+      || offer.closest(productSelector) !== product || !/^https?:\/\/schema\.org\/Offer$/.test(offer.getAttribute('itemtype'))
+      || offerUrls.length !== 1 || offerUrls[0].getAttribute('content') !== url.href
+      || availability.length !== 1) unavailable();
+    const status = availability[0].getAttribute('content') || availability[0].getAttribute('href');
+    inStock = /^(?:https?:\/\/schema\.org\/)?InStock$/.test(status);
+    // Explicit negative, unknown or conflicting metadata must not fall back to
+    // a possibly stale visible badge.
+    if (!inStock) unavailable();
+  }
+  if (button.disabled || input.disabled || !button.getClientRects().length || !input.getClientRects().length
+    || (!directlyAvailable && !inStock)) unavailable();
   if (action === 'inspect') return {title,article,url:url.href};
   if (action !== 'add' || title !== expected.title) fail('Product of verpakking is gewijzigd sinds de voorcontrole.');
   if (!Number.isSafeInteger(expected.quantity) || expected.quantity < 1 || expected.quantity > 999) fail('Ongeldig aantal.');

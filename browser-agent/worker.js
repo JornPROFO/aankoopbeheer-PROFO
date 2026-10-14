@@ -120,7 +120,7 @@ async function execute(payload) {
 }
 chrome.runtime.onMessage.addListener((message,sender,respond) => {
   if (sender.id !== chrome.runtime.id || sender.frameId !== 0 || !sender.url || new URL(sender.url).origin !== APP_ORIGIN) return;
-  if (message.action === 'ping') { respond({data:{version:'1.0.2'}}); return; }
+  if (message.action === 'ping') { respond({data:{version:'1.0.3'}}); return; }
   if (!['prepare','execute'].includes(message.action)) return;
   if (busy) { respond({error:'Er loopt al een overdracht in deze browser.'}); return; }
   busy = true;

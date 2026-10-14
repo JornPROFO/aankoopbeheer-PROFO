@@ -14,7 +14,7 @@ function page(html,path=url) {
   window.HTMLElement.prototype.getClientRects=()=>[{}];
   return document;
 }
-const product=()=>`<h1>${line.title}</h1><p>Direct leverbaar</p><form class="prodform" action="/Handdoeken-i3737.html#pSDR02017"><input name="amount" value="1"><button data-test="add-to-cart" data-measure='${JSON.stringify({label:line.title+' - SDR02017'})}'>Bestellen</button></form><button id="checkout">Afrekenen</button>`;
+const product=()=>`<h1>${line.title}</h1><div class="block"><p class="stock-text">Direct leverbaar</p><form class="prodform" action="/Handdoeken-i3737.html#pSDR02017"><input name="amount" value="1"><button data-test="add-to-cart" data-measure='${JSON.stringify({label:line.title+' - SDR02017'})}'>Bestellen</button></form></div><button id="checkout">Afrekenen</button>`;
 test('exacte productknop vult het aantal; afrekenen wordt nooit aangeraakt',()=>{
   const doc=page(product());let additions=0,checkout=0;
   doc.querySelector('[data-test]').addEventListener('click',()=>additions++);
@@ -33,6 +33,67 @@ test('login, beschikbaarheid en gewijzigde selectors stoppen',()=>{
   page(product()).querySelector('body > button').remove();assert.throws(()=>supplierDOM('inspect',line),/aan/);
   page(product().replace('Direct leverbaar','Uitverkocht'));assert.throws(()=>supplierDOM('inspect',line),/beschikbaar/);
   page(product().replace('data-test="add-to-cart"','data-test="changed"'));assert.throws(()=>supplierDOM('inspect',line),/knop/);
+});
+
+const water={supplier:'123inkt.be',url:'https://www.123inkt.be/Cristaline-plat-water-0-5-liter-12-stuks-i130947.html',article:'422783',title:'Cristaline plat water 0,5 liter (12 stuks)'};
+// Public product markup observed on 14 October 2026: no stock-text badge,
+// but an Offer with InStock and the exact product URL beside the order form.
+const waterOffer=(status='InStock',offerUrl=water.url)=>`<span itemprop="offers" itemscope itemtype="http://schema.org/Offer"><meta content="${status}" itemprop="availability"><meta content="${offerUrl}" itemprop="url"></span>`;
+const waterPage=(offer=waterOffer(),badge='')=>`<div itemscope itemtype="http://schema.org/Product" itemid="${water.url}#product"><meta itemprop="sku" content="422783"><h1>${water.title}</h1><span>OP = OP</span><div class="prodinfo"><div class="block">${badge}${offer}<form class="prodform" action="${water.url}#p422783"><input name="amount" value="1"><button data-test="add-to-cart" data-measure='${JSON.stringify({label:water.title+' - 422783'})}'>Bestellen</button></form></div></div></div>`;
+
+test('Cristaline met exact InStock-aanbod zonder badge kan worden gecontroleerd en toegevoegd',()=>{
+  for (const status of ['InStock','https://schema.org/InStock','http://schema.org/InStock']) {
+    const doc=page(waterPage(waterOffer(status)),water.url);let clicks=0;
+    doc.querySelector('form button').addEventListener('click',()=>clicks++);
+    assert.deepEqual(supplierDOM('inspect',water),{title:water.title,article:water.article,url:water.url});
+    supplierDOM('add',{...water,quantity:5});
+    assert.equal(doc.querySelector('input').value,'5');assert.equal(clicks,1);
+  }
+});
+
+test('uitverkocht, nabestelling, onbekende of tegenstrijdige voorraad stopt ook met actieve knop',()=>{
+  for (const status of ['OutOfStock','BackOrder','PreOrder','SoldOut','Discontinued','LimitedAvailability','Unknown','']) {
+    page(waterPage(waterOffer(status),'<span class="stock-text">Direct leverbaar</span>'),water.url);
+    assert.throws(()=>supplierDOM('inspect',water),/beschikbaar/);
+  }
+  page(waterPage(waterOffer(),'<span class="stock-text">Niet op voorraad</span>'),water.url);
+  assert.throws(()=>supplierDOM('inspect',water),/beschikbaar/);
+  page(waterPage(''),water.url); // OP = OP or an enabled button is no stock proof.
+  assert.throws(()=>supplierDOM('inspect',water),/beschikbaar/);
+});
+
+test('voorraad van een ander artikel, aanbeveling of dubbel aanbod keurt het product niet goed',()=>{
+  for (const html of [
+    waterPage(waterOffer('InStock','https://www.123inkt.be/Ander-i1.html')),
+    waterPage().replace('content="422783"','content="ANDER"'),
+    waterPage().replace(`${water.url}#product`,'https://www.123inkt.be/Ander-i1.html#product'),
+    waterPage(waterOffer()+waterOffer('OutOfStock')),
+    waterPage(waterOffer().replace('</span>','<meta itemprop="availability" content="OutOfStock"></span>')),
+    waterPage('')+`<aside><span class="stock-text">Direct leverbaar</span>${waterOffer()}</aside>`,
+    waterPage('').replace('</form>','</form><div itemscope itemtype="http://schema.org/Product">'+waterOffer()+'</div>'),
+  ]) {
+    page(html,water.url);assert.throws(()=>supplierDOM('inspect',water),/beschikbaar/);
+  }
+});
+
+test('InStock omzeilt geen uitgeschakelde of onzichtbare bestelknop of aantalveld',()=>{
+  for (const selector of ['form button','input']) {
+    const doc=page(waterPage(),water.url);
+    doc.querySelector(selector).disabled=true;
+    assert.throws(()=>supplierDOM('inspect',water),/beschikbaar/);
+    doc.querySelector(selector).disabled=false;
+    doc.querySelector(selector).getClientRects=()=>[];
+    assert.throws(()=>supplierDOM('inspect',water),/beschikbaar/);
+  }
+});
+
+test('beschikbaarheid wordt tussen voorcontrole en toevoegen opnieuw gecontroleerd',()=>{
+  const doc=page(waterPage(),water.url);let clicks=0;
+  doc.querySelector('form button').addEventListener('click',()=>clicks++);
+  supplierDOM('inspect',water);
+  doc.querySelector('[itemprop="availability"]').setAttribute('content','OutOfStock');
+  assert.throws(()=>supplierDOM('add',{...water,quantity:5}),/beschikbaar/);
+  assert.equal(clicks,0);
 });
 test('winkelwagen wordt met exact artikelnummer, URL en aantal teruggelezen',()=>{
   page(`<table class="shopcart_overview"><tr data-role="cart-item" data-product-code="SDR02017"><td><input data-role="amount" value="3"></td><td data-test="product-name"><a href="${url}">${line.title}</a></td></tr></table>`,'https://www.123schoon.nl/shoppingcart.html');
@@ -71,7 +132,7 @@ test('HP-modelnummers worden uitsluitend op de vier exacte huismerkpagina’s ve
   const codes={W2030X:'055437',W2031X:'055441',W2032X:'055445',W2033X:'055449'};
   for(const [hp,url] of Object.entries(hp415xSingles)) {
     const code=codes[hp], title=`123inkt huismerk vervangt HP 415X (${hp})`;
-    const html=`<h1>${title}</h1><p>Direct leverbaar</p><form class="prodform" action="${url}#p${code}"><input name="amount" value="1"><button data-test="add-to-cart" data-measure='${JSON.stringify({label:title+' - '+code})}'>Bestellen</button></form>`;
+    const html=`<h1>${title}</h1><div class="block"><p class="stock-text">Direct leverbaar</p><form class="prodform" action="${url}#p${code}"><input name="amount" value="1"><button data-test="add-to-cart" data-measure='${JSON.stringify({label:title+' - '+code})}'>Bestellen</button></form></div>`;
     const doc=page(html,url);let clicks=0;
     doc.querySelector('form button').addEventListener('click',()=>clicks++);
     const expected={supplier:'123inkt.be',article:hp,url};
