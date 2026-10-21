@@ -48,3 +48,21 @@ create index if not exists aankoop_printer_cartridges_printer_idx
 
 comment on table public.aankoop_printers is 'Printers per PROFO-locatie voor interne inkt- en tonerbestellingen.';
 comment on table public.aankoop_printer_cartridges is 'Cartridges en toners per printer, gekoppeld aan kleur en leverancier.';
+
+-- BEGIN EXPLICIT DATA API GRANTS (2026-10-30 compatibility)
+-- Bestaande API-rechten, gecontroleerd op 2026-10-21. RLS blijft van toepassing.
+alter table public.aankoop_printers enable row level security;
+grant select, insert, update, delete on table public.aankoop_printers to anon;
+grant select, insert, update, delete on table public.aankoop_printers to authenticated;
+grant select, insert, update, delete on table public.aankoop_printers to service_role;
+alter table public.aankoop_printer_cartridges enable row level security;
+grant select, insert, update, delete on table public.aankoop_printer_cartridges to anon;
+grant select, insert, update, delete on table public.aankoop_printer_cartridges to authenticated;
+grant select, insert, update, delete on table public.aankoop_printer_cartridges to service_role;
+grant usage, select on sequence public.aankoop_printer_cartridges_id_seq to anon;
+grant usage, select on sequence public.aankoop_printer_cartridges_id_seq to authenticated;
+grant usage, select on sequence public.aankoop_printer_cartridges_id_seq to service_role;
+grant usage, select on sequence public.aankoop_printers_id_seq to anon;
+grant usage, select on sequence public.aankoop_printers_id_seq to authenticated;
+grant usage, select on sequence public.aankoop_printers_id_seq to service_role;
+-- END EXPLICIT DATA API GRANTS

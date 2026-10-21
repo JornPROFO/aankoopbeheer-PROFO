@@ -57,3 +57,28 @@ create table if not exists public.aankoop_bestelregels (
   lijn_totaal_btw numeric(12, 2) not null,
   lijn_totaal_incl_btw numeric(12, 2) not null
 );
+
+-- BEGIN EXPLICIT DATA API GRANTS (2026-10-30 compatibility)
+-- Bestaande API-rechten, gecontroleerd op 2026-10-21. RLS blijft van toepassing.
+alter table public.aankoop_producten enable row level security;
+grant select, insert, update, delete on table public.aankoop_producten to anon;
+grant select, insert, update, delete on table public.aankoop_producten to authenticated;
+grant select, insert, update, delete on table public.aankoop_producten to service_role;
+alter table public.aankoop_bestellingen enable row level security;
+grant select, insert, update, delete on table public.aankoop_bestellingen to anon;
+grant select, insert, update, delete on table public.aankoop_bestellingen to authenticated;
+grant select, insert, update, delete on table public.aankoop_bestellingen to service_role;
+alter table public.aankoop_bestelregels enable row level security;
+grant select, insert, update, delete on table public.aankoop_bestelregels to anon;
+grant select, insert, update, delete on table public.aankoop_bestelregels to authenticated;
+grant select, insert, update, delete on table public.aankoop_bestelregels to service_role;
+grant usage, select on sequence public.aankoop_bestellingen_id_seq to anon;
+grant usage, select on sequence public.aankoop_bestellingen_id_seq to authenticated;
+grant usage, select on sequence public.aankoop_bestellingen_id_seq to service_role;
+grant usage, select on sequence public.aankoop_bestelregels_id_seq to anon;
+grant usage, select on sequence public.aankoop_bestelregels_id_seq to authenticated;
+grant usage, select on sequence public.aankoop_bestelregels_id_seq to service_role;
+grant usage, select on sequence public.aankoop_producten_id_seq to anon;
+grant usage, select on sequence public.aankoop_producten_id_seq to authenticated;
+grant usage, select on sequence public.aankoop_producten_id_seq to service_role;
+-- END EXPLICIT DATA API GRANTS

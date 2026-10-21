@@ -41,3 +41,10 @@ create policy aankoop_statuslog_select_beheerder
       'kathleen.nerinckx@profo.be'
     )
   );
+
+-- BEGIN EXPLICIT DATA API GRANTS (2026-10-30 compatibility)
+-- Bestaande API-rechten, gecontroleerd op 2026-10-21. RLS blijft van toepassing.
+alter table public.aankoop_bestelling_statuslog enable row level security;
+grant select, insert on table public.aankoop_bestelling_statuslog to authenticated;
+grant usage, select on sequence public.aankoop_bestelling_statuslog_id_seq to authenticated;
+-- END EXPLICIT DATA API GRANTS

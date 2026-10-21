@@ -135,4 +135,15 @@ end;
 $$;
 revoke all on function public.aankoop_ontvangst_verwerken(bigint,bigint,text,uuid,timestamptz,jsonb,text) from public,anon,authenticated;
 grant execute on function public.aankoop_ontvangst_verwerken(bigint,bigint,text,uuid,timestamptz,jsonb,text) to service_role;
+
+-- BEGIN EXPLICIT DATA API GRANTS (2026-10-30 compatibility)
+-- Bestaande API-rechten, gecontroleerd op 2026-10-21. RLS blijft van toepassing.
+alter table public.aankoop_ontvangstverzoeken enable row level security;
+grant select on table public.aankoop_ontvangstverzoeken to authenticated;
+grant select, insert, update, delete on table public.aankoop_ontvangstverzoeken to service_role;
+alter table public.aankoop_ontvangstbevestigingen enable row level security;
+grant select on table public.aankoop_ontvangstbevestigingen to authenticated;
+grant select, insert, update, delete on table public.aankoop_ontvangstbevestigingen to service_role;
+-- END EXPLICIT DATA API GRANTS
+
 commit;

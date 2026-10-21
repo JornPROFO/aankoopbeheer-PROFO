@@ -1,0 +1,708 @@
+{
+  "checkedOn": "2026-10-21",
+  "scope": "Bestaande Data API-rechten; geen wijziging aan bedrijfsrollen of RLS-policies.",
+  "relations": [
+    {
+      "schema": "public",
+      "name": "aankoop_bestellingen",
+      "kind": "r",
+      "rls": true,
+      "grants": {
+        "anon": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ],
+        "authenticated": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ],
+        "service_role": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ]
+      }
+    },
+    {
+      "schema": "public",
+      "name": "aankoop_bestellingen_id_seq",
+      "kind": "S",
+      "rls": false,
+      "grants": {
+        "anon": [
+          "USAGE",
+          "SELECT"
+        ],
+        "authenticated": [
+          "USAGE",
+          "SELECT"
+        ],
+        "service_role": [
+          "USAGE",
+          "SELECT"
+        ]
+      }
+    },
+    {
+      "schema": "public",
+      "name": "aankoop_bestelregel_wijzigingen",
+      "kind": "r",
+      "rls": true,
+      "grants": {
+        "anon": [],
+        "authenticated": [
+          "SELECT",
+          "INSERT"
+        ],
+        "service_role": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ]
+      }
+    },
+    {
+      "schema": "public",
+      "name": "aankoop_bestelregels",
+      "kind": "r",
+      "rls": true,
+      "grants": {
+        "anon": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ],
+        "authenticated": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ],
+        "service_role": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ]
+      }
+    },
+    {
+      "schema": "public",
+      "name": "aankoop_bestelregels_id_seq",
+      "kind": "S",
+      "rls": false,
+      "grants": {
+        "anon": [
+          "USAGE",
+          "SELECT"
+        ],
+        "authenticated": [
+          "USAGE",
+          "SELECT"
+        ],
+        "service_role": [
+          "USAGE",
+          "SELECT"
+        ]
+      }
+    },
+    {
+      "schema": "public",
+      "name": "aankoop_goedkeurder_scopes",
+      "kind": "r",
+      "rls": true,
+      "grants": {
+        "anon": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ],
+        "authenticated": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ],
+        "service_role": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ]
+      }
+    },
+    {
+      "schema": "public",
+      "name": "aankoop_goedkeurder_scopes_id_seq",
+      "kind": "S",
+      "rls": false,
+      "grants": {
+        "anon": [
+          "USAGE",
+          "SELECT"
+        ],
+        "authenticated": [
+          "USAGE",
+          "SELECT"
+        ],
+        "service_role": [
+          "USAGE",
+          "SELECT"
+        ]
+      }
+    },
+    {
+      "schema": "public",
+      "name": "aankoop_meldingen",
+      "kind": "r",
+      "rls": true,
+      "grants": {
+        "anon": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ],
+        "authenticated": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ],
+        "service_role": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ]
+      }
+    },
+    {
+      "schema": "public",
+      "name": "aankoop_meldingen_id_seq",
+      "kind": "S",
+      "rls": false,
+      "grants": {
+        "anon": [
+          "USAGE",
+          "SELECT"
+        ],
+        "authenticated": [
+          "USAGE",
+          "SELECT"
+        ],
+        "service_role": [
+          "USAGE",
+          "SELECT"
+        ]
+      }
+    },
+    {
+      "schema": "public",
+      "name": "aankoop_ontvangstbevestigingen",
+      "kind": "r",
+      "rls": true,
+      "grants": {
+        "anon": [],
+        "authenticated": [
+          "SELECT"
+        ],
+        "service_role": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ]
+      }
+    },
+    {
+      "schema": "public",
+      "name": "aankoop_ontvangstverzoeken",
+      "kind": "r",
+      "rls": true,
+      "grants": {
+        "anon": [],
+        "authenticated": [
+          "SELECT"
+        ],
+        "service_role": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ]
+      }
+    },
+    {
+      "schema": "public",
+      "name": "aankoop_printer_cartridges",
+      "kind": "r",
+      "rls": true,
+      "grants": {
+        "anon": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ],
+        "authenticated": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ],
+        "service_role": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ]
+      }
+    },
+    {
+      "schema": "public",
+      "name": "aankoop_printer_cartridges_id_seq",
+      "kind": "S",
+      "rls": false,
+      "grants": {
+        "anon": [
+          "USAGE",
+          "SELECT"
+        ],
+        "authenticated": [
+          "USAGE",
+          "SELECT"
+        ],
+        "service_role": [
+          "USAGE",
+          "SELECT"
+        ]
+      }
+    },
+    {
+      "schema": "public",
+      "name": "aankoop_printers",
+      "kind": "r",
+      "rls": true,
+      "grants": {
+        "anon": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ],
+        "authenticated": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ],
+        "service_role": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ]
+      }
+    },
+    {
+      "schema": "public",
+      "name": "aankoop_printers_id_seq",
+      "kind": "S",
+      "rls": false,
+      "grants": {
+        "anon": [
+          "USAGE",
+          "SELECT"
+        ],
+        "authenticated": [
+          "USAGE",
+          "SELECT"
+        ],
+        "service_role": [
+          "USAGE",
+          "SELECT"
+        ]
+      }
+    },
+    {
+      "schema": "public",
+      "name": "aankoop_producten",
+      "kind": "r",
+      "rls": true,
+      "grants": {
+        "anon": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ],
+        "authenticated": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ],
+        "service_role": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ]
+      }
+    },
+    {
+      "schema": "public",
+      "name": "aankoop_producten_id_seq",
+      "kind": "S",
+      "rls": false,
+      "grants": {
+        "anon": [
+          "USAGE",
+          "SELECT"
+        ],
+        "authenticated": [
+          "USAGE",
+          "SELECT"
+        ],
+        "service_role": [
+          "USAGE",
+          "SELECT"
+        ]
+      }
+    },
+    {
+      "schema": "public",
+      "name": "aankoop_push_abonnementen",
+      "kind": "r",
+      "rls": true,
+      "grants": {
+        "anon": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ],
+        "authenticated": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ],
+        "service_role": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ]
+      }
+    },
+    {
+      "schema": "public",
+      "name": "aankoop_push_abonnementen_id_seq",
+      "kind": "S",
+      "rls": false,
+      "grants": {
+        "anon": [
+          "USAGE",
+          "SELECT"
+        ],
+        "authenticated": [
+          "USAGE",
+          "SELECT"
+        ],
+        "service_role": [
+          "USAGE",
+          "SELECT"
+        ]
+      }
+    },
+    {
+      "schema": "public",
+      "name": "aankoop_winkelwagen_overdrachten",
+      "kind": "r",
+      "rls": true,
+      "grants": {
+        "anon": [],
+        "authenticated": [
+          "SELECT",
+          "INSERT"
+        ],
+        "service_role": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ]
+      }
+    },
+    {
+      "schema": "public",
+      "name": "aankoop_winkelwagen_resultaten",
+      "kind": "r",
+      "rls": true,
+      "grants": {
+        "anon": [],
+        "authenticated": [
+          "SELECT",
+          "INSERT"
+        ],
+        "service_role": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ]
+      }
+    },
+    {
+      "schema": "public",
+      "name": "aankoop_winkelwagen_resultaten_id_seq",
+      "kind": "S",
+      "rls": false,
+      "grants": {
+        "anon": [
+          "USAGE",
+          "SELECT"
+        ],
+        "authenticated": [
+          "USAGE",
+          "SELECT"
+        ],
+        "service_role": [
+          "USAGE",
+          "SELECT"
+        ]
+      }
+    },
+    {
+      "schema": "public",
+      "name": "gebruikers",
+      "kind": "r",
+      "rls": true,
+      "grants": {
+        "anon": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ],
+        "authenticated": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ],
+        "service_role": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ]
+      }
+    },
+    {
+      "schema": "public",
+      "name": "gebruikers_id_seq",
+      "kind": "S",
+      "rls": false,
+      "grants": {
+        "anon": [
+          "USAGE",
+          "SELECT"
+        ],
+        "authenticated": [
+          "USAGE",
+          "SELECT"
+        ],
+        "service_role": [
+          "USAGE",
+          "SELECT"
+        ]
+      }
+    },
+    {
+      "schema": "public",
+      "name": "locaties",
+      "kind": "r",
+      "rls": true,
+      "grants": {
+        "anon": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ],
+        "authenticated": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ],
+        "service_role": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ]
+      }
+    },
+    {
+      "schema": "public",
+      "name": "locaties_id_seq",
+      "kind": "S",
+      "rls": false,
+      "grants": {
+        "anon": [
+          "USAGE",
+          "SELECT"
+        ],
+        "authenticated": [
+          "USAGE",
+          "SELECT"
+        ],
+        "service_role": [
+          "USAGE",
+          "SELECT"
+        ]
+      }
+    },
+    {
+      "schema": "public",
+      "name": "aankoop_bestelling_statuslog",
+      "kind": "r",
+      "rls": true,
+      "notInstalled": true,
+      "basis": "Optioneel script: bestaande SELECT- en INSERT-policies. Niet aangemaakt in productie.",
+      "grants": {
+        "anon": [],
+        "authenticated": [
+          "SELECT",
+          "INSERT"
+        ],
+        "service_role": []
+      }
+    },
+    {
+      "schema": "public",
+      "name": "aankoop_bestelling_statuslog_id_seq",
+      "kind": "S",
+      "rls": false,
+      "notInstalled": true,
+      "grants": {
+        "anon": [],
+        "authenticated": [
+          "USAGE",
+          "SELECT"
+        ],
+        "service_role": []
+      }
+    }
+  ],
+  "sourceFiles": [
+    {
+      "path": "00_OPEN_DIT_SQL_GOEDKEURINGSFLOW_KOPIEERBAAR.txt",
+      "objects": [
+        "aankoop_goedkeurder_scopes",
+        "aankoop_goedkeurder_scopes_id_seq"
+      ]
+    },
+    {
+      "path": "00_OPEN_DIT_SQL_INTERNE_MELDINGEN_KOPIEERBAAR.txt",
+      "objects": [
+        "aankoop_meldingen",
+        "aankoop_meldingen_id_seq"
+      ]
+    },
+    {
+      "path": "00_OPEN_DIT_SQL_PUSH_NOTIFICATIES_KOPIEERBAAR.txt",
+      "objects": [
+        "aankoop_push_abonnementen",
+        "aankoop_push_abonnementen_id_seq"
+      ]
+    },
+    {
+      "path": "RECHTERBALK_SQL_GOEDKEURINGSFLOW.txt",
+      "objects": [
+        "aankoop_goedkeurder_scopes",
+        "aankoop_goedkeurder_scopes_id_seq"
+      ]
+    },
+    {
+      "path": "supabase/manual-sql/20260623_aankoopbeheer_schema.sql",
+      "objects": [
+        "aankoop_producten",
+        "aankoop_bestellingen",
+        "aankoop_bestelregels",
+        "aankoop_bestellingen_id_seq",
+        "aankoop_bestelregels_id_seq",
+        "aankoop_producten_id_seq"
+      ]
+    },
+    {
+      "path": "supabase/manual-sql/20260623_aankoopbeheer_stap_0_basisgegevens.sql",
+      "objects": [
+        "gebruikers",
+        "locaties",
+        "gebruikers_id_seq",
+        "locaties_id_seq"
+      ]
+    },
+    {
+      "path": "supabase/manual-sql/20260623_aankoopbeheer_stap_1_tabellen.sql",
+      "objects": [
+        "aankoop_producten",
+        "aankoop_bestellingen",
+        "aankoop_bestelregels",
+        "aankoop_bestellingen_id_seq",
+        "aankoop_bestelregels_id_seq",
+        "aankoop_producten_id_seq"
+      ]
+    },
+    {
+      "path": "supabase/manual-sql/20260629_aankoopbeheer_inktmodule.sql",
+      "objects": [
+        "aankoop_printers",
+        "aankoop_printer_cartridges",
+        "aankoop_printer_cartridges_id_seq",
+        "aankoop_printers_id_seq"
+      ]
+    },
+    {
+      "path": "supabase/manual-sql/20260707_aankoopbeheer_statuslog.sql",
+      "objects": [
+        "aankoop_bestelling_statuslog",
+        "aankoop_bestelling_statuslog_id_seq"
+      ]
+    },
+    {
+      "path": "supabase/manual-sql/20260916_bestelregels_beheren.sql",
+      "objects": [
+        "aankoop_bestelregel_wijzigingen"
+      ]
+    },
+    {
+      "path": "supabase/manual-sql/20260917_ontvangstbevestiging.sql",
+      "objects": [
+        "aankoop_ontvangstverzoeken",
+        "aankoop_ontvangstbevestigingen"
+      ]
+    },
+    {
+      "path": "supabase/manual-sql/20260928_aankoop_winkelwagenoverdracht.sql",
+      "objects": [
+        "aankoop_winkelwagen_overdrachten",
+        "aankoop_winkelwagen_resultaten",
+        "aankoop_winkelwagen_resultaten_id_seq"
+      ]
+    }
+  ]
+}

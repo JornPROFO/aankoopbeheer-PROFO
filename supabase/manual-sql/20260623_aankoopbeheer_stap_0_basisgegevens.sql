@@ -46,3 +46,21 @@ set
   functie = excluded.functie,
   rol = excluded.rol,
   actief = excluded.actief;
+
+-- BEGIN EXPLICIT DATA API GRANTS (2026-10-30 compatibility)
+-- Bestaande API-rechten, gecontroleerd op 2026-10-21. RLS blijft van toepassing.
+alter table public.gebruikers enable row level security;
+grant select, insert, update, delete on table public.gebruikers to anon;
+grant select, insert, update, delete on table public.gebruikers to authenticated;
+grant select, insert, update, delete on table public.gebruikers to service_role;
+alter table public.locaties enable row level security;
+grant select, insert, update, delete on table public.locaties to anon;
+grant select, insert, update, delete on table public.locaties to authenticated;
+grant select, insert, update, delete on table public.locaties to service_role;
+grant usage, select on sequence public.gebruikers_id_seq to anon;
+grant usage, select on sequence public.gebruikers_id_seq to authenticated;
+grant usage, select on sequence public.gebruikers_id_seq to service_role;
+grant usage, select on sequence public.locaties_id_seq to anon;
+grant usage, select on sequence public.locaties_id_seq to authenticated;
+grant usage, select on sequence public.locaties_id_seq to service_role;
+-- END EXPLICIT DATA API GRANTS

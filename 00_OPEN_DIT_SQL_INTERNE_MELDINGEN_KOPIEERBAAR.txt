@@ -112,3 +112,14 @@ select
   'Interne meldingen voor PROFO Aankoopbeheer zijn actief.' as resultaat,
   count(*) as bestaande_meldingen
 from public.aankoop_meldingen;
+
+-- BEGIN EXPLICIT DATA API GRANTS (2026-10-30 compatibility)
+-- Bestaande API-rechten, gecontroleerd op 2026-10-21. RLS blijft van toepassing.
+alter table public.aankoop_meldingen enable row level security;
+grant select, insert, update, delete on table public.aankoop_meldingen to anon;
+grant select, insert, update, delete on table public.aankoop_meldingen to authenticated;
+grant select, insert, update, delete on table public.aankoop_meldingen to service_role;
+grant usage, select on sequence public.aankoop_meldingen_id_seq to anon;
+grant usage, select on sequence public.aankoop_meldingen_id_seq to authenticated;
+grant usage, select on sequence public.aankoop_meldingen_id_seq to service_role;
+-- END EXPLICIT DATA API GRANTS

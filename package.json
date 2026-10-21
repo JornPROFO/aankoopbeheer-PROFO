@@ -11,7 +11,8 @@
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
     "import:users": "node scripts/import-profo-users-from-csv.mjs",
-    "import:locations": "node scripts/import-profo-locations-from-csv.mjs"
+    "import:locations": "node scripts/import-profo-locations-from-csv.mjs",
+    "check:db-grants": "node scripts/check-data-api-grants.mjs"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",

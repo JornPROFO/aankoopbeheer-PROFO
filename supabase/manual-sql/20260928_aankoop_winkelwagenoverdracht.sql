@@ -121,4 +121,18 @@ begin
 end $$;
 revoke all on function public.aankoop_winkelwagen_snapshot(bigint), public.aankoop_winkelwagen_start(bigint,jsonb), public.aankoop_winkelwagen_bewaak() from public, anon;
 grant execute on function public.aankoop_winkelwagen_snapshot(bigint), public.aankoop_winkelwagen_start(bigint,jsonb) to authenticated;
+
+-- BEGIN EXPLICIT DATA API GRANTS (2026-10-30 compatibility)
+-- Bestaande API-rechten, gecontroleerd op 2026-10-21. RLS blijft van toepassing.
+alter table public.aankoop_winkelwagen_overdrachten enable row level security;
+grant select, insert on table public.aankoop_winkelwagen_overdrachten to authenticated;
+grant select, insert, update, delete on table public.aankoop_winkelwagen_overdrachten to service_role;
+alter table public.aankoop_winkelwagen_resultaten enable row level security;
+grant select, insert on table public.aankoop_winkelwagen_resultaten to authenticated;
+grant select, insert, update, delete on table public.aankoop_winkelwagen_resultaten to service_role;
+grant usage, select on sequence public.aankoop_winkelwagen_resultaten_id_seq to anon;
+grant usage, select on sequence public.aankoop_winkelwagen_resultaten_id_seq to authenticated;
+grant usage, select on sequence public.aankoop_winkelwagen_resultaten_id_seq to service_role;
+-- END EXPLICIT DATA API GRANTS
+
 commit;

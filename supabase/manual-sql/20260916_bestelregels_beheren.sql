@@ -139,5 +139,12 @@ end;
 $$;
 revoke all on function public.aankoop_bestelregel_wijzigen(bigint,timestamptz,uuid,text,bigint,integer,bigint) from public, anon;
 grant execute on function public.aankoop_bestelregel_wijzigen(bigint,timestamptz,uuid,text,bigint,integer,bigint) to authenticated;
-commit;
 
+-- BEGIN EXPLICIT DATA API GRANTS (2026-10-30 compatibility)
+-- Bestaande API-rechten, gecontroleerd op 2026-10-21. RLS blijft van toepassing.
+alter table public.aankoop_bestelregel_wijzigingen enable row level security;
+grant select, insert on table public.aankoop_bestelregel_wijzigingen to authenticated;
+grant select, insert, update, delete on table public.aankoop_bestelregel_wijzigingen to service_role;
+-- END EXPLICIT DATA API GRANTS
+
+commit;

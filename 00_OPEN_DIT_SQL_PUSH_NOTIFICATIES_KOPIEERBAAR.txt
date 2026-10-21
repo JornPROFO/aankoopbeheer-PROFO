@@ -172,3 +172,14 @@ select
   'Pushabonnementen voor PROFO Aankoopbeheer zijn voorbereid.' as resultaat,
   count(*) as bestaande_abonnementen
 from public.aankoop_push_abonnementen;
+
+-- BEGIN EXPLICIT DATA API GRANTS (2026-10-30 compatibility)
+-- Bestaande API-rechten, gecontroleerd op 2026-10-21. RLS blijft van toepassing.
+alter table public.aankoop_push_abonnementen enable row level security;
+grant select, insert, update, delete on table public.aankoop_push_abonnementen to anon;
+grant select, insert, update, delete on table public.aankoop_push_abonnementen to authenticated;
+grant select, insert, update, delete on table public.aankoop_push_abonnementen to service_role;
+grant usage, select on sequence public.aankoop_push_abonnementen_id_seq to anon;
+grant usage, select on sequence public.aankoop_push_abonnementen_id_seq to authenticated;
+grant usage, select on sequence public.aankoop_push_abonnementen_id_seq to service_role;
+-- END EXPLICIT DATA API GRANTS

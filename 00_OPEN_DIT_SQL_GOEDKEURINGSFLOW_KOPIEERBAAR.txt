@@ -261,3 +261,14 @@ join public.gebruikers goedkeurder on goedkeurder.id = scope.goedkeurder_id
 left join public.gebruikers teamlid on teamlid.id = scope.teamlid_id
 left join public.locaties locatie on locatie.id = scope.locatie_id
 order by goedkeurder.naam, scope.scope_type, teamlid.naam, locatie.naam;
+
+-- BEGIN EXPLICIT DATA API GRANTS (2026-10-30 compatibility)
+-- Bestaande API-rechten, gecontroleerd op 2026-10-21. RLS blijft van toepassing.
+alter table public.aankoop_goedkeurder_scopes enable row level security;
+grant select, insert, update, delete on table public.aankoop_goedkeurder_scopes to anon;
+grant select, insert, update, delete on table public.aankoop_goedkeurder_scopes to authenticated;
+grant select, insert, update, delete on table public.aankoop_goedkeurder_scopes to service_role;
+grant usage, select on sequence public.aankoop_goedkeurder_scopes_id_seq to anon;
+grant usage, select on sequence public.aankoop_goedkeurder_scopes_id_seq to authenticated;
+grant usage, select on sequence public.aankoop_goedkeurder_scopes_id_seq to service_role;
+-- END EXPLICIT DATA API GRANTS
