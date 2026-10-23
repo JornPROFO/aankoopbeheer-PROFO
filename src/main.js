@@ -1,3 +1,5 @@
+import {initializeTactileExperience,renderSoundControl,renderExperienceDock} from './ui/tactile-experience.js';
+initializeTactileExperience();
 import './styles/receipt.css';
 import { renderReceiptPanel } from './ui/receipt.js';
 import { receiptLines, receiptDraft, receiptTotals, canConfirmReceipt, receiptRoute } from './utils/receipt.js';
@@ -16,6 +18,7 @@ import './styles/order-editing.css';
 import './styles/warm-workplace.css';
 import './styles/guide-helper.css';
 import './styles/ux-refinements.css';
+import './styles/tactile-experience.css';
 import { initializeGuideHelper } from './ui/guide-helper.js';
 import { canEditOrderLines, validateOrderLineQuantity } from './utils/orderEditing.js';
 import {
@@ -1239,7 +1242,7 @@ function renderShell() {
         </div>
       </div>
       <details class="account-menu"><summary aria-label="Account en weergave">${escapeHtml(userLabel)} <span aria-hidden="true">⌄</span></summary><div class="header-actions">
-        <div class="appearance-controls" role="group" aria-label="Weergave en beweging">
+        <div class="appearance-controls" role="group" aria-label="Weergave en beweging">${renderSoundControl()}
           <div class="motion-choice" role="group" aria-label="Beweging">
             <button type="button" data-motion="dynamic" aria-pressed="${document.documentElement.dataset.motion === 'dynamic'}">✧ Dynamisch</button>
             <button type="button" data-motion="calm" aria-pressed="${document.documentElement.dataset.motion === 'calm'}">Rustig</button>
@@ -1273,6 +1276,7 @@ function renderShell() {
         ${state.setupError ? renderSetupError() : renderCurrentView(admin, approver)}
       </main>
     </div>
+    ${renderExperienceDock("purchase",state.view)}
     ${renderMobileCartBar()}
     ${renderProductPreview()}
     ${renderExpectedDeliveryModal()}
@@ -1632,7 +1636,7 @@ function renderUserGuide(inApp = true) {
       </article>
       <article class="panel guide-card">
         <h3>15. Weergave en hulp</h3>
-        <p>Open bovenaan het menu met je naam. Met <strong>Dynamisch</strong> of <strong>Rustig</strong> kies je of de kleine animaties actief zijn. Met <strong>Donker</strong> of <strong>Licht</strong> wissel je de weergave. De app bewaart je keuze in deze browser. Op smartphone open en sluit je de navigatie met de menuknop.</p>
+        <p>Open bovenaan het menu met je naam. Met <strong>Dynamisch</strong> of <strong>Rustig</strong> kies je of de kleine animaties actief zijn. Met <strong>Donker</strong> of <strong>Licht</strong> wissel je de weergave. De app bewaart je keuze in deze browser. Met <strong>Geluid aan</strong> of <strong>Geluid uit</strong> regel je de korte klikgeluiden. Op smartphone staan Start, Producten en Winkelmand in de vaste balk onderaan. Via <strong>Menu</strong> open je de andere onderdelen; sluiten kan met het kruisje of Escape.</p>
         <p>De PROFO-begeleider bij de handleidingknop opent het relevante hoofdstuk in een nieuw tabblad, zodat je huidige scherm behouden blijft. Bij de ontvangstvelden krijg je bijvoorbeeld hulp over leveringen; in de leveranciersoverdracht over extern bestellen. Ook via het menu kan je de handleiding raadplegen. Contacteer aankoopbeheer bij toegangsproblemen, foutieve producten of vragen over een bestelling. Vermeld daarbij het bestelnummer.</p>
       </article>
       <article class="panel guide-card">

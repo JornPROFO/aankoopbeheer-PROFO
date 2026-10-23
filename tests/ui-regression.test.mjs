@@ -14,23 +14,23 @@ function loadFunction(name, context) {
   return context[name];
 }
 
-test('lichte weergave vraagt geen toestelvoorkeur of browseropslag', () => {
-  const document = { documentElement: { dataset: {} } };
-  const context = vm.createContext({ document });
+test('lichte weergave blijft beschikbaar zonder opgeslagen voorkeur', () => {
+  const document = { documentElement: { dataset: {} }, addEventListener(){} };
+  const context = vm.createContext({ document, matchMedia:()=>({matches:false}), localStorage:{getItem:()=>null} });
   loadFunction('initializeTheme', context)();
   assert.equal(document.documentElement.dataset.theme, 'light');
 });
 
-test('winkelmand toont productfoto, EHBO-fallback en inktkleur', () => {
+test('winkelmand toont de aangeleverde foto, een neutrale placeholder en de inktkleur', () => {
   const context = vm.createContext({ escapeHtml, isEhboProduct: p => p.categorie === 'EHBO',
-    ehboDefaultImage: '/assets/ehbo-koffer-a-aanvulling.svg', defaultImage: '/assets/gevouwen-handdoeken-voorbeeld.png' });
+    ehboDefaultImage: '/assets/ehbo-koffer-a-aanvulling.svg', defaultImage: '/assets/productfoto-ontbreekt.svg' });
   const render = loadFunction('renderCartProductImage', context);
   assert.match(render({ naam: 'Test <product>', image_url: '/assets/pritt-lijmstift-22g.jpg' }), /src="\/assets\/pritt-lijmstift-22g.jpg"/);
   assert.match(render({ naam: 'Test <product>' }), /Test &lt;product&gt;/);
-  assert.match(render({ naam: 'Verband', categorie: 'EHBO' }), /ehbo-koffer-a-aanvulling.svg/);
+  assert.match(render({ naam: 'Verband', categorie: 'EHBO' }), /productfoto-ontbreekt.svg/);
   assert.match(render({ source_type: 'ink', kleur: 'C' }), /color-c/);
   assert.match(source, /\$\{renderCartProductImage\(product\)\}/);
-  for (const asset of ['pritt-lijmstift-22g.jpg', 'ehbo-koffer-a-aanvulling.svg', 'gevouwen-handdoeken-voorbeeld.png']) {
+  for (const asset of ['pritt-lijmstift-22g.jpg', 'productfoto-ontbreekt.svg']) {
     assert.ok(existsSync(new URL(`../public/assets/${asset}`, import.meta.url)));
   }
 });
@@ -39,7 +39,7 @@ test('geen volledige achtergrondverversing tijdens bestellen of dubbel bij focus
   let calls = 0;
   const context = vm.createContext({
     state: { session: { user: { email: 'test@example.invalid' } }, appUser: {}, loading: false, view: 'winkelmand' },
-    document: { hidden: false }, passiveRefreshRunning: false, lastPassiveRefreshAt: 0,
+    document: { hidden: false, querySelector:()=>null }, receiptBusy:false, passiveRefreshRunning: false, lastPassiveRefreshAt: 0,
     passiveRefreshViews: new Set(['start', 'bestellingen', 'analyse', 'beheer']),
     getPassiveRefreshSignature: () => '', isAdminUser: () => false,
     loadAankoopData: async () => { calls++; return {}; }, syncAppBadge: () => {}, render: () => {},

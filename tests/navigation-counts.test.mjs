@@ -1,4 +1,5 @@
 import test from 'node:test';
+import {renderExperienceDock,renderSoundControl} from '../src/ui/tactile-experience.js';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
@@ -21,7 +22,7 @@ test('open bestellingen volgen zichtbare orders en sluiten afgeronde statussen u
 });
 test('navigatie houdt open bestellingen en ongelezen meldingen uit elkaar',()=>{
  const state={view:'start',session:{user:{email:'a@profo.be'}},appUser:{id:1}};
- const c=vm.createContext({state,escapeHtml,document:{documentElement:{dataset:{}}},isAdminUser:()=>false,isApproverUser:()=>false,getUserLabel:()=> 'Jorn',getUnreadNotifications:()=>[1,2,3,4],getOpenOrders:()=>[1,2,3,4,5],getCartItems:()=>[],renderCurrentView:()=>'',renderMobileCartBar:()=>'',renderProductPreview:()=>'',renderExpectedDeliveryModal:()=>''});
+ const c=vm.createContext({state,escapeHtml,renderExperienceDock,renderSoundControl,document:{documentElement:{dataset:{}}},isAdminUser:()=>false,isApproverUser:()=>false,getUserLabel:()=> 'Jorn',getUnreadNotifications:()=>[1,2,3,4],getOpenOrders:()=>[1,2,3,4,5],getCartItems:()=>[],renderCurrentView:()=>'',renderMobileCartBar:()=>'',renderProductPreview:()=>'',renderExpectedDeliveryModal:()=>''});
  load('renderIcon',c);load('navLink',c);const shell=load('renderShell',c)();
  const start=shell.match(/<a[^>]*href="#start"[^>]*>[\s\S]*?<\/a>/)[0];
  assert.doesNotMatch(start,/nav-badge/);
