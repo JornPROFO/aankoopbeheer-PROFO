@@ -1,6 +1,6 @@
 # PROFO Aankoopbeheer - gebruikershandleiding
 
-Laatste bijwerking: 02/10/2026
+Laatste bijwerking: 30/10/2026
 
 Van aanvraag tot ontvangst: voor bestellers, goedkeurders en aankoopbeheer. Welke acties je ziet, hangt af van je rol en de status van de bestelling.
 
@@ -94,7 +94,7 @@ Kies op het aanmeldscherm voor **Wachtwoord vergeten** en vul je PROFO-mailadres
 
 ## 10. Geleverde producten bevestigen — voor bestellers
 
-1. Open de bestelling via de ontvangstmail of via **Bestellingen**. Meld aan met het account van de besteller op wiens naam de bestelling staat.
+1. Klik in de meest recente ontvangstmail op **Ontvangst bevestigen**. Je komt op een korte bevestigingspagina en hoeft je niet aan te melden. De persoonlijke link is 14 dagen geldig; stuur hem niet door. Je kunt ook via **Bestellingen** in de app bevestigen, met het account van de besteller.
 
 2. Open **Ontvangst bevestigen** op de bestelkaart. Ontvangst bevestigen is mogelijk zodra de bestelling op **Besteld** of **Gedeeltelijk geleverd** staat.
 
@@ -136,7 +136,7 @@ De verwachte leverdatum is geen garantie. Je kan die later aanpassen via **Meer 
 
 Onder **Levering per leverancier** volg je de afzonderlijke bestelregels op: nog niet geleverd, backorder, gedeeltelijk geleverd, geleverd of geannuleerd. Vul waar nodig een verwachte leverdatum en toelichting in en kies **Bewaren en melden**.
 
-Bij de statuswijziging naar **Besteld** wordt ook een ontvangstverzoek voor de besteller aangevraagd. Voor bestaande bestellingen kan je **Ontvangstbevestiging vragen per mail** gebruiken. Mislukt de verzending, dan kan je **Ontvangstmail opnieuw proberen** kiezen.
+Bij de statuswijziging naar **Besteld** wordt ook een ontvangstverzoek voor de besteller aangevraagd. Voor bestaande bestellingen kan je **Ontvangstbevestiging vragen per mail** gebruiken. Na verzending blijft **Herinnering ontvangst versturen** beschikbaar zolang de bestelling nog niet volledig ontvangen is. Onder **Ontvangstverzoek** staat wanneer de laatste mail verstuurd is. Tussen twee mails geldt een wachttijd van vijf minuten. Mislukt de eerste verzending, kies dan **Ontvangstmail opnieuw proberen**. De nieuwe mail bevat een persoonlijke link waarmee de collega zonder aanmelding kan bevestigen; die vervangt de link uit een eerdere herinnering.
 
 De bevestiging van de besteller toont het tijdstip, de ontvangen aantallen en wat nog ontbreekt. Aankoopbeheerders krijgen hierover een interne melding. Volg ontbrekende of foutief bevestigde producten verder op; de app verstuurt geen periodieke ontvangstherinneringen.
 

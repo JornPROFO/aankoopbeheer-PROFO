@@ -10,10 +10,10 @@ export function renderReceiptPanel(order, userId, admin, busy, draft = {}) {
   const review = Boolean(draft.__review);
   return `<section class="receipt-panel" data-help-topic="ontvangst" aria-label="Ontvangst bestelling ${e(order.id)}">
     <h4>Ontvangst bevestigen</h4>
-    ${latest ? `<p><strong>${latest.volledig ? 'Volledig ontvangen' : 'Gedeeltelijk ontvangen'}</strong> — bevestigd door ${e(order.besteller_naam)} op ${formatDateTime(latest.created_at)}.</p>
+    ${latest ? `<p><strong>${latest.volledig ? 'Volledig ontvangen' : 'Gedeeltelijk ontvangen'}</strong> — bevestigd door ${e(order.besteller_naam)}${latest.kanaal === 'mail' ? ' via de persoonlijke maillink' : ''} op ${formatDateTime(latest.created_at)}.</p>
       ${latest.opmerking ? `<p>${e(latest.opmerking)}</p>` : ''}
       <ul>${lines.map(line => `<li>${e(line.product_naam)}: ${e(latest.aantallen[line.id] || 0)} van ${e(line.aantal)} ontvangen${Number(latest.aantallen[line.id] || 0) < Number(line.aantal) ? ` · <strong>nog ${Number(line.aantal) - Number(latest.aantallen[line.id] || 0)} te ontvangen</strong>` : ''}</li>`).join('')}</ul>` : '<p>De besteller heeft de ontvangst nog niet bevestigd.</p>'}
-    ${admin && eligible && !request?.mail_verzonden_op ? `<button type="button" class="ghost-button" data-request-receipt="${e(order.id)}" ${busy ? 'disabled' : ''}>${request ? 'Ontvangstmail opnieuw proberen' : 'Ontvangstbevestiging vragen per mail'}</button>` : ''}
+    ${admin && eligible ? `<button type="button" class="ghost-button" data-request-receipt="${e(order.id)}" data-receipt-reminder="${Boolean(request?.mail_verzonden_op)}" ${busy ? 'disabled' : ''}>${busy ? 'Ontvangstmail wordt verstuurd…' : request?.mail_verzonden_op ? 'Herinnering ontvangst versturen' : request ? 'Ontvangstmail opnieuw proberen' : 'Ontvangstbevestiging vragen per mail'}</button>` : ''}
     ${canConfirmReceipt(order, userId) ? `<form data-receipt-form="${e(order.id)}">
       <fieldset class="receipt-choice" ${busy || review ? 'disabled' : ''}><legend>Wat is er geleverd?</legend>
         <label><input type="radio" name="receipt-mode" value="partial" ${draft['receipt-mode'] !== 'all' ? 'checked' : ''}> Een deel ontvangen</label>
@@ -34,6 +34,6 @@ export function renderReceiptPanel(order, userId, admin, busy, draft = {}) {
         <button type="button" class="text-button" data-receipt-reset ${busy ? 'disabled' : ''}>Invoer opnieuw beginnen</button>
       </div>
     </form>` : ''}
-    ${request ? `<details class="receipt-mail-info"><summary>Ontvangstverzoek</summary><p>${request.mail_verzonden_op ? `Ontvangstvraag gemaild op ${formatDateTime(request.mail_verzonden_op)}.` : 'De vraag staat in de app. De e-mail is nog niet als verzonden geregistreerd.'}</p></details>` : ''}
+    ${request ? `<details class="receipt-mail-info"><summary>Ontvangstverzoek</summary><p>${request.mail_verzonden_op ? `Laatste ontvangstmail verstuurd op ${formatDateTime(request.mail_verzonden_op)}.${request.mail_aantal > 1 ? ` Totaal ${e(request.mail_aantal)} ontvangstverzoeken verstuurd.` : ''}` : 'De vraag staat in de app. De e-mail is nog niet als verzonden geregistreerd.'}</p></details>` : ''}
   </section>`;
 }

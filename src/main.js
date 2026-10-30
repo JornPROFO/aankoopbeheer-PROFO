@@ -1512,7 +1512,7 @@ function renderUserGuide(inApp = true) {
       </div>
       <div class="privacy-heading-actions">
         <p class="page-intro">
-          Van aanvraag tot ontvangst: de stappen voor bestellers, goedkeurders en aankoopbeheer. Bijgewerkt op 2 oktober 2026. Welke acties je ziet, hangt af van je rol en de status van de bestelling.
+          Van aanvraag tot ontvangst: de stappen voor bestellers, goedkeurders en aankoopbeheer. Bijgewerkt op 30 oktober 2026. Welke acties je ziet, hangt af van je rol en de status van de bestelling.
         </p>
         ${inApp ? '' : '<a class="ghost-button" href="#start">Terug naar aanmelden</a>'}
       </div>
@@ -1596,7 +1596,7 @@ function renderUserGuide(inApp = true) {
       <article class="panel guide-card">
         <h3>10. Geleverde producten bevestigen — voor bestellers</h3>
         <ol>
-          <li>Open de bestelling via de ontvangstmail of via <strong>Bestellingen</strong>. Meld aan met het account van de besteller op wiens naam de bestelling staat.</li>
+          <li>Klik in de meest recente ontvangstmail op <strong>Ontvangst bevestigen</strong>. Je komt op een korte bevestigingspagina en hoeft je niet aan te melden. De persoonlijke link is 14 dagen geldig; stuur hem niet door. Je kunt ook via <strong>Bestellingen</strong> in de app bevestigen, met het account van de besteller.</li>
           <li>Open <strong>Ontvangst bevestigen</strong> op de bestelkaart. Ontvangst bevestigen is mogelijk zodra de bestelling op <strong>Besteld</strong> of <strong>Gedeeltelijk geleverd</strong> staat.</li>
           <li>Vul per product het <strong>vandaag ontvangen aantal verpakkingen</strong> in. Laat nog niet ontvangen producten op 0 staan. Tel verpakkingen volgens de bestelregel: één doos met 20 koffiecups telt als 1, niet als 20.</li>
           <li>Is alles aangekomen? Kies <strong>Alles ontvangen</strong>. Dit vult de velden in, maar verstuurt nog niets.</li>
@@ -1626,7 +1626,7 @@ function renderUserGuide(inApp = true) {
       <article class="panel guide-card">
         <h3>13. Leveringen opvolgen — voor aankoopbeheer</h3>
         <p>Onder <strong>Levering per leverancier</strong> volg je de afzonderlijke bestelregels op: nog niet geleverd, backorder, gedeeltelijk geleverd, geleverd of geannuleerd. Vul waar nodig een verwachte leverdatum en toelichting in en kies <strong>Bewaren en melden</strong>.</p>
-        <p>Bij de statuswijziging naar <strong>Besteld</strong> wordt ook een ontvangstverzoek voor de besteller aangevraagd. Voor bestaande bestellingen kan je <strong>Ontvangstbevestiging vragen per mail</strong> gebruiken. Mislukt de verzending, dan kan je <strong>Ontvangstmail opnieuw proberen</strong> kiezen.</p>
+        <p>Bij de statuswijziging naar <strong>Besteld</strong> wordt ook een ontvangstverzoek voor de besteller aangevraagd. Voor bestaande bestellingen kan je <strong>Ontvangstbevestiging vragen per mail</strong> gebruiken. Na verzending blijft <strong>Herinnering ontvangst versturen</strong> beschikbaar zolang de bestelling nog niet volledig ontvangen is. De besteller kan via de mail bevestigen zonder aanmelding. Onder <strong>Ontvangstverzoek</strong> zie je de laatste verzending. Tussen twee mails geldt een wachttijd van vijf minuten. Mislukt de eerste verzending, kies dan <strong>Ontvangstmail opnieuw proberen</strong>.</p>
         <p>De bevestiging van de besteller toont het tijdstip, de ontvangen aantallen en wat nog ontbreekt. Aankoopbeheerders krijgen hierover een interne melding. Volg ontbrekende of foutief bevestigde producten verder op; de app verstuurt geen periodieke ontvangstherinneringen.</p>
       </article>
       <article class="panel guide-card">
@@ -6037,10 +6037,15 @@ function clearPrivateLocalData() {
 app.addEventListener('click', async (event) => {
   const request = event.target.closest('[data-request-receipt]');
   if (request && !receiptBusy) {
+    const id=Number(request.dataset.requestReceipt);
+    const reminder=request.dataset.receiptReminder==='true';
+    const attemptKey='mail-'+id;
+    if (!receiptAttempts.has(attemptKey)) receiptAttempts.set(attemptKey,crypto.randomUUID());
     receiptBusy = true; state.error = ''; render();
     try {
-      await processReceipt({bestelling_id:Number(request.dataset.requestReceipt), actie:'vragen'});
-      state.notice = 'De vraag om ontvangst te bevestigen is per e-mail naar de besteller verstuurd.';
+      const result=await processReceipt({bestelling_id:id,actie:reminder?'herinneren':'vragen',request_id:receiptAttempts.get(attemptKey)});
+      receiptAttempts.delete(attemptKey);
+      state.notice = result.alreadySent ? 'Dit ontvangstverzoek was al verstuurd. Er is geen dubbele mail verzonden.' : reminder ? 'De herinnering is per e-mail naar de besteller verstuurd. Bevestigen kan via de mail zonder aanmelding.' : 'De vraag om ontvangst te bevestigen is per e-mail naar de besteller verstuurd.';
     } catch(error) { state.error = error.message; }
     finally { const receiptError = state.error; receiptBusy = false; await bootstrapData(); state.error = receiptError; render(); }
   }
