@@ -26,7 +26,7 @@ Supabase beheert de rechten op de `pg_net`-wachtrij zelf; `postgres` kan die nie
 
 ## Publicatie en verificatie
 
-1. Controleer de live projectidentiteit, maak een catalogusmomentopname en voer uitsluitend `supabase/migrations/20261110142537_cataloguscontrole_cloud.sql` uit. Importeer de bevestigde bronreferenties afzonderlijk via de beheerverbinding; publiceer geen database-export.
+1. Controleer de live projectidentiteit, maak een catalogusmomentopname en voer uitsluitend `supabase/migrations/20261110142537_cataloguscontrole_cloud.sql` uit. Wanneer dit via `db query` gebeurt, registreer de aantoonbaar uitgevoerde migratie vóór de Git-publicatie met `supabase migration repair 20261110142537 --status applied --linked --project-ref rxkffollbimmsvwhucgd`; zo probeert de Supabase-GitHub-integratie de tabellen niet opnieuw aan te maken. Controleer daarna `supabase migration list`. Importeer de bevestigde bronreferenties afzonderlijk via de beheerverbinding; publiceer geen database-export.
 2. Publiceer alleen deze functie met `supabase functions deploy cataloguscontrole --project-ref rxkffollbimmsvwhucgd --use-api --no-verify-jwt`.
 3. Voer de unit-tests en `tests/cataloguscontrole-rollback.sql` uit. Controleer de RLS-zichtbaarheid als beheerder én gewone gebruiker en controleer het endpoint met een ongeldige taakcode.
 4. Laat eerst een volledige testronde op de server draaien. Controleer alle regels, eindstatus, HTTP-resultaten en ongewijzigde hashes van catalogus en bestellingen. Activeer daarna de planning en bewijs een uitvoering die door `pg_cron` gestart is.
