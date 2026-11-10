@@ -1,0 +1,5 @@
+.catalog-control { padding: 1.25rem; }
+.catalog-control-summary, .catalog-control-item { display: grid; gap: .4rem; padding: 1rem; margin: 1rem 0; border: 1px solid var(--border, #d7c8c6); border-radius: .75rem; overflow-wrap: anywhere; }
+.catalog-control-summary { border-left: 4px solid #B61917; }
+.catalog-control-item p { margin: .2rem 0; }
+.catalog-control details { margin-top: 1rem; }

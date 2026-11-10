@@ -97,7 +97,21 @@ export async function loadAankoopData({ includeInactiveProducts = false } = {}) 
     locations,
     orders,
     notifications,
+    catalogControl: includeInactiveProducts ? await getCatalogControl() : null,
   };
+}
+
+export async function getCatalogControl() {
+  try {
+    const [runs, planning] = await Promise.all([
+      run(supabase.from('aankoop_catalogus_runs').select('*').order('started_at', { ascending: false }).limit(10)),
+      run(supabase.rpc('aankoop_catalogus_planning')),
+    ]);
+    const items = runs[0] ? await runPaged((from, to) => supabase.from('aankoop_catalogus_resultaten')
+      .select('id,kind,record_id,snapshot,status,message,patch,checked_at').eq('run_id', runs[0].id)
+      .not('status', 'in', '(ok,pending)').order('kind').order('record_id').range(from, to)) : [];
+    return { runs, planning, items };
+  } catch (error) { return { error: error.message || 'Onbekende fout.' }; }
 }
 
 export async function getNotifications() {

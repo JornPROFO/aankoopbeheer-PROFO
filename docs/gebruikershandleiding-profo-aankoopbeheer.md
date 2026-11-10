@@ -146,6 +146,8 @@ Gebruik **Analyse** om aankopen per periode, product, locatie en status te bekij
 
 Bevoegde beheerders onderhouden de productcatalogus, printers en cartridges. Controleer bij wijzigingen ook de verpakkingseenheid, prijs, afbeelding, leverancier en exacte productlink. Een fout in een bestaande bestelling meld je met het bestelnummer.
 
+Via **Beheer > Cataloguscontrole** volg je de wekelijkse controle van productlinks en afbeeldingen op. Die draait op maandag om 08.00 uur op de server, ook wanneer je computer uitstaat. Bevestigde link- en fotocorrecties gebeuren automatisch. Afwijkende artikelen, verpakkingen of onbereikbare leveranciers verschijnen als aandachtspunt; prijzen en bestellingen worden hierbij niet aangepast.
+
 ## 15. Weergave en hulp
 
 Open bovenaan het menu met je naam. Met **Dynamisch** of **Rustig** kies je of de kleine animaties actief zijn. Met **Donker** of **Licht** wissel je de weergave. De app bewaart je keuze in deze browser. Op smartphone open en sluit je de navigatie met de menuknop.

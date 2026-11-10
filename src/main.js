@@ -1,6 +1,8 @@
 import {initializeTactileExperience,renderSoundControl,renderExperienceDock} from './ui/tactile-experience.js';
 initializeTactileExperience();
 import './styles/receipt.css';
+import './styles/cataloguscontrole.css';
+import { renderCatalogControl } from './ui/cataloguscontrole.js';
 import { renderReceiptPanel } from './ui/receipt.js';
 import { receiptLines, receiptDraft, receiptTotals, canConfirmReceipt, receiptRoute } from './utils/receipt.js';
 import { processReceipt } from './services/aankoopService.js';
@@ -1633,6 +1635,7 @@ function renderUserGuide(inApp = true) {
         <h3>14. Analyse en catalogus — voor aankoopbeheer</h3>
         <p>Gebruik <strong>Analyse</strong> om aankopen per periode, product, locatie en status te bekijken. Standaard telt de analyse dossiers met status Besteld, Gedeeltelijk geleverd, Geleverd en Afgesloten mee. De kruistabel <strong>Producten per locatie</strong> en de afdrukfunctie ondersteunen de controle.</p>
         <p>Bevoegde beheerders onderhouden de productcatalogus, printers en cartridges. Controleer bij wijzigingen ook de verpakkingseenheid, prijs, afbeelding, leverancier en exacte productlink. Een fout in een bestaande bestelling meld je met het bestelnummer.</p>
+        <p>Via <strong>Beheer > Cataloguscontrole</strong> volg je de wekelijkse controle van productlinks en afbeeldingen op. Die draait op maandag om 08.00 uur op de server, ook wanneer je computer uitstaat. Bevestigde link- en fotocorrecties gebeuren automatisch. Afwijkende artikelen, verpakkingen of onbereikbare leveranciers verschijnen als aandachtspunt; prijzen en bestellingen worden hierbij niet aangepast.</p>
       </article>
       <article class="panel guide-card">
         <h3>15. Weergave en hulp</h3>
@@ -3200,6 +3203,12 @@ function renderAnalysisTable(rows) {
 
 function renderAdmin() {
   const sections = {
+    cataloguscontrole: {
+      eyebrow: 'Beheer',
+      title: 'Cataloguscontrole',
+      intro: 'Automatische controle en opvolging van productlinks en afbeeldingen.',
+      content: () => renderCatalogControl(state.data.catalogControl),
+    },
     products: {
       eyebrow: 'Beheer',
       title: 'Producten',
@@ -3233,6 +3242,7 @@ function renderAdmin() {
       ${adminSectionButton('products', 'Producten', `${state.data.products.length} artikelen`)}
       ${adminSectionButton('printers', 'Printers toevoegen', `${state.data.printers.length} printers`)}
       ${adminSectionButton('cartridges', 'Inkt of toner toevoegen', `${state.data.cartridges.length} types`)}
+      ${adminSectionButton('cataloguscontrole', 'Cataloguscontrole', 'Wekelijks op de server')}
     </section>
     ${section.content()}
   `;

@@ -605,6 +605,40 @@
         ],
         "service_role": []
       }
+    },
+    {
+      "schema": "public",
+      "name": "aankoop_catalogus_runs",
+      "kind": "r",
+      "rls": true,
+      "grants": {
+        "anon": [],
+        "authenticated": [
+          "SELECT"
+        ],
+        "service_role": [
+          "SELECT",
+          "INSERT",
+          "UPDATE"
+        ]
+      }
+    },
+    {
+      "schema": "public",
+      "name": "aankoop_catalogus_resultaten",
+      "kind": "r",
+      "rls": true,
+      "grants": {
+        "anon": [],
+        "authenticated": [
+          "SELECT"
+        ],
+        "service_role": [
+          "SELECT",
+          "INSERT",
+          "UPDATE"
+        ]
+      }
     }
   ],
   "sourceFiles": [
@@ -702,6 +736,13 @@
         "aankoop_winkelwagen_overdrachten",
         "aankoop_winkelwagen_resultaten",
         "aankoop_winkelwagen_resultaten_id_seq"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261110142537_cataloguscontrole_cloud.sql",
+      "objects": [
+        "aankoop_catalogus_runs",
+        "aankoop_catalogus_resultaten"
       ]
     }
   ]
